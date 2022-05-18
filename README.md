@@ -48,7 +48,7 @@ source_position=(sz/2,sz/2)
 im=PSF.pdf(p,camera_pixels,source_position)
 ```
 
-### 3D Scalar PSF with Astigmatims
+### 3D Scalar PSF with Astigmatism
 
 ```julia
 using MicroscopePSFs
