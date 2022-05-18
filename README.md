@@ -37,12 +37,15 @@ pixelsize=.1
 p=PSF.Airy2D(na,λ,pixelsize)
 
 # calculate the PSF at a point
-PSF.pdf(p,(0,0),(0,0))
+camera_pixel=(0,0)
+source_position=(0,0)
+PSF.pdf(p,camera_pixel,source_position)
 
 # calculate the PSF in a region
 sz=16
-roi=[(i,j) for i=1:sz, j=1:sz]
-im1=PSF.pdf(p,roi,(sz/2,sz/2))
+camera_pixels=[(i,j) for i=1:sz, j=1:sz]
+source_position=(sz/2,sz/2)
+im=PSF.pdf(p,camera_pixels,source_position)
 ```
 
 ### 3D Scalar PSF with Astigmatims
@@ -67,9 +70,9 @@ p=PSF.Scalar3D(na,λ,n,pixelsize;z=z)
 
 # calculate the PSF in a region
 sz=32
-roi=[(i,j,0) for i=-sz/2:(sz/2-1), 
-    j=-sz/2:(sz/2-1)] 
-im=PSF.pdfₐ(p,roi,(0.0,0.0,-10.0))
+camera_pixels=[(i,j,k) for i=-sz/2:(sz/2-1), j=-sz/2:(sz/2-1), k=-1:1] 
+source_position=(0.0,0.0,0)
+im=PSF.pdf(p,camera_pixels,source_position)
 ```
 
 
