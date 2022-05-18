@@ -20,7 +20,7 @@ Current implementaions provide widefield PSFs assuming an incoherent point sourc
 
 ## Design
 
-The high-level interface is designed to facilitate generation of synthetic data as would be seen by an Array Detector (e.g. Camera).  The PSF is considered a probability distribution that is normalized across 2D sections.  Calculating the PSF at a location follows the convention from  [Distributions.jl](https://github.com/JuliaStats/Distributions.jl) where a distribution is created, and the PDF is calculated at a location.  
+The high-level interface is designed to facilitate generation of synthetic data as would be seen by an Array Detector (e.g. Camera).  The PSF is considered a probability distribution that is normalized across 2D sections.  Calculating the PSF at a location follows the convention from  [Distributions.jl](https://github.com/JuliaStats/Distributions.jl) where a distribution is created, and the PDF is calculated at a location.  Pixel and source locations in pixels.  
 
 ## Examples
 
@@ -70,7 +70,7 @@ p=PSF.Scalar3D(na,λ,n,pixelsize;z=z)
 
 # calculate the PSF in a region
 sz=32
-camera_pixels=[(i,j,k) for i=-sz/2:(sz/2-1), j=-sz/2:(sz/2-1), k=-1:1] 
+camera_pixels=[(i,j,k) for i=-sz/2:(sz/2-1), j=-sz/2:(sz/2-1), k=-5:5:5] #Note z in 'pixel' units.  
 source_position=(0.0,0.0,0)
 im=PSF.pdf(p,camera_pixels,source_position)
 ```
