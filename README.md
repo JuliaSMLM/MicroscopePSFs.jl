@@ -14,9 +14,9 @@ Current implementaions provide widefield PSFs assuming an incoherent point sourc
 - 2D Gaussian PSF
 - 2D Airy PSF
 - 2D/3D Scalar PSF
-- Scalar PSF allow arbitrary Pupil Function modification
+- Scalar PSF allows arbitrary Pupil Function modification
 - Phase and Magnitude Aberrations via Zernike expansion
-- Any PSF can be converted to an interpolated PSF for faster generation at new positions.   
+- Any PSF can be converted to an interpolated PSF for faster generation at new positions   
 
 ## Design
 
