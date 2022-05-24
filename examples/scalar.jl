@@ -19,7 +19,7 @@ roi=[(i,j,0) for i=-sz/2:(sz/2-1),
 im=PSF.pdf(p,roi,(0.0,0.0,0.0))
 
 #look at psf
-plt=heatmap((im))
+plt=heatmap((im), aspectratio=:equal, yflip = true)
 display(plt)
 
 #check normalization 

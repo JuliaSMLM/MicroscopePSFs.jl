@@ -17,7 +17,7 @@ Calculations of various 3D PSF types will involve calculations based around
 Pupil Funciton.  They differ in the complexity and approach used to calculate 
 Pupil Function. 
 """
-mutable struct PupilFunction{T <: AbstractFloat} <: PSF 
+struct PupilFunction{T <: AbstractFloat} <: PSF 
     nₐ::T
     λ::T
     n::T

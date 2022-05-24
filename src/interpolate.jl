@@ -10,9 +10,8 @@
 
 #Fields
 - p             : Generator PSF           
-- r             : range (x,y,z) where x,y,z are maximum supported pixel range in each dimension
+- r             : range (x,y,z) where x,y,z are maximum supported range in each dimension
 - subsampling   : subsampling (default = 4)
-- itp           : Interpolated object
 
 """
 mutable struct InterpolatedPSF <: PSF
@@ -32,7 +31,7 @@ function InterpolatedPSF(p,r; subsampling=4)
     n=length(r)
     #sampling the PSF
     dx=1/subsampling
-    dz=1/subsampling #could make better 
+    dz=p.pixelsize/subsampling #could make better 
 
     x=Array(-r[1]:dx:r[1])
     y=Array(-r[2]:dx:r[2])
@@ -66,12 +65,12 @@ end
 
 # calculations
 function pdf(p::InterpolatedPSF, pixel::Tuple,x_emitter::Tuple)
-    x=x_emitter.-pixel #convert to pixels
+    x=x_emitter.-pixel # convert to pixels
     return p.itp[x...]
 end    
 
 function pdfₐ(p::InterpolatedPSF, pixel::Tuple,x_emitter::Tuple)
-    x=x_emitter.-pixel #convert to pixels
+    x=x_emitter.-pixel # convert to pixels
     
     return Complex(p.itp_real[x...],p.itp_imag[x...])
 end    

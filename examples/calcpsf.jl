@@ -25,7 +25,7 @@ im1=PSF.pdf(p,roi,(sz/2,sz/2))
 sum(im1)
 
 # look at psf
-plt=heatmap(im1)
+plt=heatmap(im1, aspectratio=:equal, yflip = true)
 display(plt)
 
 # calculate for multiple emitters

@@ -19,7 +19,7 @@ where
 
 
 """
-mutable struct Airy2D{T<:AbstractFloat} <: PSF
+struct Airy2D{T<:AbstractFloat} <: PSF
     nₐ::T
     λ::T 
     pixelsize::T
