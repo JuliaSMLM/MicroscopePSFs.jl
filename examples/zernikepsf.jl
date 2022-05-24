@@ -1,6 +1,5 @@
 # Create and show a PSF with Zernike magnitude and phase abbeerations 
 
-using Revise
 using MicroscopePSFs
 PSF=MicroscopePSFs
 using Plots
@@ -30,17 +29,10 @@ sz=32
 roi=[(i,j,0) for i=-sz/2:(sz/2-1), 
     j=-sz/2:(sz/2-1)] 
 
-# look at psf
-im2=PSF.pdf(p,roi,(0.0,0.0,-2.0))
-plt=heatmap(im2,aspectratio=:equal)
-display(plt)
-
-im=PSF.pdf(p,roi,(0.0,0.0,0.0))
-plt2=heatmap(im,aspectratio=:equal)
-display(plt2)
-
-im3=PSF.pdf(p,roi,(0.0,0.0,2.0))
-plt3=heatmap(im3,aspectratio=:equal)
-display(plt3)
+# out of focus by up to 1 physical unit (usually micron)
+zrange=collect(LinRange(-1,1,9))
+for z ∈ zrange
+   display(heatmap(PSF.pdf(p,roi,(0.0,0.0,z))))
+end
 
 

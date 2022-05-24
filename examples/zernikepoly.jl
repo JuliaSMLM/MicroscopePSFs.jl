@@ -1,10 +1,8 @@
 # A few tests and examples of zernike polynomials
 
-using Revise
 using MicroscopePSFs
 PSF=MicroscopePSFs
 using Plots 
-
 
 rsz=128
 ρ=[ sqrt(ii^2+jj^2)/rsz for ii=-rsz:rsz-1, jj=-rsz:rsz-1]

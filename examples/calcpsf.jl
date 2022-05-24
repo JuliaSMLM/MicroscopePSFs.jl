@@ -1,6 +1,5 @@
 ## Create a psf, calculate in a ROI and display
 
-using Revise
 using MicroscopePSFs
 PSF=MicroscopePSFs
 using Plots

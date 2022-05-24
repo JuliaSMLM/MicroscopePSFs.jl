@@ -1,6 +1,5 @@
 # Create and show an amplitude PSF with Zernike magnitude and phase abbeerations 
 
-using Revise
 using MicroscopePSFs
 PSF=MicroscopePSFs
 using Plots
@@ -34,11 +33,9 @@ roi=[(i,j,0) for i=-sz/2:(sz/2-1),
 im=PSF.pdfₐ(p,roi,(0.0,0.0,0.0))
 println("integrated intensity: ", sum(abs2.(im)))
 
-# look at psf
-im=PSF.pdfₐ(p,roi,(0.0,0.0,-10.0))
-plt2=heatmap(abs.(im))
-display(plt2)
+# look at psf. Note x,y are pixels, z is physical unit. 
+im=PSF.pdfₐ(p,roi,(0.0,0.0,-1.0))
+display(heatmap(abs.(im)))
+display(heatmap(angle.(im)))
 
-plt2=heatmap(angle.(im))
-display(plt2)
 

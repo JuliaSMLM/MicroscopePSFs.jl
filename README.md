@@ -20,7 +20,10 @@ Current implementaions provide widefield PSFs assuming an incoherent point sourc
 
 ## Design
 
-The high-level interface is designed to facilitate generation of synthetic data as would be seen by an Array Detector (e.g. Camera).  The PSF is considered a probability distribution that is normalized across 2D sections.  Calculating the PSF at a location follows the convention from  [Distributions.jl](https://github.com/JuliaStats/Distributions.jl) where a distribution is created, and the PDF is calculated at a location.  Pixel and source locations in pixels.  
+The high-level interface is designed to facilitate generation of synthetic data as would be seen by an Array Detector (e.g. Camera).  The PSF is considered a probability distribution that is normalized across 2D sections.  Calculating the PSF at a location follows the convention from  [Distributions.jl](https://github.com/JuliaStats/Distributions.jl) where a distribution is created, and the PDF is calculated at a location.  
+
+### Unit Convention
+Pixel and source locations are in pixels for $x,y$ and in physics unit (micron) for $z$.  This was chosen as it is the most natural unit for simulating and interpreting data because the camera in referenced in pixels and stage movements in the $z$ dimention are in micron.  
 
 ## Examples
 
@@ -70,17 +73,17 @@ p=PSF.Scalar3D(na,λ,n,pixelsize;z=z)
 
 # calculate the PSF in a region
 sz=32
-camera_pixels=[(i,j,k) for i=-sz/2:(sz/2-1), j=-sz/2:(sz/2-1), k=-5:5:5] #Note z in 'pixel' units.  
+camera_pixels=[(i,j,k) for i=-sz/2:(sz/2-1), j=-sz/2:(sz/2-1), k=-1:.5:1] # Note z in microns.  
 source_position=(0.0,0.0,0)
 im=PSF.pdf(p,camera_pixels,source_position)
 ```
-
 
 ## Future Development
 
 *MicroscopePSFs* should be considered under development and the interface may change as we build the JuliaSMLM ecosystem.  Comments and Feature requests are welcome via an issue.  
 
 ### Future Features
+- GPU calculations
 - Vector PSFs
 - Super-critical angle PSFs
 - Integration across finite pixels sizes using sub-sampling.  

@@ -1,6 +1,5 @@
 # Make an interpolated PSF 
 
-using Revise
 using MicroscopePSFs
 PSF=MicroscopePSFs
 using Plots
