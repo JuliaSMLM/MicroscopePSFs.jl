@@ -23,7 +23,7 @@ Current implementaions provide widefield PSFs assuming an incoherent point sourc
 The high-level interface is designed to facilitate generation of synthetic data as would be seen by an Array Detector (e.g. Camera).  The PSF is considered a probability distribution that is normalized across 2D sections.  Calculating the PSF at a location follows the convention from  [Distributions.jl](https://github.com/JuliaStats/Distributions.jl) where a distribution is created, and the PDF is calculated at a location.  
 
 ### Unit Convention
-Pixel and source locations are in pixels for $x,y$ and in physics unit (micron) for $z$.  This was chosen as it is the most natural unit for simulating and interpreting data because the camera in referenced in pixels and stage movements in the $z$ dimention are in micron.  
+Pixel and source locations are in pixels for $x,y$ and in physical unit (typically micron) for $z$.  This was chosen as it is the most natural units for simulating and interpreting data because the camera is referenced in pixels and stage movements in the $z$ dimention are in micron.  
 
 ## Examples
 
