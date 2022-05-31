@@ -32,8 +32,8 @@ end
 
 
 function pdfₐ(p::Airy2D,x_pixel::Tuple,x_emitter::Tuple)
-    r=sqrt((x_emitter[1]-x_pixel[2]).^2+
-    (x_emitter[2]-x_pixel[1]).^2)*p.pixelsize
+    r=sqrt((x_emitter[1]-x_pixel[1]).^2+
+        (x_emitter[2]-x_pixel[2]).^2)*p.pixelsize
     w = r * p.ν
     w = max(w, 1f-5) #handle zero case   
     return p.pixelsize*p.ν/(sqrt(4π))*(2*besselj1(w)/(w))

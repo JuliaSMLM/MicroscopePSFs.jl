@@ -26,8 +26,8 @@ PSF.pdfₐ(p,(0,0,0),(0.0,0.0,0.0))
 
 # calculate the PSF in a region
 sz=32
-roi=[(i,j,0) for i=-sz/2:(sz/2-1), 
-    j=-sz/2:(sz/2-1)] 
+roi=[(x,y,0) for y=-sz/2:(sz/2-1), 
+    x=-sz/2:(sz/2-1)] 
 
 # check normalization    
 im=PSF.pdfₐ(p,roi,(0.0,0.0,0.0))

@@ -11,7 +11,7 @@ using Test
     psf_airy=PSF.Airy2D(na,λ,pixelsize)
     psf_scalar=PSF.Scalar3D(na,λ,n,pixelsize)
 
-    sz=16
+    sz=4
     roi=[(i,j,0) for i=-sz/2:(sz/2-1), 
         j=-sz/2:(sz/2-1)] 
 
@@ -19,4 +19,14 @@ using Test
     im_scalar=PSF.pdf(psf_scalar,roi,(0.0,0.0,0.0))
       
     @test minimum(isapprox(im_airy, im_scalar,atol=1e-4))
+
+    ip=PSF.InterpolatedPSF(psf_scalar,(sz*2,sz*2,.2);subsampling=2)
+
+    im_scalar=PSF.pdf(psf_scalar,roi,(sz/2+1,sz/2,.2))
+    im_itp=PSF.pdf(ip,roi,(sz/2+1,sz/2,.2))
+
+    @test minimum(isapprox(im_scalar, im_itp,atol=1e-4))
+
+
+
 end

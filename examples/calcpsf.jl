@@ -1,5 +1,5 @@
 ## Create a psf, calculate in a ROI and display
-
+using Revise
 using MicroscopePSFs
 PSF=MicroscopePSFs
 using Plots
@@ -8,19 +8,23 @@ using Plots
 na=1.2
 λ=.6 
 pixelsize=.1
-p=PSF.Airy2D(na,λ,pixelsize)
+p_airy=PSF.Airy2D(na,λ,pixelsize)
 
 # Or Create a 2D Gaussian approximation
-p=PSF.Gauss2D(p)
+p_gauss=PSF.Gauss2D(p_airy)
+
+#pick one
+p=p_gauss
+#p=p_airy
 
 # calculate the PSF at a point
 PSF.pdf(p,(0,0),(0,0))
 
 # calculate the PSF in a region
 sz=16
-roi=[(i,j) for i=1:sz, j=1:sz]
+roi=[(x,y) for y=1:sz, x=1:sz]
 
-im1=PSF.pdf(p,roi,(sz/2,sz/2))
+im1=PSF.pdf(p,roi,(sz/2+3,sz/2))
 # check normalization 
 sum(im1)
 
@@ -31,7 +35,7 @@ display(plt)
 # calculate for multiple emitters
 x_emitters=[(sz/2-2,sz/2),(sz/2+2,sz/2)]
 im2=PSF.pdf(p,roi,x_emitters)
-heatmap(im2)
+heatmap(im2,aspectratio=:equal, yflip = true)
 
 
 

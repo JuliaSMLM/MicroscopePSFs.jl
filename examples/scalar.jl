@@ -1,3 +1,4 @@
+using Revise
 using MicroscopePSFs
 PSF=MicroscopePSFs
 using Plots
@@ -13,8 +14,8 @@ p=PSF.Scalar3D(na,λ,n,pixelsize)
 
 #calculate the PSF in a region
 sz=16
-roi=[(i,j,0) for i=-sz/2:(sz/2-1), 
-    j=-sz/2:(sz/2-1)] 
+roi=[(x,y,0) for x=-sz/2:(sz/2-1), 
+    y=-sz/2:(sz/2-1)] 
 
 im=PSF.pdf(p,roi,(0.0,0.0,0.0))
 

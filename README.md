@@ -46,7 +46,7 @@ PSF.pdf(p,camera_pixel,source_position)
 
 # calculate the PSF in a region
 sz=16
-camera_pixels=[(i,j) for i=1:sz, j=1:sz]
+camera_pixels=[(x,y) for y=1:sz, x=1:sz]
 source_position=(sz/2,sz/2)
 im=PSF.pdf(p,camera_pixels,source_position)
 ```
@@ -73,7 +73,7 @@ p=PSF.Scalar3D(na,λ,n,pixelsize;z=z)
 
 # calculate the PSF in a region
 sz=32
-camera_pixels=[(i,j,k) for i=-sz/2:(sz/2-1), j=-sz/2:(sz/2-1), k=-1:.5:1] # Note z in microns.  
+camera_pixels=[(x,y,z) for y=-sz/2:(sz/2-1), x=-sz/2:(sz/2-1), z=-1:.5:1] # Note z in microns.  
 source_position=(0.0,0.0,0)
 im=PSF.pdf(p,camera_pixels,source_position)
 ```

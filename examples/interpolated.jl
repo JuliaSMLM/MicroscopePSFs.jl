@@ -19,7 +19,7 @@ z=PSF.ZernikeCoefficients(mag,phase)
 p=PSF.Scalar3D(na,λ,n,pixelsize;z)
 ip=PSF.InterpolatedPSF(p,(sz*2,sz*2,.2);subsampling=2)
 
-roi=[(i,j,k) for i=1:sz,j=1:sz,k=0:0]
+roi=[(x,y,k) for y=1:sz,x=1:sz,k=0:0]
 
 @time im=PSF.pdf(p,roi,(sz/2,sz/2,.2))
 @time imp=PSF.pdf(ip,roi,(sz/2,sz/2,.2))

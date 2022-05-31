@@ -44,7 +44,7 @@ function InterpolatedPSF(p,r; subsampling=4)
     if n==3
         z=Array(-r[3]:dz:r[3])
         ndrange=(x,y,z)
-        roi=[(i,j,k) for i=x, j=y, k=z]
+        roi=[(i,j,k) for j=y, i=x, k=z]
         x_emitter=(0,0,0)
     end
 
