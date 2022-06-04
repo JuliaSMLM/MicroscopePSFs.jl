@@ -17,10 +17,7 @@ mutable struct Gauss2D{T<:AbstractFloat} <: PSF
 end
 
 function pdfₐ(p::Gauss2D,pixel::Tuple,x_emitter::Tuple)
-    r²=((x_emitter[1]-pixel[1]).^2+
-    (x_emitter[2]-pixel[2]).^2)*p.pixelsize^2
-    σ²=1/2*p.σ^2
-    return p.pixelsize/(2*pi*σ²)*exp(-r²/(2*σ²))  
+    return sqrt(pdf(p,pixel,x_emitter))  
 end    
 
 function pdf(p::Gauss2D,pixel::Tuple,x_emitter::Tuple)
