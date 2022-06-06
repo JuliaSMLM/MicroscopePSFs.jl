@@ -51,6 +51,5 @@ anim = @animate for z ∈ zrange  # hide
 end  # hide
 gif(anim, "tetrapod.gif",fps = 5) # hide
 ```
-![](tetrapod.gif)
 
 
