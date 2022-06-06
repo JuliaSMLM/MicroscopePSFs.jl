@@ -32,7 +32,7 @@ mag=[1.0]
 phase=zeros(14)
 phase[6]=1 #osa index 5
 phase[14]=-2 #osa index 13
-z=PSF.ZernikeCoefficients(mag,phase)
+z=MicroscopePSFs.ZernikeCoefficients(mag,phase)
 
 na=1.2
 n=1.3
@@ -43,7 +43,7 @@ p=MicroscopePSFs.Scalar3D(na,λ,n,pixelsize;z=z)
 
 zrange=cat(dims=1,collect(LinRange(-1,1,9)),collect(LinRange(1,-1,9)))  # hide
 anim = @animate for z ∈ zrange  # hide
-   heatmap(PSF.pdf(p,roi,(0.0,0.0,z)), aspectratio=:equal, yflip = true, colorbar=:none)  # hide
+   heatmap(MicroscopePSFs.pdf(p,roi,(0.0,0.0,z)), aspectratio=:equal, yflip = true, colorbar=:none)  # hide
 end  # hide
 gif(anim, "tetrapod.gif",fps = 5) # hide
 ```
