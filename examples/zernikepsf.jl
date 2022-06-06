@@ -29,10 +29,13 @@ sz=32
 roi=[(x,y,0) for y=-sz/2:(sz/2-1), 
     x=-sz/2:(sz/2-1)] 
 
-# out of focus by up to 1 physical unit (usually micron)
-zrange=collect(LinRange(-1,1,9))
-for z ∈ zrange
-   display(heatmap(PSF.pdf(p,roi,(0.0,0.0,z))))
+# out of focus by up to 0.5 physical unit (usually micron)
+zrange=cat(dims=1,collect(LinRange(-0.5,0.5,5))
+            ,collect(LinRange(0.5,-0.5,5)))
+anim = @animate for z ∈ zrange
+   heatmap(PSF.pdf(p,roi,(0.0,0.0,z)), aspectratio=:equal, 
+   yflip = true, colorbar=:none)
 end
+gif(anim, fps = 1)
 
 

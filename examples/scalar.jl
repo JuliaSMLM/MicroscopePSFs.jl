@@ -20,7 +20,7 @@ roi=[(x,y,0) for x=-sz/2:(sz/2-1),
 im=PSF.pdf(p,roi,(0.0,0.0,0.0))
 
 #look at psf
-plt=heatmap((im), aspectratio=:equal, yflip = true)
+plt=heatmap((im), aspectratio=:equal, yflip = true, colorbar=:none)
 display(plt)
 
 #check normalization 
@@ -28,12 +28,13 @@ sum(im)
 
 
 # out of focus by up to 1 physical unit (usually micron)
-zrange=collect(LinRange(-1,1,5))
-for z ∈ zrange
-   display(heatmap(PSF.pdf(p,roi,(0.0,0.0,z))))
-end
 
+anim = @animate for z ∈ zrange
+    heatmap(PSF.pdf(p,roi,(0.0,0.0,z)), aspectratio=:equal, 
+        yflip = true, colorbar=:none)
+ end
 
+gif(anim,  fps = 1)
 
 
 

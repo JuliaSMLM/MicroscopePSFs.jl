@@ -1,6 +1,6 @@
 ## Scalar approximation of high NA objective PSFs 
 
-# Helper funtions 
+# Helper functions 
 
 
 """
