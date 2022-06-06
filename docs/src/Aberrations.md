@@ -15,11 +15,11 @@ Pupil function based PSFs can be created with a pupil magnitude and phase that a
 MicroscopePSFs.ZernikeCoefficients
 ```
 
-The fields of this structure hold the coefficients of Zernike expansion using the [OSA/ANSI](https://en.wikipedia.org/wiki/Zernike_polynomials#OSA/ANSI_standard_indices) linear index.  These vectors are one based where e.g. `mag[1]` holds the coefficient for the `j=0` linear index.  
+The fields of this structure hold the coefficients of Zernike expansion using the [OSA/ANSI](https://en.wikipedia.org/wiki/Zernike_polynomials#OSA/ANSI_standard_indices) linear index.  These vectors are one based where e.g. `mag[1]` holds the coefficient for the `j = 0` linear index.  
 
 ### Example 
 
-A Tetrapod type PSF using a mixture of 1st and 2nd order astigmatim. 
+A Tetrapod type PSF using a mixture of 1st and 2nd order astigmatism. 
 ```@setup
 using Pkg
 Pkg.add("Plots")
@@ -27,6 +27,7 @@ Pkg.add("Plots")
 
 ```@example
 using Plots
+using MicroscopePSFs
 
 mag=[1.0]
 phase=zeros(14)
