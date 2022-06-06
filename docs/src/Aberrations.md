@@ -1,6 +1,6 @@
 # Aberrations
 
-*MicroscopePSFs* includes a class of PSFs that are generated via integration over a complex pupil function, $P(k\_x,k\_y)$. Aberrations can be included in this calculation by modification of the pupil function.  This can be done by direct modification of the pupil or by expansion into Zernike modes.  
+*MicroscopePSFs* includes a class of PSFs that are generated via integration over a complex pupil function, $P(k_x,k_y)$. Aberrations can be included in this calculation by modification of the pupil function.  This can be done by direct modification of the pupil or by expansion into Zernike modes.  
 
 ## The Pupil Function 
 
@@ -37,15 +37,15 @@ pixelsize=.1
 
 p=PSF.Scalar3D(na,λ,n,pixelsize;z=z)
 
-zrange=cat(dims=1,collect(LinRange(-1,1,9))
-            ,collect(LinRange(1,-1,9)))
+zrange=cat(dims=1,collect(LinRange(-1,1,9))  # hide
+            ,collect(LinRange(1,-1,9)))  # hide
 
-anim = @animate for z ∈ zrange
-   heatmap(PSF.pdf(p,roi,(0.0,0.0,z)), aspectratio=:equal, 
-   yflip = true, colorbar=:none)
-end
-gif(anim, fps = 5)
+anim = @animate for z ∈ zrange  # hide
+   heatmap(PSF.pdf(p,roi,(0.0,0.0,z)), aspectratio=:equal,  # hide 
+   yflip = true, colorbar=:none)  # hide
+end  # hide
+gif(anim, "tetrapod.gif",fps = 5) # hide
 ```
-
+![](tetrapod.gif)
 
 
