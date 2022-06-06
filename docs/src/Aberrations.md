@@ -20,6 +20,10 @@ The fields of this structure hold the coefficients of Zernike expansion using th
 ### Example 
 
 A Tetrapod type PSF using a mixture of 1st and 2nd order astigmatim. 
+```@setup
+using Pkg
+Pkg.add("Plots")
+```
 
 ```@example
 using Plots
