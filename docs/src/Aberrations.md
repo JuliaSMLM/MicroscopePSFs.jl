@@ -39,10 +39,9 @@ n=1.3
 λ=.6 
 pixelsize=.1
 
-p=PSF.Scalar3D(na,λ,n,pixelsize;z=z)
+p=MicroscopePSFs.Scalar3D(na,λ,n,pixelsize;z=z)
 
 zrange=cat(dims=1,collect(LinRange(-1,1,9)),collect(LinRange(1,-1,9)))  # hide
-
 anim = @animate for z ∈ zrange  # hide
    heatmap(PSF.pdf(p,roi,(0.0,0.0,z)), aspectratio=:equal, yflip = true, colorbar=:none)  # hide
 end  # hide
