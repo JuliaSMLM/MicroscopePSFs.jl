@@ -21,7 +21,7 @@ The fields of this structure hold the coefficients of Zernike expansion using th
 
 A Tetrapod type PSF using a mixture of 1st and 2nd order astigmatim. 
 
-```@Example
+```@example
 using Plots
 
 mag=[1.0]
