@@ -23,8 +23,6 @@ A Tetrapod type PSF using a mixture of 1st and 2nd order astigmatism.
 ```@setup
 using Pkg
 Pkg.add("Plots")
-sz=32
-roi=[(x,y,0) for y=-sz/2:(sz/2-1), x=-sz/2:(sz/2-1)] 
 ```
 
 ```@example
@@ -43,6 +41,9 @@ n=1.3
 pixelsize=.1
 
 p=MicroscopePSFs.Scalar3D(na,λ,n,pixelsize;z=z)
+
+sz=32  # hide
+roi=[(x,y,0) for y=-sz/2:(sz/2-1), x=-sz/2:(sz/2-1)]  # hide
 
 zrange=cat(dims=1,collect(LinRange(-1,1,9)),collect(LinRange(1,-1,9)))  # hide
 anim = @animate for z ∈ zrange  # hide
