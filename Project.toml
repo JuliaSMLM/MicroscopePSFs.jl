@@ -1,7 +1,7 @@
 name = "MicroscopePSFs"
 uuid = "de9ac726-48a4-48ab-84b0-1c03c7c18929"
 authors = ["klidke@unm.edu"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
