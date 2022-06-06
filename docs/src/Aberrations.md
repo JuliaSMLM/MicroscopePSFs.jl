@@ -22,7 +22,7 @@ The fields of this structure hold the coefficients of Zernike expansion using th
 A Tetrapod type PSF using a mixture of 1st and 2nd order astigmatim. 
 
 ```@Example
-
+using Plots
 
 mag=[1.0]
 phase=zeros(14)
@@ -37,12 +37,10 @@ pixelsize=.1
 
 p=PSF.Scalar3D(na,λ,n,pixelsize;z=z)
 
-zrange=cat(dims=1,collect(LinRange(-1,1,9))  # hide
-            ,collect(LinRange(1,-1,9)))  # hide
+zrange=cat(dims=1,collect(LinRange(-1,1,9)),collect(LinRange(1,-1,9)))  # hide
 
 anim = @animate for z ∈ zrange  # hide
-   heatmap(PSF.pdf(p,roi,(0.0,0.0,z)), aspectratio=:equal,  # hide 
-   yflip = true, colorbar=:none)  # hide
+   heatmap(PSF.pdf(p,roi,(0.0,0.0,z)), aspectratio=:equal, yflip = true, colorbar=:none)  # hide
 end  # hide
 gif(anim, "tetrapod.gif",fps = 5) # hide
 ```
