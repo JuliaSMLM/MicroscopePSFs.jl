@@ -3,7 +3,8 @@ module MicroscopePSFs
 using SpecialFunctions
 using LoopVectorization
 using Interpolations
-
+using JSON
+using HDF5
 # Write your package code here.
 include("psftypes.jl")
 include("airy2D.jl")
@@ -13,5 +14,7 @@ include("helpers.jl")
 include("pupil.jl")
 include("scalar3D.jl")
 include("interpolate.jl")
+include("import.jl")
+include("splinePSF.jl")
 
 end
