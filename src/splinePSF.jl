@@ -53,7 +53,7 @@ end
 
 
 # needed for broadcasting
-Base.broadcastable(x::InterpolatedPSF) = Ref(x)
+Base.broadcastable(x::SplinePSF) = Ref(x)
 
 
 
