@@ -1,6 +1,6 @@
 
 """
-    loadh5(r)
+    importpsf(r)
 
 load PSF data from PSF learning software
 
@@ -14,9 +14,9 @@ load PSF data from PSF learning software
 - `pixelsize_z` : step size in z, micron
 
 #Example:
-p, PSFstack, pixelsize_x, pixelsize_z = loadpsf(filename)
+p, PSFstack, pixelsize_x, pixelsize_z = importpsf(filename)
 """
-function loadpsf(filename)
+function importpsf(filename)
 
     f = h5open(filename,"r")
     PSFstack = read(f["res/I_model"])
@@ -30,7 +30,6 @@ function loadpsf(filename)
         j_noll = osa2noll.(j_osa)        
         mag=zernike_coeff[j_noll,1]
         phase=zernike_coeff[j_noll,2]
-
      
         z=ZernikeCoefficients(mag,phase)
 

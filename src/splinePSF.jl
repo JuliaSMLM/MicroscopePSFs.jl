@@ -4,7 +4,7 @@
 
 
 """
-    InterpolatedPSF(p,r;subsampling=4) 
+    SplinePSF(psfstack) 
 
 3D psf interpolated from other PSF models 
 
