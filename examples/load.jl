@@ -6,7 +6,7 @@ using Plots
 
 
 filename = raw"examples\psfmodel_tetropod_zernike_single.h5"
-p,PSFstack = PSF.loadpsf(filename)  
+p,PSFstack = PSF.importpsf(filename)  
  
 
 # interpolate psf: linear
