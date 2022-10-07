@@ -33,7 +33,6 @@ function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; electricfi
 
     pupilx = zeros(ksize, ksize, 2)
     pupily = zeros(ksize, ksize, 2)
-    pupilphase = zeros(ksize,ksize)
     kpixelsize = 2 * nₐ / λ / ksize
     
     k0 = (ksize + 1) / 2
@@ -136,3 +135,28 @@ function pdf(p::Dipole3D,roi::Array,x_emitter::Tuple)
 end
 
 
+function calFresnel(kr2,λ,n::Vector)
+    sinθ₁ = sqrt(kr2)*λ/n[1]
+    cosθ₁ = sqrt(complex(1-kr2*λ*λ/n[1]/n[1])) 
+    cosθ₂ = sqrt(complex(1-kr2*λ*λ/n[2]/n[2]))
+    cosθ₃ = sqrt(complex(1-kr2*λ*λ/n[3]/n[3]))
+
+    FresnelP₁₂ = 2*n[1]*cosθ₁/(n[1]*cosθ₂+n[2]*cosθ₁)
+    FresnelS₁₂ = 2*n[1]*cosθ₁/(n[1]*cosθ₁+n[2]*cosθ₂)  
+    FresnelP₂₃ = 2*n[2]*cosθ₂/(n[2]*cosθ₃+n[3]*cosθ₂) 
+    FresnelS₂₃ = 2*n[2]*cosθ₂/(n[2]*cosθ₂+n[3]*cosθ₃) 
+    Tp = FresnelP₁₂*FresnelP₂₃
+    Ts = FresnelS₁₂*FresnelS₂₃
+
+    return Tp, Ts, sinθ₁, cosθ₁, cosθ₂, cosθ₃
+end
+
+
+function calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁; dvec = [1,1,1])
+
+    pvec = [cosθ₁*cos(ϕ),cosθ₁*sin(ϕ),-sinθ₁].*Tp.*dvec
+    svec = [-sin(ϕ),cos(ϕ),0.0].*Ts.*dvec
+    hx = pvec.*cos(ϕ)-svec.*sin(ϕ)
+    hy = pvec.*sin(ϕ)+svec.*cos(ϕ)
+    return sum(hx), sum(hy), hcat(hx,hy)
+end
