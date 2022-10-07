@@ -10,11 +10,11 @@ p,PSFstack = PSF.importpsf(filename)
  
 
 # interpolate psf: linear
-sz = 16
-ip=PSF.InterpolatedPSF(p,(sz*2,sz*2,1);subsampling=1)
+#sz = 16
+#ip=PSF.InterpolatedPSF(p,(sz*2,sz*2,1);subsampling=1) # z unit is in micron
 
 # interpolate psf: cubic
-ip = PSF.SplinePSF(PSFstack)
+ip = PSF.SplinePSF(PSFstack) # z unit is in pixel
 
 # Generate a PSF stack
 sz = 16

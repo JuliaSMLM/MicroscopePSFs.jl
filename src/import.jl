@@ -14,7 +14,7 @@ load PSF data from PSF learning software
 - `pixelsize_z` : step size in z, micron
 
 #Example:
-p, PSFstack, pixelsize_x, pixelsize_z = importpsf(filename)
+p, PSFstack, z, h, params = importpsf(filename)
 """
 function importpsf(filename)
 

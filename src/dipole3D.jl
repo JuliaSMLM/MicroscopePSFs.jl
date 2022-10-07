@@ -45,27 +45,15 @@ function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; electricfi
         ky = kpixelsize * (jj - k0)
         
         kr2 = kx^2 + ky^2
-        sinθ₁ = sqrt(kr2)*λ/n[1]
-        cosθ₁ = sqrt(complex(1-kr2*λ*λ/n[1]/n[1])) 
-        cosθ₂ = sqrt(complex(1-kr2*λ*λ/n[2]/n[2]))
-        cosθ₃ = sqrt(complex(1-kr2*λ*λ/n[3]/n[3]))
+    
 
-        FresnelP₁₂ = 2*n[1]*cosθ₁/(n[1]*cosθ₂+n[2]*cosθ₁)
-        FresnelS₁₂ = 2*n[1]*cosθ₁/(n[1]*cosθ₁+n[2]*cosθ₂)  
-        FresnelP₂₃ = 2*n[2]*cosθ₂/(n[2]*cosθ₃+n[3]*cosθ₂) 
-        FresnelS₂₃ = 2*n[2]*cosθ₂/(n[2]*cosθ₂+n[3]*cosθ₃) 
-        Tp = FresnelP₁₂*FresnelP₂₃
-        Ts = FresnelS₁₂*FresnelS₂₃
-
+        Tp, Ts, sinθ₁, cosθ₁, _, _=calFresnel(kr2,λ,n)
         
         if kr2 < (nₐ / λ)^2 
             ρ=sqrt(kr2)/(nₐ / λ)
             ϕ=atan(ky,kx)
-            pvec = [cosθ₁*cos(ϕ),cosθ₁*sin(ϕ),-sinθ₁].*Tp.*dvec
-            svec = [-sin(ϕ),cos(ϕ),0.0].*Ts.*dvec
-            hx = sum(pvec.*cos(ϕ)-svec.*sin(ϕ))
-            hy = sum(pvec.*sin(ϕ)+svec.*cos(ϕ))
 
+            hx, hy, _ = calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁; dvec=dvec)
             for nn=1:length(z.mag)
                 if abs(z.mag[nn])>0.0
                     pupilx[jj,ii,1] += z.mag[nn]*zernikepolynomial(nn-1,ρ,ϕ)
