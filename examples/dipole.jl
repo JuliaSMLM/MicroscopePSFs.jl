@@ -9,8 +9,8 @@ na=1.45
 n=[1.33,1.52,1.52] # refractive indices (sample medium, cover glass, immersion)
 λ=.69
 pixelsize=.106
-dipole_ang = [90,45].*pi./180
-p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang)
+dipole_ang = [90,0].*pi./180
+p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang;ksize=256)
 
 
 #calculate the PSF in a region

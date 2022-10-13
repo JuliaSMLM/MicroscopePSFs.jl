@@ -23,6 +23,7 @@ mutable struct Dipole3D{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
     dipole_ang::Vector
     ksize::Int
     electricfield::Char
+    normf::T
 end
 
 """
@@ -77,8 +78,8 @@ function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; electricfi
     #pupilx = cat(abs.(Ex),angle.(Ex).+pupilphase;dims=3)
     #pupily = cat(abs.(Ey),angle.(Ey).+pupilphase;dims=3)
 
-    normf = sqrt(sum(pupilx[:,:,1].^2) + sum(pupily[:,:,1].^2))/kpixelsize
-
+    #normf = sqrt(sum(pupilx[:,:,1].^2) + sum(pupily[:,:,1].^2))/kpixelsize
+    normf = pi/4/kpixelsize*ksize
 
     pupilx[:,:,1] = pupilx[:,:,1]./normf
     pupily[:,:,1] = pupily[:,:,1]./normf
@@ -86,10 +87,10 @@ function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; electricfi
     px = PupilFunction(nₐ, λ, n[3], pixelsize, kpixelsize, pupilx)
     py = PupilFunction(nₐ, λ, n[3], pixelsize, kpixelsize, pupily)
 
-
+    normf1 = normf*kpixelsize/ksize
     #normalize!(px)
     #normalize!(py)
-    return Dipole3D{PupilFunction,typeof(nₐ),Int}(px,py, pixelsize, Σ,dipole_ang,ksize,electricfield)
+    return Dipole3D{PupilFunction,typeof(nₐ),Int}(px,py, pixelsize, Σ,dipole_ang,ksize,electricfield,normf1)
 end
 
 function pdfₐ(p::Dipole3D, pixel::Tuple,x_emitter::Tuple)
