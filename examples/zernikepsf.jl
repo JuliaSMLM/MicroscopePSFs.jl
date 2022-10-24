@@ -6,13 +6,13 @@ using Plots
 
 mag=[1.0]
 phase=zeros(10)
-phase[6]=1 # astigmatism
+phase[6]=0.5 # astigmatism
 
 z=PSF.ZernikeCoefficients(mag,phase)
 
 # Create a scalar PSF
-na=1.2
-n=1.3
+na=1.35
+n=1.4
 λ=.6 
 pixelsize=.1
 

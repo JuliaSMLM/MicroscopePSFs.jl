@@ -42,7 +42,9 @@ function InterpolatedPSF(p,r; subsampling=4)
     end
 
     if n==3
-        z=Array(-r[3]:dz:r[3])
+        Nz = Int(round(r[3]/dz)*2)
+        z = Array(range(-r[3],r[3],Nz))
+        #z=Array(-r[3]:dz:r[3])
         ndrange=(x,y,z)
         roi=[(i,j,k) for j=y, i=x, k=z]
         x_emitter=(0,0,0)
@@ -62,6 +64,7 @@ function InterpolatedPSF(p,r; subsampling=4)
 end
 
 end
+
 
 # calculations
 function pdf(p::InterpolatedPSF, pixel::Tuple,x_emitter::Tuple)

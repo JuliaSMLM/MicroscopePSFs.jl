@@ -16,28 +16,28 @@ end
 
 
 """
-    nm2noll(n::Int,l::Int)
+    nl2noll(n::Int,l::Int)
 
     convert the `n` and `l` indexes into a Noll linear index
 """
-function nl2noll(n::Int,l::Int)
+function nl2noll(n::Int,l::Int)::Int
     mm = abs(l)
     j = n * (n + 1) / 2 + 1 + max(0, mm - 1);
-    if (l > 0 & mod(n, 4) >= 2) | (l < 0 & mod(n, 4) <= 1)
+    if ((l > 0) & (mod(n, 4) >= 2)) | ((l < 0) & (mod(n, 4) <= 1))
        j = j + 1
     end
     return j
 end
 
 """
-    noll2nm(j::Int)
+    noll2nl(j::Int)
 
     convert the Noll index `j` into `n` and `l` 
 """
-function noll2nl(j::Int)
+function noll2nl(j::Int)::Tuple{Int,Int}
     n = ceil((-3 + sqrt(1 + 8*j)) / 2);
     l = j - n * (n + 1) / 2 - 1;
-    if mod(n, 2) != mod(m, 2)
+    if mod(n, 2) != mod(l, 2)
        l = l + 1;
     end
     if mod(j, 2) == 1
@@ -47,16 +47,16 @@ function noll2nl(j::Int)
 end
 
 """
-    nm2osa(n::Int,m::Int)
+    nl2osa(n::Int,l::Int)
 
-    convert the `n` and `m` indexes into a OSE linear index
+    convert the `n` and `l` indexes into a OSE linear index
 """
-function nl2osa(n::Int,l::Int)
+function nl2osa(n::Int,l::Int)::Int
     return (n*(n+2)+l)/2
 end
 
 """
-osa2nm(j::Int)
+osa2nl(j::Int)
 
     convert the OSA index `j` into `n` and `l` 
 """
@@ -70,6 +70,25 @@ function osa2nl(j::Int)::Tuple{Int,Int}
 end
 
 """
+noll2osa(j::Int)
+
+    convert the Noll index `j` to OSA index `j` 
+"""
+function noll2osa(j::Int)::Int
+    n,l = noll2nl(j)
+    return nl2osa(n,l) 
+end
+
+"""
+osa2noll(j::Int)
+
+    convert the OSA index `j` to Noll index `j` 
+"""
+function osa2noll(j::Int)::Int
+    n,l = osa2nl(j)
+    return nl2noll(n,l) 
+end
+"""
     radialpolynomical(n::Int,m::Int,ρ)
 
     return the value of the `n,m` radial polynomial at `ρ`
@@ -82,10 +101,16 @@ function radialpolynomial(n::Int,m::Int,ρ)
         return 0
     end
 
+    if m==0
+        g = sqrt(n+1)
+    else
+        g = sqrt(2*n+2)
+    end
+
     r=0.0;
     for k=0:(n-m)/2
         p=ρ.^(n-2*k)
-        coef= (-1)^k * prod((n - m)/2 - k + 1 : n - k) / 
+        coef= g*(-1)^k * prod((n - m)/2 - k + 1 : n - k) / 
                      (factorial(Int(k)) * factorial(Int((n + m)/2 - k)));
      r+=coef*p;
     end
