@@ -3,12 +3,11 @@
 using MicroscopePSFs
 PSF=MicroscopePSFs
 using Plots 
+using Statistics
 
 rsz=128
 ρ=[ sqrt(ii^2+jj^2)/rsz for ii=-rsz:rsz-1, jj=-rsz:rsz-1]
 ϕ=[ atan(ii,jj) for ii=-rsz:rsz-1, jj=-rsz:rsz-1]
-
-
 
 ## 
 n=3
@@ -28,8 +27,8 @@ for j=1:21
     plot!(plt,title="OSA Index: $j, n: $n l:$l")
     display(plt)
     sleep(.1)
-    print(sum(im.*im))
     print("\n")
+    display(sum(abs2.(im)) / (rsz)^2 )
 end
 
 
