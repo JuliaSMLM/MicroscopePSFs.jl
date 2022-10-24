@@ -19,7 +19,7 @@ The fields of this structure hold the coefficients of Zernike expansion using th
 
 Zernike polynomials are normalized such that coefficients are equal to the root-mean-square error across the unit disk.  This normalization is:
 
-$\\int_0^{2\\pi}\\int_0^1 Z^2  \\rho d\\rho d\\phi = \\pi$
+$\int_0^{2\pi}\int_0^1 Z^2  \rho d\rho d\phi = \pi$
 
 
 ### Example 
