@@ -2,7 +2,7 @@ using Revise
 using MicroscopePSFs
 PSF=MicroscopePSFs
 using Plots
-
+using FisherInfoPoisson
 
 filename = raw"Y:\Personal Folders\Sheng\data\PSF Engineering Microscope\PR_10-04-2022_UAF_7px_Shift_200nm_beads_Gain0_PupilSeq\ZStack_-2to+2um_PupilSize125psfmodel_LL_pupil_vector_single.h5"
 scalarpsf,_,zcoeff,h,params = PSF.importpsf(filename)  
@@ -38,4 +38,11 @@ for j=eachindex(pos)
     print(sum(im1))
     print("\n")
 end
+
+# calculate CRLB    
+model(θ, (x, y, z)) = θ[4] * PSF.pdf(immpsf, (x, y, z), (θ[1], θ[2], θ[3])) + θ[5]
+θ = [pos[1]...,1000,10]    
+fi,crlb=FisherInfoPoisson.calcFI(model,θ,roi,prior=Inf)
+
+
 
