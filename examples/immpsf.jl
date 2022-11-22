@@ -8,11 +8,11 @@ filename = raw"Y:\Personal Folders\Sheng\data\PSF Engineering Microscope\PR_10-0
 scalarpsf,_,zcoeff,h,params = PSF.importpsf(filename)  
 
 n = [params["option_params"]["RI_med"],params["option_params"]["RI_cov"],params["option_params"]["RI_imm"]]
-zstage = 1 # stage position 1um
-immpsf = PSF.ImmPSF(h.nₐ,h.λ,n,h.pixelsize;inputpupil = h.pupil,zstage = zstage,ksize=size(h.pupil,1))
+zstage = 0.0 # stage position 1um
+immpsf = PSF.ImmPSF(h.nₐ,h.λ,n,h.pixelsize;zstage = zstage,ksize=size(h.pupil,1))
 
 
-h1 = immpsf.pupilfunction[1]
+h1 = immpsf.pupilfunction[5]
 p1 = heatmap(h1.pupil[:,:,1], aspectratio=:equal, yflip = true, axis = nothing,showaxis=false)
 p2 = heatmap(h1.pupil[:,:,2], aspectratio=:equal, yflip = true, axis = nothing,showaxis=false)
 plot(p1,p2,layout=(1,2))
@@ -20,13 +20,20 @@ plot(p1,p2,layout=(1,2))
 #scalarpsf=PSF.Scalar3D(h.nₐ,h.λ,h.n,h.pixelsize;inputpupil=h.pupil,ksize=size(h.pupil,1))
 
 # Generate a PSF stack
-sz = 25
+sz = 21
 roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
 xe = sz/2
 ye = sz/2
-pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=maximum([-zstage*n[1]/n[2],-1]):0.2:1]
+pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.2:1]
 
-val = PSF.pdfₐ(immpsf,roi,pos[1])
+#val = PSF.pdfₐ(immpsf,roi,pos[1])
+
+#Isum = 0.0
+#for v in val
+#    print(sum(abs.(v).^2))
+#    print('\n')
+#    Isum += sum(abs.(v).^2)
+#end
 
 for j=eachindex(pos)
     im1=PSF.pdf(immpsf,roi,pos[j])

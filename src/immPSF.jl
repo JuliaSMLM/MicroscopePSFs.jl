@@ -35,7 +35,9 @@ function ImmPSF(nₐ, λ, n::Vector, pixelsize;zstage = 0.0,inputpupil=nothing, 
         
         kr2 = kx^2 + ky^2
         Tp, Ts, sinθ₁, cosθ₁, _, cosθ₃ = calFresnel(kr2,λ,n)
-        immphase = exp(2*pi*(n[1]/λ*cosθ₁*n[1]/n[3]*zstage-n[3]/λ*cosθ₃*zstage)*im)
+        #immphase = exp(2*pi*(n[1]/λ*cosθ₁*n[1]/n[3]*zstage-n[3]/λ*cosθ₃*zstage)*im)
+        immphase = exp(-2*pi*(n[3]/λ*cosθ₃*zstage)*im)
+
         if kr2 < (nₐ / λ)^2 
             ρ=sqrt(kr2)/(nₐ / λ)
             ϕ=atan(ky,kx)
@@ -66,11 +68,12 @@ function ImmPSF(nₐ, λ, n::Vector, pixelsize;zstage = 0.0,inputpupil=nothing, 
     
     normf = 0.0
     for j=eachindex(pupil)
+        normf += sum(pupil[j][:,:,1].^2)
         if inputpupil !== nothing
             pupil[j][:,:,1] .*= inputpupil[:,:,1]
             pupil[j][:,:,2] .+= inputpupil[:,:,2]
         end
-        normf += sum(pupil[j][:,:,1].^2)
+        #normf += sum(pupil[j][:,:,1].^2)
     end
 
     normf = sqrt(normf)/kpixelsize
