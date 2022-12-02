@@ -1,63 +1,69 @@
 
 """
-    importpsf(r)
+    importpsf(filename, psftype)
 
-load PSF data from PSF learning software
+import PSF data from PSF learning software
 
 #Arguments
-- `filename`   : file name of the PSF data, file format is .h5
+- `filename`   : file name of the PSF data
+- `psftype`    : PSF types that are supported by julia package, options are: "scalar3D", "immPSF", "splinePSF"
+- `source`     : software that generates the PSF data
+- `zstage`     : position of the sample stage, equal to zero at the coverslip, positive when imaging inside the sample
 
 #returns
-- `p`           : Scalar3D PSF type
+- `p`           : PSF Type
 - `PSFstack`    : a 3D stack of learned PSF
-- `pixelsize_x` : pixel size at sample plane in x, micron
-- `pixelsize_z` : step size in z, micron
+- `h`           : PupilFunction Type
+- `z`           : ZernikeCoefficients Type
 
 #Example:
-p, PSFstack, z, h, params = importpsf(filename)
+p, PSFstack, z, h, params = importpsf(filename,psftype)
 """
-function importpsf(filename)
+function importpsf(filename, psftype; zstage=0.0, source="python")
 
-    f = h5open(filename,"r")
-    PSFstack = read(f["res/I_model"])
-    params = JSON.parse(attrs(f)["params"])
-    pixelsize_x=params["pixelsize_x"]
-    pixelsize_y=params["pixelsize_y"]
-    pixelsize_z=params["pixelsize_z"]
-    na=params["option_params"]["NA"]
-    n=params["option_params"]["RI_imm"]
-    λ=params["option_params"]["emission_wavelength"]
-    p=[]; z=[]; h=[]
-    if haskey(f,"res/zernike_coeff")
-        zernike_coeff = read(f["res/zernike_coeff"]) 
-        pupil = read(f["res/pupil"])    
-        N = size(zernike_coeff)[1]
-        j_osa = Array(0:N-1) 
-        j_noll = osa2noll.(j_osa)        
-        mag=zernike_coeff[j_noll,1]
-        phase=zernike_coeff[j_noll,2]
-     
-        z=ZernikeCoefficients(mag,phase)
-
-        # Create a scalar PSF
+    if source == "python"
+        f = h5open(filename,"r") 
+        PSFstack = read(f["res/I_model"])
+        params = JSON.parse(attrs(f)["params"])
+        pixelsize_x=params["pixel_size"]["x"]
+        na=params["option"]["imaging"]["NA"]
+        n=collect(values(params["option"]["imaging"]["RI"]))
+        λ=params["option"]["imaging"]["emission_wavelength"]
+        p=[]; z=[]; h=[]
         
-        p=Scalar3D(na,λ,n,pixelsize_x;z=z)
+        if haskey(f,"res/zernike_coeff")
+            zernike_coeff = read(f["res/zernike_coeff"]) 
+            N = size(zernike_coeff)[1]
+            j_osa = Array(0:N-1) 
+            j_noll = osa2noll.(j_osa)        
+            mag=zernike_coeff[j_noll,1]
+            phase=zernike_coeff[j_noll,2]
+            z=ZernikeCoefficients(mag,phase)
+        end
 
-        kpixelsize = 2 * na / λ / size(pupil,1)
-        pupil1 = Float64.(cat(abs.(pupil),angle.(pupil),dims=3 ))
-        h = PupilFunction(na,λ,n,pixelsize_x,kpixelsize,pupil1)
-    end
+        if haskey(f,"res/pupil")
+            pupilcomplex = read(f["res/pupil"]) 
+            ksize = size(pupilcomplex,1)
+            kpixelsize = 2 * na / λ / ksize
+            pupil = Float64.(cat(abs.(pupilcomplex),angle.(pupilcomplex),dims=3))
+            if psftype == "scalar3D"
+                p = Scalar3D(na,λ,n[1],pixelsize_x;inputpupil=pupil,ksize=ksize)
+                h = PupilFunction(na,λ,n[1],pixelsize_x,kpixelsize,pupil)
+            end
 
-    if haskey(f,"res/pupil")
-        pupilcomplex = read(f["res/pupil"]) 
-        ksize = size(pupilcomplex,1)
-        kpixelsize = 2 * na / λ / ksize
-        pupil = Float64.(cat(abs.(pupilcomplex),angle.(pupilcomplex),dims=3))
+            if psftype == "immPSF"
+                p = ImmPSF(na,λ,n,pixelsize_x;inputpupil=pupil,zstage = zstage,ksize=ksize)
+                h = PupilFunction(na,λ,n[2],pixelsize_x,kpixelsize,pupil)
+            end
 
-        p=Scalar3D(na,λ,n,pixelsize_x;inputpupil=pupil,ksize=ksize)
-        h = PupilFunction(na,λ,n,pixelsize_x,kpixelsize,pupil)
+            
+        end
+
+        if psftype == "splinePSF"
+            p = SplinePSF(PSFstack)
+        end
     end
     
-    return p,PSFstack, z, h, params
+    return p, PSFstack, z, h, params
 end
 

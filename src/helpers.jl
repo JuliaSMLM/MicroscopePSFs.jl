@@ -27,3 +27,11 @@ function makeobs(r)
     return obspoints
 end
 
+function save(psffile,p)
+    JLD2.@save psffile p
+end
+
+function load(psffile)
+    JLD2.@load psffile p
+    return p
+end

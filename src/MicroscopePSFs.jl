@@ -5,6 +5,7 @@ using LoopVectorization
 using Interpolations
 using JSON
 using HDF5
+using JLD2
 # Write your package code here.
 include("psftypes.jl")
 include("airy2D.jl")
