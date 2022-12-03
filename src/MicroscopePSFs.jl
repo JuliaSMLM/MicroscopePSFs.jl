@@ -6,6 +6,7 @@ using Interpolations
 using JSON
 using HDF5
 using JLD2
+using Statistics
 # Write your package code here.
 include("psftypes.jl")
 include("airy2D.jl")

@@ -65,7 +65,7 @@ function ImmPSF(nₐ, λ, n::Vector, pixelsize;zstage = 0.0,inputpupil=nothing, 
         end
     end
 
-    
+
     normf = 0.0
     for j=eachindex(pupil)
         normf += sum(pupil[j][:,:,1].^2)

@@ -5,8 +5,8 @@ PSF=MicroscopePSFs
 using Plots
 
 
-filename = raw"examples\Tetra_psfmodel_pupil_vector_single.h5"
-p,PSFstack,z = PSF.importpsf(filename,"scalar3D")  
+filename = raw"E:\EMBL files\data for PSF learning\insitu data\from Yoav\3D STORM TP\bead zstack\Tetra_psfmodel_pupil_vector_single.h5"
+p,PSFstack,z = PSF.importpsf(filename,"splinePSF",zstage = 4.0)  
  
 
 psffile = splitext(filename)[1]*".jld2"
@@ -22,13 +22,13 @@ ip = PSF.load(psffile)
 #ip = PSF.SplinePSF(PSFstack) # z unit is in pixel
 
 # Generate a PSF stack
-sz = 101
+sz = 60
 roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
 xe = sz/2
 ye = sz/2
-pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=-1:0.1:1]
+pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.5:6]
 
-
+#@enter im=PSF.pdfₐ(ip,roi[1],pos[1])
 for j=eachindex(pos)
     im=PSF.pdf(ip,roi,pos[j])
     plt=heatmap(im[:,:,1], aspectratio=:equal, yflip = true)

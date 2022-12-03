@@ -47,8 +47,8 @@ function pdfₐ(pupil::Array{<:Real,3},kpixelsize,x,y,z,n,λ,nₐ)
         if kr2 < kmax2
             defocus = z * sqrt(complex((n / λ)^2 - kr2))
             θ = pupil[jj,ii,2] + 2 * pi * (defocus + x * kx + y * ky)
-            a_real += pupil[jj,ii,1] * cos(θ)
-            a_im += pupil[jj,ii,1] * sin(θ)
+            a_real += pupil[jj,ii,1] * cos(real(θ))*exp(-imag(θ))
+            a_im += pupil[jj,ii,1] * sin(real(θ))*exp(-imag(θ))
         end
 
     end

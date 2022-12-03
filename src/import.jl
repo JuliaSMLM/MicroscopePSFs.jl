@@ -24,10 +24,14 @@ function importpsf(filename, psftype; zstage=0.0, source="python")
     if source == "python"
         f = h5open(filename,"r") 
         PSFstack = read(f["res/I_model"])
+        #normf = median(sum(PSFstack,dims=(1,2)))
+        #PSFstack /= normf
         params = JSON.parse(attrs(f)["params"])
         pixelsize_x=params["pixel_size"]["x"]
         na=params["option"]["imaging"]["NA"]
-        n=collect(values(params["option"]["imaging"]["RI"]))
+        RI = params["option"]["imaging"]["RI"]
+        #n=collect(values(params["option"]["imaging"]["RI"]))
+        n = [RI["med"],RI["cov"],RI["imm"]]
         λ=params["option"]["imaging"]["emission_wavelength"]
         p=[]; z=[]; h=[]
         
@@ -47,13 +51,13 @@ function importpsf(filename, psftype; zstage=0.0, source="python")
             kpixelsize = 2 * na / λ / ksize
             pupil = Float64.(cat(abs.(pupilcomplex),angle.(pupilcomplex),dims=3))
             if psftype == "scalar3D"
-                p = Scalar3D(na,λ,n[1],pixelsize_x;inputpupil=pupil,ksize=ksize)
-                h = PupilFunction(na,λ,n[1],pixelsize_x,kpixelsize,pupil)
+                p = Scalar3D(na,λ,n[3],pixelsize_x;inputpupil=pupil,ksize=ksize)
+                h = PupilFunction(na,λ,n[3],pixelsize_x,kpixelsize,pupil)
             end
 
             if psftype == "immPSF"
                 p = ImmPSF(na,λ,n,pixelsize_x;inputpupil=pupil,zstage = zstage,ksize=ksize)
-                h = PupilFunction(na,λ,n[2],pixelsize_x,kpixelsize,pupil)
+                h = PupilFunction(na,λ,n[1],pixelsize_x,kpixelsize,pupil)
             end
 
             
