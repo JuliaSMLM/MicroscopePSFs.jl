@@ -6,21 +6,29 @@
 """
     InterpolatedPSF(p,r;subsampling=4) 
 
-3D psf interpolated from other PSF models 
+3D psf interpolated from other PSF models (linear interpolation)
 
 #Fields
-- p             : Generator PSF           
-- r             : range (x,y,z) where x,y,z are maximum supported range in each dimension
-- subsampling   : subsampling (default = 4)
+- `p`               : Generator PSF           
+- `r`               : range (x,y,z) where x,y,z are maximum supported range in each dimension
+- `subsampling`     : subsampling (default = 4)
+- `itp`             : linear interpolation object for intensity PSF
+- `itp_real`        : linear interpolation object for real part of the amplitude PSF
+- `itp_imag`        : linear interpolation object for imaginary part of the amplitude PSF
+- `pixelsize`       : Linear size of a back-projected pixel
 
 """
-mutable struct InterpolatedPSF <: PSF
+
+mutable struct InterpolatedPSF{T<:AbstractFloat} <: PSF
+
     p::PSF 
     r
     subsampling   
     itp
     itp_real
     itp_imag
+    pixelsize::T
+end
     
 function InterpolatedPSF(p,r; subsampling=4)
 
@@ -60,9 +68,7 @@ function InterpolatedPSF(p,r; subsampling=4)
     itp_real=interpolate(ndrange,real.(im),Gridded(Linear()))
     itp_imag=interpolate(ndrange,imag.(im),Gridded(Linear()))
 
-    return new(p, r, subsampling, itp,itp_real,itp_imag)
-end
-
+    return InterpolatedPSF(p, r, subsampling, itp,itp_real,itp_imag, p.pixelsize)
 end
 
 

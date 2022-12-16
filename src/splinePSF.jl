@@ -6,31 +6,22 @@
 """
     SplinePSF(psfstack) 
 
-3D psf interpolated from other PSF models 
+3D psf interpolated from a 3D PSF stack (spline interpolation)
 
 #Fields
-- psfstack             : a 3D psf stack        
-- sitp                 : spline PSF object
+- `psfstack`             : a 3D PSF stack        
+- `sitp`                 : spline interpolation object
+- `pixelsize`            : Linear size of a back-projected pixel
 
 """
-mutable struct SplinePSF <: PSF
+mutable struct SplinePSF{T<:AbstractFloat} <: PSF
     psfstack::Array
     sitp
-
+    pixelsize::T
 
 end
 
-function SplinePSF(psfstack)
-
-    # setup interpolation 
-    # we are working in a 'pixel' 
-    # unit basis 
-
-
-
-    #integration over finite pixels
-    #TODO!
-
+function SplinePSF(psfstack;pixelsize=0.1)
 
  
     itp = interpolate(psfstack, BSpline(Cubic(Line(OnGrid()))))
@@ -41,7 +32,7 @@ function SplinePSF(psfstack)
     sitp = scale(itp, x, y, z)
 
 
-    return SplinePSF(psfstack,sitp)
+    return SplinePSF(psfstack,sitp,pixelsize)
 end
 # calculations
 function pdf(p::SplinePSF, pixel::Tuple,x_emitter::Tuple)
