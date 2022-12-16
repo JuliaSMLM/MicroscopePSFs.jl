@@ -64,7 +64,7 @@ function importpsf(filename, psftype; zstage=0.0, source="python")
         end
 
         if psftype == "splinePSF"
-            p = SplinePSF(PSFstack)
+            p = SplinePSF(PSFstack,pixelsize=pixelsize_x)
         end
     end
     

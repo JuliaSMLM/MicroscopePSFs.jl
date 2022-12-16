@@ -10,6 +10,7 @@
 
 #Fields
 - `pupilfunction`   : Pupil Function structure           
+- `pixelsize`            : Linear size of a back-projected pixel
 - 'Σ'               : OTF rescaling via image space 2D Gaussian Covariance matrix 
 - 'ksize'           : number of pixels in pupil 
 

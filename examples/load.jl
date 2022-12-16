@@ -5,7 +5,7 @@ PSF=MicroscopePSFs
 using Plots
 
 
-filename = raw"E:\EMBL files\data for PSF learning\insitu data\from Yoav\3D STORM TP\bead zstack\Tetra_psfmodel_pupil_vector_single.h5"
+filename = raw"C:\Users\Sheng\Documents\git\julia\MicroscopePSFs.jl\examples\Tetra_psfmodel_pupil_vector_single.h5"
 p,PSFstack,z = PSF.importpsf(filename,"splinePSF",zstage = 4.0)  
  
 
