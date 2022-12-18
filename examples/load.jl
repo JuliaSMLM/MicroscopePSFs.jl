@@ -5,25 +5,30 @@ PSF=MicroscopePSFs
 using Plots
 
 
-filename = raw"examples\psfmodel_tetropod_zernike_single.h5"
-p,PSFstack = PSF.importpsf(filename)  
+filename = raw"examples\Tetra_psfmodel_pupil_vector_single.h5"
+p,PSFstack,z = PSF.importpsf(filename,"splinePSF",zstage = 4.0)  
  
 
+psffile = splitext(filename)[1]*".jld2"
+
+PSF.save(psffile,p)
+ip = PSF.load(psffile)
+
 # interpolate psf: linear
-sz = 16
-ip=PSF.InterpolatedPSF(p,(sz*2,sz*2,1);subsampling=1)
+#sz = 16
+#ip=PSF.InterpolatedPSF(p,(sz*2,sz*2,1);subsampling=1) # z unit is in micron
 
 # interpolate psf: cubic
-ip = PSF.SplinePSF(PSFstack)
+#ip = PSF.SplinePSF(PSFstack) # z unit is in pixel
 
 # Generate a PSF stack
-sz = 16
+sz = 60
 roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
-xe = 8
-ye = 8
-pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=-1:0.5:1]
+xe = sz/2
+ye = sz/2
+pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.5:6]
 
-
+#@enter im=PSF.pdfₐ(ip,roi[1],pos[1])
 for j=eachindex(pos)
     im=PSF.pdf(ip,roi,pos[j])
     plt=heatmap(im[:,:,1], aspectratio=:equal, yflip = true)
