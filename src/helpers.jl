@@ -6,12 +6,12 @@
 
 make a set of observations points in a square window
 
-#Arguments
+# Arguments
 - `r`   : A range  
 
 returns a vector of Tuples e.g. (x,y)   
 
-#Example:
+# Example:
 obs=makeobs(-8:8)
 """
 function makeobs(r)
@@ -32,12 +32,12 @@ end
 
 save PSF type as .jld2 file
 
-#Arguments
+# Arguments
 - `psffile` : The full saving path
 - `p`       : MicroscopePSFs type
 
-#Example:
-save("psffile.jld2",p)
+# Example:
+save('psffile.jld2',p)
 """
 function save(psffile::String,p::PSF)
     JLD2.@save psffile p
@@ -49,13 +49,13 @@ end
 
 load PSF file
 
-#Arguments
+# Arguments
 - `psffile` : The full path to the psf file
 
 return the MicroscopePSFs type from the file
 
-#Example:
-p=load("psffile.jld2")
+# Example:
+p=load('psffile.jld2')
 """
 function load(psffile::String)
     JLD2.@load psffile p

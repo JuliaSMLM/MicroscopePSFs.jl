@@ -4,20 +4,21 @@
 
 import PSF data from PSF learning software
 
-#Arguments
+# Arguments
 - `filename`   : file name of the PSF data
 - `psftype`    : PSF types that are supported by julia package, options are: "scalar3D", "immPSF", "splinePSF"
-- `source`     : software that generates the PSF data
+- `source`     : software that generates the PSF data, default is "python"
 - `zstage`     : position of the sample stage, equal to zero at the coverslip, positive when imaging inside the sample
 
-#returns
+# returns
 - `p`           : PSF Type
 - `PSFstack`    : a 3D stack of learned PSF
 - `h`           : PupilFunction Type
 - `z`           : ZernikeCoefficients Type
 
-#Example:
-p, PSFstack, z, h, params = importpsf(filename,psftype)
+
+# Example:
+p, PSFstack, z, h = importpsf(filename,psftype)
 """
 function importpsf(filename, psftype; zstage=0.0, source="python")
 
@@ -68,6 +69,6 @@ function importpsf(filename, psftype; zstage=0.0, source="python")
         end
     end
 
-    return p, PSFstack, z, h, params
+    return p, PSFstack, z, h
 end
 

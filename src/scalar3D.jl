@@ -8,7 +8,7 @@
 
 3D psf using scalar model and OTF rescaling 
 
-#Fields
+# Fields
 - `pupilfunction`   : Pupil Function structure           
 - `pixelsize`            : Linear size of a back-projected pixel
 - 'Σ'               : OTF rescaling via image space 2D Gaussian Covariance matrix 

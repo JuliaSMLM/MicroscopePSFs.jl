@@ -8,7 +8,7 @@
 
 3D psf interpolated from other PSF models (linear interpolation)
 
-#Fields
+# Fields
 - `p`               : Generator PSF           
 - `r`               : range (x,y,z) where x,y,z are maximum supported range in each dimension
 - `subsampling`     : subsampling (default = 4)

@@ -5,7 +5,7 @@
 
 A structure used by 3D PSF methods.
 
-#Fields
+# Fields
 - `nₐ`              : Numerical Aperture           
 - `λ`               : Emission Wavelength           
 - `n`               : Immersion Index           
