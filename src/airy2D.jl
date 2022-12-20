@@ -7,7 +7,7 @@
 
 2D Airy Patter psf using paraxial, scalar model
 
-#Fields
+# Fields
 - `na`              : Numerical Aperture           
 - `λ`               : Emission Wavelength           
 - `pixelsize`       : Linear size of a back-projected pixel

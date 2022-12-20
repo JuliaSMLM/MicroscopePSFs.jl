@@ -18,7 +18,7 @@ end
 """
     nl2noll(n::Int,l::Int)
 
-    convert the `n` and `l` indexes into a Noll linear index
+convert the `n` and `l` indexes into a Noll linear index
 """
 function nl2noll(n::Int,l::Int)::Int
     mm = abs(l)
@@ -32,7 +32,7 @@ end
 """
     noll2nl(j::Int)
 
-    convert the Noll index `j` into `n` and `l` 
+convert the Noll index `j` into `n` and `l` 
 """
 function noll2nl(j::Int)::Tuple{Int,Int}
     n = ceil((-3 + sqrt(1 + 8*j)) / 2);
@@ -49,16 +49,16 @@ end
 """
     nl2osa(n::Int,l::Int)
 
-    convert the `n` and `l` indexes into a OSE linear index
+convert the `n` and `l` indexes into a OSE linear index
 """
 function nl2osa(n::Int,l::Int)::Int
     return (n*(n+2)+l)/2
 end
 
 """
-osa2nl(j::Int)
+    osa2nl(j::Int)
 
-    convert the OSA index `j` into `n` and `l` 
+convert the OSA index `j` into `n` and `l` 
 """
 function osa2nl(j::Int)::Tuple{Int,Int}
     if j==0
@@ -70,9 +70,9 @@ function osa2nl(j::Int)::Tuple{Int,Int}
 end
 
 """
-noll2osa(j::Int)
+    noll2osa(j::Int)
 
-    convert the Noll index `j` to OSA index `j` 
+convert the Noll index `j` to OSA index `j` 
 """
 function noll2osa(j::Int)::Int
     n,l = noll2nl(j)
@@ -80,9 +80,9 @@ function noll2osa(j::Int)::Int
 end
 
 """
-osa2noll(j::Int)
+    osa2noll(j::Int)
 
-    convert the OSA index `j` to Noll index `j` 
+convert the OSA index `j` to Noll index `j` 
 """
 function osa2noll(j::Int)::Int
     n,l = osa2nl(j)
@@ -91,9 +91,9 @@ end
 """
     radialpolynomical(n::Int,m::Int,ρ)
 
-    return the value of the `n,m` radial polynomial at `ρ`
+return the value of the `n,m` radial polynomial at `ρ`
 
-    values of `ρ>1` will return zero
+values of `ρ>1` will return zero
 
 """
 function radialpolynomial(n::Int,m::Int,ρ)
@@ -120,9 +120,9 @@ end
 """
     zernike(n::Int,l::Int,ρ,ϕ)
 
-    return the value the `n,l` zernike polynomial at `ρ,ϕ`
+return the value the `n,l` zernike polynomial at `ρ,ϕ`
 
-    Note that l is in -n<:2:n
+Note that l is in -n<:2:n
 """
 function zernikepolynomial(n::Int,l::Int,ρ,ϕ)
     m=abs(l)

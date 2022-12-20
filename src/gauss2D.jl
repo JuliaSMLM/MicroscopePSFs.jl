@@ -6,7 +6,7 @@
 
 Isotropic 2D Gaussian psf
 
-#Fields
+# Fields
 - `σ`            : Gaussian σ           
 - `pixelsize`    : Linear size of a pixel
 

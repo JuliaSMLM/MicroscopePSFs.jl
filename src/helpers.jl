@@ -6,12 +6,12 @@
 
 make a set of observations points in a square windoe  
 
-#Arguments
+# Arguments
 - `r`   : A range  
 
 returns a vector of Tuples e.g. (x,y)   
 
-#Example:
+# Example:
 obs=makeobs(-8:8)
 """
 function makeobs(r)

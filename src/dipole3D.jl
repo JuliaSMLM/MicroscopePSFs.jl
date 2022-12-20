@@ -8,7 +8,7 @@
 
 3D psf using vector model and OTF rescaling 
 
-#Fields
+# Fields
 - `pupilfunction`   : Pupil Function structure           
 - 'Σ'               : OTF rescaling via image space 2D Gaussian Covariance matrix 
 - 'ksize'           : number of pixels in pupil 
