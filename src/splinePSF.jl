@@ -8,7 +8,7 @@
 
 3D psf interpolated from a 3D PSF stack (spline interpolation)
 
-#Fields
+# Fields
 - `psfstack`             : a 3D PSF stack        
 - `sitp`                 : spline interpolation object
 - `pixelsize`            : Linear size of a back-projected pixel
