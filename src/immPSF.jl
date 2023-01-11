@@ -22,7 +22,7 @@ mutable struct ImmPSF{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
     ksize::Int
 end
 
-function ImmPSF(nₐ, λ, n::Vector, pixelsize;zstage = 0.0,inputpupil=nothing, Σ=0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1))
+function ImmPSF(nₐ, λ, n::Vector, pixelsize;zstage = 0.0,inputpupil=nothing, Σ=0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1),mvtype="bead")
 
     pupil = [zeros(ksize, ksize, 2) for x=1:6]
     kpixelsize = 2 * nₐ / λ / ksize
@@ -84,7 +84,12 @@ function ImmPSF(nₐ, λ, n::Vector, pixelsize;zstage = 0.0,inputpupil=nothing, 
 
     p=Vector{PupilFunction}()
     for j=eachindex(pupil)
-        append!(p,[PupilFunction(nₐ, λ, n[1], pixelsize, kpixelsize, pupil[j])])
+        if mvtype == "bead"
+            append!(p,[PupilFunction(nₐ, λ, n[1], pixelsize, kpixelsize, pupil[j])])
+        end
+        if mvtype == "stage"
+            append!(p,[PupilFunction(nₐ, λ, n[3], pixelsize, kpixelsize, pupil[j])])
+        end
     end
    
     return ImmPSF{PupilFunction,typeof(nₐ),Int}(p, pixelsize, Σ, ksize)

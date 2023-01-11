@@ -4,11 +4,11 @@ PSF=MicroscopePSFs
 using Plots
 using FisherInfoPoisson
 
-filename = raw"Y:\Personal Folders\Sheng\data\PSF Engineering Microscope\PR_10-04-2022_UAF_7px_Shift_200nm_beads_Gain0_PupilSeq\ZStack_-2to+2um_PupilSize125psfmodel_LL_pupil_vector_single.h5"
+filename = raw"Y:\Projects\Super Critical Angle Localization Microscopy\ZStack_TIRF_01-10-23\ZStack_psfmodel_zernike_vector_single.h5"
 
 zstage = 0.0 # stage position 1um
 
-p = PSF.importpsf(filename,"immPSF",zstage=zstage)  
+p,_,_,_ = PSF.importpsf(filename,"immPSF",zstage=zstage,mvtype="stage")  
 
 
 h1 = p.pupilfunction[5]
@@ -22,7 +22,7 @@ sz = 21
 roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
 xe = sz/2
 ye = sz/2
-pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.2:1]
+pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0.5:-0.05:-0.5]
 
 
 for j=eachindex(pos)
