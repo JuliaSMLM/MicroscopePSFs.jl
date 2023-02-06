@@ -4,7 +4,7 @@
 """
     makeobs(r)
 
-make a set of observations points in a square windoe  
+make a set of observations points in a square window
 
 # Arguments
 - `r`   : A range  
@@ -32,11 +32,11 @@ end
 
 save PSF type as .jld2 file
 
-#Arguments
+# Arguments
 - `psffile` : The full saving path
 - `p`       : MicroscopePSFs type
 
-#Example:
+# Example:
 save('psffile.jld2',p)
 """
 function save(psffile::String,p::PSF)
@@ -49,12 +49,12 @@ end
 
 load PSF file
 
-#Arguments
+# Arguments
 - `psffile` : The full path to the psf file
 
 return the MicroscopePSFs type from the file
 
-#Example:
+# Example:
 p=load('psffile.jld2')
 """
 function load(psffile::String)

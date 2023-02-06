@@ -31,8 +31,8 @@ using MicroscopePSFs
 
 mag=[1.0]
 phase=zeros(14)
-phase[6]=1 #osa index 5
-phase[14]=-2 #osa index 13
+phase[6]=.5 #osa index 5
+phase[14]=-.5 #osa index 13
 z=MicroscopePSFs.ZernikeCoefficients(mag,phase)
 
 na=1.2

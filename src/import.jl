@@ -24,52 +24,52 @@ p, PSFstack, z, h = importpsf(filename,psftype)
 function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead")
 
     if source == "python"
-        f = h5open(filename,"r") 
+        f = h5open(filename, "r")
         PSFstack = read(f["res/I_model"])
         #normf = median(sum(PSFstack,dims=(1,2)))
         #PSFstack /= normf
         params = JSON.parse(attrs(f)["params"])
-        pixelsize_x=params["pixel_size"]["x"]
-        na=params["option"]["imaging"]["NA"]
+        pixelsize_x = params["pixel_size"]["x"]
+        na = params["option"]["imaging"]["NA"]
         RI = params["option"]["imaging"]["RI"]
         #n=collect(values(params["option"]["imaging"]["RI"]))
-        n = [RI["med"],RI["cov"],RI["imm"]]
-        λ=params["option"]["imaging"]["emission_wavelength"]
-        p=[]; z=[]; h=[]
-        
-        if haskey(f,"res/zernike_coeff")
-            zernike_coeff = read(f["res/zernike_coeff"]) 
+        n = [RI["med"], RI["cov"], RI["imm"]]
+        λ = params["option"]["imaging"]["emission_wavelength"]
+        p = []
+        z = []
+        h = []
+
+        if haskey(f, "res/zernike_coeff")
+            zernike_coeff = read(f["res/zernike_coeff"])
             N = size(zernike_coeff)[1]
-            j_osa = Array(0:N-1) 
-            j_noll = osa2noll.(j_osa)        
-            mag=zernike_coeff[j_noll,1]
-            phase=zernike_coeff[j_noll,2]
-            z=ZernikeCoefficients(mag,phase)
+            j_osa = Array(0:N-1)
+            j_noll = osa2noll.(j_osa)
+            mag = zernike_coeff[j_noll, 1]
+            phase = zernike_coeff[j_noll, 2]
+            z = ZernikeCoefficients(mag, phase)
         end
 
-        if haskey(f,"res/pupil")
-            pupilcomplex = read(f["res/pupil"]) 
-            ksize = size(pupilcomplex,1)
+        if haskey(f, "res/pupil")
+            pupilcomplex = read(f["res/pupil"])
+            ksize = size(pupilcomplex, 1)
             kpixelsize = 2 * na / λ / ksize
-            pupil = Float64.(cat(abs.(pupilcomplex),angle.(pupilcomplex),dims=3))
+            pupil = Float64.(cat(abs.(pupilcomplex), angle.(pupilcomplex), dims=3))
             if psftype == "scalar3D"
-                p = Scalar3D(na,λ,n[3],pixelsize_x;inputpupil=pupil,ksize=ksize)
-                h = PupilFunction(na,λ,n[3],pixelsize_x,kpixelsize,pupil)
+                p = Scalar3D(na, λ, n[3], pixelsize_x; inputpupil=pupil, ksize=ksize)
+                h = PupilFunction(na, λ, n[3], pixelsize_x, kpixelsize, pupil)
             end
 
             if psftype == "immPSF"
-                p = ImmPSF(na,λ,n,pixelsize_x;inputpupil=pupil,zstage = zstage,ksize=ksize,mvtype=mvtype)
-                h = PupilFunction(na,λ,n[1],pixelsize_x,kpixelsize,pupil)
+                p = ImmPSF(na, λ, n, pixelsize_x; inputpupil=pupil, zstage=zstage, ksize=ksize,mvtype=mvtype)
+                h = PupilFunction(na, λ, n[1], pixelsize_x, kpixelsize, pupil)
             end
-
-            
         end
 
         if psftype == "splinePSF"
-            p = SplinePSF(PSFstack,pixelsize=pixelsize_x)
+            p = SplinePSF(PSFstack, pixelsize=pixelsize_x)
         end
     end
-    
+
     return p, PSFstack, z, h
 end
 

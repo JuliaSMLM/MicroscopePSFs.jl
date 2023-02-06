@@ -29,7 +29,7 @@ mutable struct InterpolatedPSF{T<:AbstractFloat} <: PSF
     itp_imag
     pixelsize::T
 end
-
+    
 function InterpolatedPSF(p,r; subsampling=4)
 
     # setup interpolation 
