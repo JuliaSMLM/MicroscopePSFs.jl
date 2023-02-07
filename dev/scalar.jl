@@ -26,7 +26,7 @@ display(plt)
 #check normalization 
 sum(im)
 
-
+zrange = Array(range(-1,1,21))
 # out of focus by up to 1 physical unit (usually micron)
 
 anim = @animate for z ∈ zrange

@@ -5,8 +5,8 @@ PSF=MicroscopePSFs
 using Plots
 
 
-filename = raw"C:\Users\Sheng\Documents\git\julia\MicroscopePSFs.jl\examples\Tetra_psfmodel_pupil_vector_single.h5"
-p,PSFstack,z = PSF.importpsf(filename,"splinePSF",zstage = 4.0)  
+filename = raw"Y:\Projects\Super Critical Angle Localization Microscopy\ZStack_TIRF_01-10-23\ZStack_psfmodel_zernike_vector_single.h5"
+p,PSFstack,z = PSF.importpsf(filename,"splinePSF",zstage = 1.0)  
  
 
 psffile = splitext(filename)[1]*".jld2"
@@ -22,11 +22,11 @@ ip = PSF.load(psffile)
 #ip = PSF.SplinePSF(PSFstack) # z unit is in pixel
 
 # Generate a PSF stack
-sz = 60
+sz = 20
 roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
 xe = sz/2
 ye = sz/2
-pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.5:6]
+pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.1:2]
 
 #@enter im=PSF.pdfₐ(ip,roi[1],pos[1])
 for j=eachindex(pos)
