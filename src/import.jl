@@ -22,7 +22,6 @@ import PSF data from PSF learning software
 # Example:
 p, PSFstack, z, h = importpsf(filename,psftype)
 """
-
 function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead")
     if source == "python"
         f = h5open(filename, "r")
