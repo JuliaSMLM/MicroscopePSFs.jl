@@ -9,8 +9,6 @@ rsz=128
 ρ=[ sqrt(ii^2+jj^2)/rsz for ii=-rsz:rsz-1, jj=-rsz:rsz-1]
 ϕ=[ atan(ii,jj) for ii=-rsz:rsz-1, jj=-rsz:rsz-1]
 
-
-
 ## 
 n=3
 l=-1

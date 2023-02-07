@@ -11,6 +11,7 @@ import PSF data from PSF learning software
 - `zstage`     : position of the sample stage, equal to zero at the coverslip, positive when imaging inside the sample
 - `mvtype`     : for immPSF only, options are: "bead", "stage" 
 
+
 # returns
 - `p`           : PSF Type
 - `PSFstack`    : a 3D stack of learned PSF
@@ -21,8 +22,8 @@ import PSF data from PSF learning software
 # Example:
 p, PSFstack, z, h = importpsf(filename,psftype)
 """
-function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead")
 
+function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead")
     if source == "python"
         f = h5open(filename, "r")
         PSFstack = read(f["res/I_model"])
@@ -60,7 +61,8 @@ function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead"
             end
 
             if psftype == "immPSF"
-                p = ImmPSF(na, λ, n, pixelsize_x; inputpupil=pupil, zstage=zstage, ksize=ksize,mvtype=mvtype)
+
+                p = ImmPSF(na, λ, n, pixelsize_x; inputpupil=pupil, zstage=zstage, ksize=ksize,mvtype=mvtype)    
                 h = PupilFunction(na, λ, n[1], pixelsize_x, kpixelsize, pupil)
             end
         end

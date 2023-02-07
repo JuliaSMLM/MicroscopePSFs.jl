@@ -4,3 +4,10 @@
 /Manifest.toml
 /examples/Manifest.toml
 /docs/build/
+.vscode/*
+/examples/Manifest.toml
+.ipynb_checkpoints
+*.bson
+*.jld2
+*.h5
+
