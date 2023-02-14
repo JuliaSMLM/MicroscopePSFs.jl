@@ -1,7 +1,7 @@
 *.jl.*.cov
 *.jl.cov
 *.jl.mem
-/Manifest.toml
+/dev/Manifest.toml
 /examples/Manifest.toml
 /docs/build/
 .vscode/*
@@ -11,3 +11,4 @@
 *.jld2
 *.h5
 
+dev/Manifest.toml

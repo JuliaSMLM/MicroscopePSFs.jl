@@ -18,5 +18,7 @@ include("scalar3D.jl")
 include("interpolate.jl")
 include("import.jl")
 include("splinePSF.jl")
+include("dipole3D.jl")
+include("immPSF.jl")
 
 end
