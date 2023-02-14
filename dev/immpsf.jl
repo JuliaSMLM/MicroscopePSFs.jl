@@ -4,12 +4,22 @@ PSF=MicroscopePSFs
 using Plots
 using FisherInfoPoisson
 
-filename = raw"Y:\Projects\Super Critical Angle Localization Microscopy\ZStack_TIRF_01-10-23\ZStack_psfmodel_zernike_vector_single.h5"
+#filename = raw"Y:\Projects\Super Critical Angle Localization Microscopy\ZStack_TIRF_01-10-23\ZStack_psfmodel_zernike_vector_single.h5"
 
-zstage = 0.0 # stage position 1um
 
-p,_,_,_ = PSF.importpsf(filename,"immPSF",zstage=zstage,mvtype="stage")  
+# define PSF parameters
+n = [1.33,1.52,1.52]
+na = 1.49
+λ = 0.68
+pixelsize = 0.107
+zstage = 0.0 # stage position um
+mag=[1.0]
+phase=zeros(10)
+phase[6]=0.5 # astigmatism
+z=PSF.ZernikeCoefficients(mag,phase)
 
+p = PSF.ImmPSF(na, λ, n, pixelsize; zstage=zstage, ksize=64,mvtype="stage")
+#p,_,_,_ = PSF.importpsf(filename,"immPSF",zstage=zstage,mvtype="stage")  
 
 h1 = p.pupilfunction[5]
 p1 = heatmap(h1.pupil[:,:,1], aspectratio=:equal, yflip = true, axis = nothing,showaxis=false)
