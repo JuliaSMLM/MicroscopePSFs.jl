@@ -19,6 +19,7 @@ makedocs(;
         "Aberrations" => "Aberrations.md",
         "Interpolation" => "Interpolation.md",
         "Library" => "Library.md",
+        "Tutorials" => "Tutorials.md",
     ],
 )
 
