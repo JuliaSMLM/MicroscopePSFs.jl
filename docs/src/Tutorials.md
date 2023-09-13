@@ -13,4 +13,11 @@ software, and mvtype as "bead" or "stage."
 
 ## Save
 
+Saving should be done using the proper format as shown in the example below.
 
+### Save Example
+
+    filename = raw"Y:\Projects\Super Critical Angle Localization Microscopy\ZStack_TIRF_01-10-23\ZStack_psfmodel_zernike_vector_single.h5"
+    psffile = splitext(filename)[1]*".jld2"
+
+    PSF.save(psffile,p)
