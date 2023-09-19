@@ -15,11 +15,11 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Tutorials" => "Tutorials.md",
         "PSF Types" => "psftypes.md",
         "Aberrations" => "Aberrations.md",
         "Interpolation" => "Interpolation.md",
         "Library" => "Library.md",
-        "Tutorials" => "Tutorials.md",
     ],
 )
 
