@@ -18,7 +18,6 @@
 - `pixelsize`       : Linear size of a back-projected pixel
 
 """
-
 mutable struct InterpolatedPSF{T<:AbstractFloat} <: PSF
 
     p::PSF 
