@@ -17,6 +17,8 @@
 - `itp_imag`        : linear interpolation object for imaginary part of the amplitude PSF
 - `pixelsize`       : Linear size of a back-projected pixel
 
+# Constructor
+    InterpolatedPSF(p,r;subsampling=4) 
 """
 mutable struct InterpolatedPSF{T<:AbstractFloat} <: PSF
 

@@ -60,7 +60,6 @@ return the complex amplitude at pixel locations defined by `roi` with emitter lo
 - `x_emitter::Tuple`    : location of emitter 
 
 """
-
 function pdfₐ(p::PSF,roi::Array,x_emitter::Tuple)
     return pdfₐ.(p,roi,Ref(x_emitter))
 end
@@ -77,7 +76,6 @@ update `im` to the psf at pixel locations defined by `roi` with emitter located 
 - `x_emitter::Tuple`    : location of emitter 
 
 """
-
 function pdf!(im::Array,p::PSF,roi::Array,x_emitter::Tuple)
     im.= pdf.(p,roi,Ref(x_emitter))
     return nothing
@@ -95,7 +93,6 @@ update `im` to the complex amplitude at pixel locations defined by `roi` with em
 - `x_emitter::Tuple`    : location of emitter 
 
 """
-
 function pdfₐ!(im::Array,p::PSF,roi::Array,x_emitter::Tuple)
     im.= pdf.(p,roi,Ref(x_emitter))
     return nothing
@@ -112,7 +109,6 @@ return the overlap of multiple psfs at pixel locations defined by `roi` with emi
 - `x_emitter::Array`    : array of tuples that defines the emitter locations
 
 """
-
 function pdf(p::PSF,roi::Array,x_emitter::Array)
     out=pdf.(p,roi,Ref(x_emitter[1]))
     for ii=2:length(x_emitter)

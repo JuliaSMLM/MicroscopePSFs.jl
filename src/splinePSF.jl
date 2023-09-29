@@ -4,7 +4,7 @@
 
 
 """
-    SplinePSF(psfstack) 
+    SplinePSF
 
 3D psf interpolated from a 3D PSF stack (spline interpolation)
 
@@ -13,6 +13,9 @@
 - `sitp`                 : spline interpolation object
 - `pixelsize`            : Linear size of a back-projected pixel
 - `pixelsize_z`          : step size in z, unit: micron
+
+# Constructor
+    SplinePSF(psfstack;pixelsize_z=0.05,pixelsize=0.1)
 """
 mutable struct SplinePSF{T<:AbstractFloat} <: PSF
     psfstack::Array

@@ -4,9 +4,8 @@
 
 The `importpsf` function imports the PSF structure from the [uiPSF](https://github.com/ries-lab/uiPSF) package as a `MicroscopePSFs` type. This function requires inputs of the PSF filename and the PSF type. 
 
-```@docs
-MicroscopePSFs.importpsf
-```
+[`MicroscopePSFs.importpsf`](@ref)
+
 ### Import Example:
 ```julia
 using MicroscopePSFs
@@ -18,11 +17,10 @@ p,PSFstack,z,h = PSF.importpsf(filename,"immPSF",zstage=1.0,mvtype="bead")
 p,PSFstack,z,h = PSF.importpsf(filename,"scalar3D") 
 ```
 ## Save
-Save the `MicroscopePSFs` type as a .jld2 file. The example below first creates a `Scalar3D` PSF type and then save the PSF as a .jld2 file. 
+Save the `MicroscopePSFs` type as a .jld2 file. The example below first creates a [`MicroscopePSFs.Scalar3D`](@ref) PSF type and then save the PSF as a .jld2 file. 
 
-```@docs
-MicroscopePSFs.save
-```
+[`MicroscopePSFs.save`](@ref)
+
 ### Save Example
 ```julia
 # Create a scalar PSF
@@ -40,9 +38,7 @@ PSF.save("psf.jld2",p)
 
 Load the `MicroscopePSFs` type from a .jld2 file.
 
-```@docs
-MicroscopePSFs.load
-```
+[`MicroscopePSFs.load`](@ref)
 ### Load Example
 ```julia
 p = PSF.load("psf.jld2")

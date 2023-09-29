@@ -9,11 +9,8 @@
 
 ## Zernike Expansion
 
-Pupil function based PSFs can be created with a pupil magnitude and phase that are each given by a sum of Zernike polynomials.  These are specified by a `MicroscopePSFs.ZernikeCoefficients` structure that is passed to the consructor:
+Pupil function based PSFs can be created with a pupil magnitude and phase that are each given by a sum of Zernike polynomials.  These are specified by a [`MicroscopePSFs.ZernikeCoefficients`](@ref) structure that is passed to the consructor:
 
-```@docs
-MicroscopePSFs.ZernikeCoefficients
-```
 
 The fields of this structure hold the coefficients of Zernike expansion using the [OSA/ANSI](https://en.wikipedia.org/wiki/Zernike_polynomials#OSA/ANSI_standard_indices) linear index.  These vectors are one based where e.g. `mag[1]` holds the coefficient for the `j = 0` linear index.  
 

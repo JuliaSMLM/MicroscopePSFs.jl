@@ -9,11 +9,19 @@
 3D psf with index mismatch aberration using scalar or vector model and OTF rescaling 
 
 # Fields
-- `pupilfunction`   : Pupil Function structure           
+- `pupilfunction`   : Pupil Function structure        
+- `pixelsize`       : Linear size of a back-projected pixel, unit: micron  
 - 'Σ'               : OTF rescaling via image space 2D Gaussian Covariance matrix 
 - 'ksize'           : number of pixels in pupil 
 
-
+# Constructor
+    ImmPSF(nₐ, λ, n, pixelsize; inputpupil=nothing, Σ=0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1))
+- 'nₐ'          : numerical aperture
+- 'λ'           : emission wavelength, unit is micrion
+- 'n'           : refractive indices of (sample medium, coverglass, immersion medium)
+- 'zstage'      : position of the sample stage, unit: micron
+- 'inputpupil'  : input pupil function, default is nothing
+- 'mvtype'      : type of motion, the z position is changed by moving 'bead' or 'stage'
 """
 mutable struct ImmPSF{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
     pupilfunction::Vector{PF}
@@ -22,7 +30,7 @@ mutable struct ImmPSF{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
     ksize::Int
 end
 
-function ImmPSF(nₐ, λ, n::Vector, pixelsize;zstage = 0.0,inputpupil=nothing, Σ=0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1),mvtype="bead")
+function ImmPSF(nₐ, λ, n::Vector, pixelsize; zstage = 0.0,inputpupil=nothing, Σ=0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1),mvtype="bead")
 
     pupil = [zeros(ksize, ksize, 2) for x=1:6]
     kpixelsize = 2 * nₐ / λ / ksize

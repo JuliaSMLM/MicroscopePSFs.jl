@@ -10,11 +10,16 @@
 
 # Fields
 - `pupilfunction`   : Pupil Function structure           
-- `pixelsize`            : Linear size of a back-projected pixel
+- `pixelsize`       : Linear size of a back-projected pixel
 - 'Σ'               : OTF rescaling via image space 2D Gaussian Covariance matrix 
 - 'ksize'           : number of pixels in pupil 
 
-
+# Constructor
+    Scalar3D(nₐ, λ, n, pixelsize; inputpupil=nothing, Σ=0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1))
+- 'nₐ'      : numerical aperture
+- 'λ'       : emission wavelength, unit is micrion
+- 'n'       : refractive indices of immersion medium
+- 'inputpupil' : input pupil function, default is nothing
 """
 mutable struct Scalar3D{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
     pupilfunction::PF
@@ -23,7 +28,7 @@ mutable struct Scalar3D{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
     ksize::Int
 end
 
-function Scalar3D(nₐ, λ, n, pixelsize;inputpupil=nothing, Σ=0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1))
+function Scalar3D(nₐ, λ, n, pixelsize; inputpupil=nothing, Σ=0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1))
 
     pupil = zeros(ksize, ksize, 2)
     kpixelsize = 2 * nₐ / λ / ksize

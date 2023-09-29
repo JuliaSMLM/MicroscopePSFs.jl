@@ -28,16 +28,13 @@ function makeobs(r)
 end
 
 """
-    save(psffile,p)
+    save(psffile::String,p::PSF)
 
 save PSF type as .jld2 file
 
 # Arguments
 - `psffile` : The full saving path
 - `p`       : MicroscopePSFs type
-
-# Example:
-save('psffile.jld2',p)
 """
 function save(psffile::String,p::PSF)
     JLD2.@save psffile p
@@ -45,17 +42,16 @@ function save(psffile::String,p::PSF)
 end
 
 """
-    load(psffile)
+    load(psffile::String)
 
 load PSF file
 
 # Arguments
 - `psffile` : The full path to the psf file
 
-return the MicroscopePSFs type from the file
+# Return 
+The MicroscopePSFs type from the file
 
-# Example:
-p=load('psffile.jld2')
 """
 function load(psffile::String)
     JLD2.@load psffile p
