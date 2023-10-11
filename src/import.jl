@@ -1,6 +1,6 @@
 
 """
-    importpsf(filename, psftype)
+    importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead")
 
 import PSF data from PSF learning software
 
@@ -15,9 +15,8 @@ import PSF data from PSF learning software
 # returns
 - `p`           : PSF Type
 - `PSFstack`    : a 3D stack of learned PSF
-- `h`           : PupilFunction Type
 - `z`           : ZernikeCoefficients Type
-
+- `h`           : PupilFunction Type
 
 # Example:
 p, PSFstack, z, h = importpsf(filename,psftype)

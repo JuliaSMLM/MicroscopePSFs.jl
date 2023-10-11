@@ -17,7 +17,6 @@ I(r)=ν²/(4π)(2*J₁(ν*r)/(ν*r))²
 where     
 ν=πD/(λf)=2*π*nₐ/λ  
 
-
 """
 struct Airy2D{T<:AbstractFloat} <: PSF
     nₐ::T

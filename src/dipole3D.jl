@@ -9,11 +9,20 @@
 3D psf using vector model and OTF rescaling 
 
 # Fields
-- `pupilfunction`   : Pupil Function structure           
-- 'Σ'               : OTF rescaling via image space 2D Gaussian Covariance matrix 
-- 'ksize'           : number of pixels in pupil 
-- 'dipole_ang'         : orientation of dipole moment (polar, azimuthal) 
+- `pupilfunctionx`   : Pupil Function defines the x component of the electric field    
+- `pupilfunctiony`   : Pupil Function defines the y component of the electric field
+- `pixelsize`        : Linear size of a back-projected pixel, unit: micron       
+- 'Σ'                : OTF rescaling via image space 2D Gaussian Covariance matrix 
+- 'dipole_ang'       : orientation of dipole moment (polar, azimuthal) 
+- 'ksize'            : number of pixels in pupil 
+- 'electricfield'    : electric field component, 'x' or 'y'
+- 'normf'            : normalization factor
 
+# Constructor
+    Dipole3D(nₐ, λ, n, pixelsize, dipole_ang; Σ=0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1))
+- 'nₐ'          : numerical aperture
+- 'λ'           : emission wavelength, unit is micrion
+- 'n'           : refractive indices (sample medium, cover glass, immersion medium)
 """
 mutable struct Dipole3D{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
     pupilfunctionx::PF
@@ -26,10 +35,7 @@ mutable struct Dipole3D{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
     normf::T
 end
 
-"""
-    Dipole3D()
-    - 'n'       : refractive indices (sample medium, cover glass, immersion medium)
-"""
+
 function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; electricfield='x', Σ=0.0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1))
 
     pupilx = zeros(ksize, ksize, 2)
@@ -123,7 +129,24 @@ function pdf(p::Dipole3D,roi::Array,x_emitter::Tuple)
     return out
 end
 
+"""
+    calFresnel(kr2,λ,n::Vector)
 
+Calculate Fresnel coefficients
+
+# Arguments
+- `kr2`     : magnitude square of the radial component of the k vector
+- `λ`       : emission wavelength, unit is micrion
+- `n`       : refractive indices (sample medium, cover glass, immersion medium)
+
+# Returns
+- `Tp`      : Fresnel coefficient for p-polarization
+- `Ts`      : Fresnel coefficient for s-polarization
+- `sinθ₁`   : sine of the incident angle in the sample medium
+- `cosθ₁`   : cosine of the incident angle in the sample medium
+- `cosθ₂`   : cosine of the incident angle in the cover glass
+- `cosθ₃`   : cosine of the incident angle in the immersion medium
+"""
 function calFresnel(kr2,λ,n::Vector)
     sinθ₁ = sqrt(kr2)*λ/n[1]
     cosθ₁ = sqrt(complex(1-kr2*λ*λ/n[1]/n[1])) 
@@ -140,7 +163,24 @@ function calFresnel(kr2,λ,n::Vector)
     return Tp, Ts, sinθ₁, cosθ₁, cosθ₂, cosθ₃
 end
 
+"""
+    calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁; dvec = [1,1,1])
 
+Calculate electric field of a given dipole orientation
+
+# Arguments
+- `ϕ`       : azimuthal coordinate of the electric field
+- `Tp`      : Fresnel coefficient for p-polarization
+- `Ts`      : Fresnel coefficient for s-polarization
+- `sinθ₁`   : sine of the incident angle in the sample medium
+- `cosθ₁`   : cosine of the incident angle in the sample medium
+- `dvec`    : dipole moment vector
+
+# Returns
+- x component of the electric field
+- y component of the electric field
+- A vector of six components of the electric field from dipole radiation
+"""
 function calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁; dvec = [1,1,1])
 
     pvec = [cosθ₁*cos(ϕ),cosθ₁*sin(ϕ),-sinθ₁].*Tp.*dvec

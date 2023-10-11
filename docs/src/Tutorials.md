@@ -1,34 +1,45 @@
-# Saving and Importing Data
+# Import, save and load PSFs
 
 ## Import
 
-The data may be imported using the importpsf function located in src/import.jl. This function requires inputs of the raw filename and the PSF type. 
-PSF types supported in this package are "scalar3D", "immPSF", and "splinePSF". You may also choose to input the zposition of the stage, the source 
-software, and mvtype as "bead" or "stage."
+The `importpsf` function imports the PSF structure from the [uiPSF](https://github.com/ries-lab/uiPSF) package as a `MicroscopePSFs` type. This function requires inputs of the PSF filename and the PSF type. 
 
-importpsf returns the PSF type (p), the 3D PSF stack, the pupil function type (h), and the ZernikeCoefficients Type (z).
+[`MicroscopePSFs.importpsf`](@ref)
 
 ### Import Example:
+```julia
+using MicroscopePSFs
+PSF=MicroscopePSFs
 
-    p,PSFstack,h,z = PSF.importpsf(filename,"splinePSF",zstage = 1.0) 
-
+filename = "psf_from_uiPSF.h5"
+p,PSFstack,z,h = PSF.importpsf(filename,"splinePSF") 
+p,PSFstack,z,h = PSF.importpsf(filename,"immPSF",zstage=1.0,mvtype="bead")
+p,PSFstack,z,h = PSF.importpsf(filename,"scalar3D") 
+```
 ## Save
+Save the `MicroscopePSFs` type as a .jld2 file. The example below first creates a [`MicroscopePSFs.Scalar3D`](@ref) PSF type and then save the PSF as a .jld2 file. 
 
-Saving should be done using the proper format as shown in the example below. You can create the PSF using the Scalar3D function by inputting the na, n,
-lambda, and pixel size. The filename should have the extension removed before being put into the save function which will save the PSF as a jld2.
+[`MicroscopePSFs.save`](@ref)
 
 ### Save Example
+```julia
+# Create a scalar PSF
+na=1.2          # Numerical Aperture
+n=1.3           # Refractive Index
+λ=.6            # Wavelength (micron)
+pixelsize=.1    # Pixel Size (micron)
 
-    # Create a scalar PSF
-    na=1.2
-    n=1.3
-    λ=.6 
-    pixelsize=.1
+p=PSF.Scalar3D(na,λ,n,pixelsize)
 
-    p=PSF.Scalar3D(na,λ,n,pixelsize)
+# Save it
+PSF.save("psf.jld2",p)
+```
+## Load
 
-    # Put the filename into the proper format
-    psffile = splitext(filename)[1]*".jld2"
-    
-    # Save it
-    PSF.save(psffile,p)
+Load the `MicroscopePSFs` type from a .jld2 file.
+
+[`MicroscopePSFs.load`](@ref)
+### Load Example
+```julia
+p = PSF.load("psf.jld2")
+```
