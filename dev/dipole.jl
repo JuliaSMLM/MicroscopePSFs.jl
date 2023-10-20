@@ -5,13 +5,26 @@ using Plots
 
 
 # Create a scalar PSF
-na=1.45
+na=1.49
 n=[1.33,1.52,1.52] # refractive indices (sample medium, cover glass, immersion)
 λ=.69
 pixelsize=.106
-dipole_ang = [90,0].*pi./180
+dipole_ang = [0,0].*pi./180
 p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang;ksize=256)
 
+# look at pupil
+h1 = p.pupilfunctionx.pupil[:,:,1].^2+p.pupilfunctiony.pupil[:,:,1].^2
+p1 = heatmap(h1, aspectratio=:equal, yflip = true, axis = nothing,showaxis=false,c=:viridis)
+
+h1 = (p.pupilfunctionx.pupil[:,:,1].*p.apodization[:,:,1]).^2+(p.pupilfunctiony.pupil[:,:,1].*p.apodization[:,:,1]).^2
+h1 = p.apodization[:,:,1].^2
+p1 = heatmap(h1, aspectratio=:equal, yflip = true, axis = nothing,showaxis=false,c=:viridis)
+
+
+h1 = p.pupilfunctionx
+p1 = heatmap(h1.pupil[:,:,1], aspectratio=:equal, yflip = true, axis = nothing,showaxis=false,c=:grays)
+p2 = heatmap(h1.pupil[:,:,2], aspectratio=:equal, yflip = true, axis = nothing,showaxis=false,c=:grays)
+plot(p1,p2,layout=(1,2))
 
 #calculate the PSF in a region
 sz=16

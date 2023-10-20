@@ -5,7 +5,7 @@ PSF=MicroscopePSFs
 using Plots
 
 
-filename = raw"Y:\Projects\Super Critical Angle Localization Microscopy\ZStack_TIRF_01-10-23\ZStack_psfmodel_zernike_vector_single.h5"
+filename = raw"Y:\Personal Folders\Sheng\data\TIRF\05-04-2023\psfmodel11_insitu_zernike_single.h5"
 p,PSFstack,z = PSF.importpsf(filename,"splinePSF",zstage = 1.0)  
  
 
@@ -26,7 +26,7 @@ sz = 20
 roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
 xe = sz/2
 ye = sz/2
-pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.1:2]
+pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=-11.5:1:11.5]
 
 #@enter im=PSF.pdfₐ(ip,roi[1],pos[1])
 for j=eachindex(pos)

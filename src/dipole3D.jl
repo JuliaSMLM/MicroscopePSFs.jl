@@ -18,6 +18,7 @@
 mutable struct Dipole3D{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
     pupilfunctionx::PF
     pupilfunctiony::PF
+    apodization::AbstractArray
     pixelsize::T
     Σ::T
     dipole_ang::Vector
@@ -34,6 +35,7 @@ function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; electricfi
 
     pupilx = zeros(ksize, ksize, 2)
     pupily = zeros(ksize, ksize, 2)
+    apod = zeros(ksize,ksize,2)
     kpixelsize = 2 * nₐ / λ / ksize
     
     k0 = (ksize + 1) / 2
@@ -48,9 +50,12 @@ function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; electricfi
         kr2 = kx^2 + ky^2
     
 
-        Tp, Ts, sinθ₁, cosθ₁, _, _=calFresnel(kr2,λ,n)
-        
+        Tp, Ts, sinθ₁, cosθ₁,  cosθ₂, cosθ₃ =calFresnel(kr2,λ,n)
+
         if kr2 < (nₐ / λ)^2 
+            apod[jj,ii,1] = abs(1.0/sqrt(cosθ₁))
+            apod[jj,ii,2] = angle(1.0/sqrt(cosθ₁))
+   
             ρ=sqrt(kr2)/(nₐ / λ)
             ϕ=atan(ky,kx)
 
@@ -90,7 +95,7 @@ function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; electricfi
     normf1 = normf*kpixelsize/ksize
     #normalize!(px)
     #normalize!(py)
-    return Dipole3D{PupilFunction,typeof(nₐ),Int}(px,py, pixelsize, Σ,dipole_ang,ksize,electricfield,normf1)
+    return Dipole3D{PupilFunction,typeof(nₐ),Int}(px,py,apod, pixelsize, Σ,dipole_ang,ksize,electricfield,normf1)
 end
 
 function pdfₐ(p::Dipole3D, pixel::Tuple,x_emitter::Tuple)

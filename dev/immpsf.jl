@@ -18,12 +18,12 @@ phase=zeros(10)
 phase[6]=0.5 # astigmatism
 z=PSF.ZernikeCoefficients(mag,phase)
 
-p = PSF.ImmPSF(na, λ, n, pixelsize; zstage=zstage, ksize=64,mvtype="stage")
+p = PSF.ImmPSF(na, λ, n, pixelsize; zstage=zstage, ksize=256,mvtype="stage")
 #p,_,_,_ = PSF.importpsf(filename,"immPSF",zstage=zstage,mvtype="stage")  
 
-h1 = p.pupilfunction[5]
-p1 = heatmap(h1.pupil[:,:,1], aspectratio=:equal, yflip = true, axis = nothing,showaxis=false)
-p2 = heatmap(h1.pupil[:,:,2], aspectratio=:equal, yflip = true, axis = nothing,showaxis=false)
+h1 = p.pupilfunction[1]
+p1 = heatmap(h1.pupil[:,:,1], aspectratio=:equal, yflip = true, axis = nothing,showaxis=false,c=:grays)
+p2 = heatmap(h1.pupil[:,:,2], aspectratio=:equal, yflip = true, axis = nothing,showaxis=false,c=:grays)
 plot(p1,p2,layout=(1,2))
 
 
