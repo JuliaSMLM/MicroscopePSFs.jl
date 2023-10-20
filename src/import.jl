@@ -1,6 +1,6 @@
 
 """
-    importpsf(filename, psftype)
+    importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead")
 
 import PSF data from PSF learning software
 
@@ -15,9 +15,8 @@ import PSF data from PSF learning software
 # returns
 - `p`           : PSF Type
 - `PSFstack`    : a 3D stack of learned PSF
-- `h`           : PupilFunction Type
 - `z`           : ZernikeCoefficients Type
-
+- `h`           : PupilFunction Type
 
 # Example:
 p, PSFstack, z, h = importpsf(filename,psftype)
@@ -26,10 +25,11 @@ function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead"
     if source == "python"
         f = h5open(filename, "r")
         PSFstack = read(f["res/I_model"])
-        #normf = median(sum(PSFstack,dims=(1,2)))
-        #PSFstack /= normf
+        #normf = sum(PSFstack,dims=(1,2))
+        #PSFstack ./= normf
         params = JSON.parse(attrs(f)["params"])
         pixelsize_x = params["pixel_size"]["x"]
+        pixelsize_z = params["pixel_size"]["z"]
         na = params["option"]["imaging"]["NA"]
         RI = params["option"]["imaging"]["RI"]
         #n=collect(values(params["option"]["imaging"]["RI"]))
@@ -67,7 +67,7 @@ function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead"
         end
 
         if psftype == "splinePSF"
-            p = SplinePSF(PSFstack, pixelsize=pixelsize_x)
+            p = SplinePSF(PSFstack; pixelsize_z=pixelsize_z, pixelsize=pixelsize_x)
         end
     end
 

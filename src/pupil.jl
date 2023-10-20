@@ -3,7 +3,7 @@
 """
     PupilFunction
 
-A structure used by 3D PSF methods.
+A structure defines the pupil function.
 
 # Fields
 - `nₐ`              : Numerical Aperture           
@@ -11,7 +11,7 @@ A structure used by 3D PSF methods.
 - `n`               : Immersion Index           
 - `pixelsize`       : Linear size of a back-projected pixel
 - 'kpixelsize'      : Number of pixels used in pupil function image
-- 'pupil'           : Pupil function [ksize*ksize*2] (Amplitude, Phase)  
+- 'pupil'           : Pupil function with a dimension of (ksize, ksize, 2), including the amplitude and phase  
 
 Calculations of various 3D PSF types will involve calculations based around 
 Pupil Funciton.  They differ in the complexity and approach used to calculate 

@@ -5,9 +5,9 @@ PSF=MicroscopePSFs
 using Plots
 
 
-filename = raw"Y:\Personal Folders\Sheng\data\TIRF\05-04-2023\psfmodel11_insitu_zernike_single.h5"
-p,PSFstack,z = PSF.importpsf(filename,"splinePSF",zstage = 1.0)  
- 
+filename = raw"/home/kiwibogo/shares/cellpath/Genmab/Data/230207_CHOK1_HAEGFR-IgG12F8-RGY/IgG1-2F8-647-5ugmL-10min/Cell_02/Label_01/psfmodel_iter1_insitu_zernike_single.h5"
+p, PSFstack, z, h = PSF.importpsf(filename,"splinePSF")  
+#p,_,_,_ = PSF.importpsf(filename,"immPSF",zstage=1.0,mvtype="stage")  
 
 psffile = splitext(filename)[1]*".jld2"
 
@@ -26,7 +26,7 @@ sz = 20
 roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
 xe = sz/2
 ye = sz/2
-pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=-11.5:1:11.5]
+pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.1:1]
 
 #@enter im=PSF.pdfₐ(ip,roi[1],pos[1])
 for j=eachindex(pos)
