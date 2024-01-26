@@ -59,8 +59,8 @@ function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; electricfi
         Tp, Ts, sinθ₁, cosθ₁,  cosθ₂, cosθ₃ =calFresnel(kr2,λ,n)
 
         if kr2 < (nₐ / λ)^2 
-            apod[jj,ii,1] = abs(1.0/sqrt(cosθ₁))
-            apod[jj,ii,2] = angle(1.0/sqrt(cosθ₁))
+            apod[jj,ii,1] = abs(sqrt(cosθ₃)/cosθ₁)
+            apod[jj,ii,2] = angle(sqrt(cosθ₃)/cosθ₁)
    
             ρ=sqrt(kr2)/(nₐ / λ)
             ϕ=atan(ky,kx)
