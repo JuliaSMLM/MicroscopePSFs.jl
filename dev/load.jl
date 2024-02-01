@@ -44,5 +44,30 @@ end
 
 
 
+# load FD PSF
+
+filename = raw"E:\EMBL files\data for PSF learning\example data for uiPSF\1ch_FD_smlm_nup96\psfmodel_20_insitu_FD_single_5D1.h5"
+p, PSFstack, z, h = PSF.importpsf(filename,"splinePSF_FD");  
+
+psffile = splitext(filename)[1]*".jld2"
+PSF.save(psffile,p)
+ip = PSF.load(psffile);
+
+sz = 20
+roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
+xe = sz/2
+ye = sz/2
+pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=-0.5:0.1:0.5]
+cor = (800,800)
 
 
+for j=eachindex(pos)
+    im=PSF.pdf(ip,roi,pos[j],cor)
+    plt=heatmap(im[:,:,1], aspectratio=:equal, yflip = true)
+    zpos = pos[j][3]
+    plot!(plt,title="PSF, z: $zpos")
+    display(plt)
+    sleep(.1)
+    print(sum(im))
+    print("\n")
+end
