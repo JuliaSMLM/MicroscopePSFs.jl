@@ -37,6 +37,20 @@ function SplinePSF(psfstack::Array{Float32,3};pixelsize_z=0.05,pixelsize=0.1)
     return SplinePSF(psfstack,sitp,pixelsize,pixelsize_z)
 end
 
+function SplinePSF(psfstack::Array{Float32,4};pixelsize_z=0.05,pixelsize=0.1,pixelsize_st=0.01)
+
+ 
+    itp = interpolate(psfstack, BSpline(Cubic(Line(OnGrid()))))
+    psf_size = size(psfstack)
+    x = -psf_size[1]/2+0.5:psf_size[1]/2-0.5
+    y = -psf_size[2]/2+0.5:psf_size[2]/2-0.5
+    z = (0:psf_size[3]-1)*pixelsize_z
+    zs = (0:psf_size[4]-1)*pixelsize_st
+    sitp = scale(itp, x, y, z, zs)
+
+    return SplinePSF(psfstack,sitp,pixelsize,pixelsize_z)
+end
+
 function SplinePSF(psfstack::Array{Float32,5};pixelsize_z=0.05,pixelsize=0.1,image_size=[256,256])
 
  
@@ -44,7 +58,7 @@ function SplinePSF(psfstack::Array{Float32,5};pixelsize_z=0.05,pixelsize=0.1,ima
     psf_size = size(psfstack)
     x = -psf_size[1]/2+0.5:psf_size[1]/2-0.5
     y = -psf_size[2]/2+0.5:psf_size[2]/2-0.5
-    z = (-psf_size[3]/2+0.5:psf_size[3]/2-0.5)*pixelsize_z
+    z = (0:psf_size[3]-1)*pixelsize_z
     corx = range(0,image_size[1],psf_size[4])
     cory = range(0,image_size[2],psf_size[5])
     sitp = scale(itp, x, y, z, corx, cory)
@@ -64,7 +78,11 @@ function pdf(p::SplinePSF, pixel::Tuple,x_emitter::Tuple, cor::Tuple)
     return p.sitp[x...]
 end   
 
-
+function pdf(p::SplinePSF, pixel::Tuple,x_emitter::Tuple,z_stage::Float64)
+    x=x_emitter.-pixel # convert to pixels
+    x = (x...,z_stage)
+    return p.sitp[x...]
+end 
 # needed for broadcasting
 Base.broadcastable(x::SplinePSF) = Ref(x)
 

@@ -53,7 +53,7 @@ function pdfₐ(pupil::Array{<:Real,3},kpixelsize,x,y,z,n,λ,nₐ)
 
     end
 
-    return a_real+a_im*im
+    return (a_real+a_im*im)*kpixelsize
 
 end
 

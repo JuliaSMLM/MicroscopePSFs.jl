@@ -7,6 +7,7 @@ using JSON
 using HDF5
 using JLD2
 using Statistics
+using LinearAlgebra
 
 include("psftypes.jl")
 include("airy2D.jl")

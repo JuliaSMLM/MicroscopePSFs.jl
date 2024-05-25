@@ -10,12 +10,12 @@ using FisherInfoPoisson
 # define PSF parameters
 n = [1.33,1.52,1.52]
 na = 1.49
-λ = 0.68
-pixelsize = 0.107
+λ = 0.69
+pixelsize = 0.05
 zstage = 0.0 # stage position um
 mag=[1.0]
 phase=zeros(10)
-phase[6]=0.5 # astigmatism
+phase[6]=0.0 # astigmatism
 z=PSF.ZernikeCoefficients(mag,phase)
 
 p = PSF.ImmPSF(na, λ, n, pixelsize; zstage=zstage, ksize=256,mvtype="stage")
@@ -27,8 +27,16 @@ p2 = heatmap(h1.pupil[:,:,2], aspectratio=:equal, yflip = true, axis = nothing,s
 plot(p1,p2,layout=(1,2))
 
 
+sz = 20
+roi=[(x,y,0) for x=-sz/2:(sz/2-1), y=-sz/2:(sz/2-1)] 
+pos = (0.0,0.0,0.0)
+im1=PSF.pdf(p,roi,pos)
+p1 = heatmap(im1, aspectratio=:equal, yflip = true, colorbar=:none,axis = nothing,showaxis=false)
+h = plot(p1,size=(400,400))
+savefig(h,"freedipole_psf.png")
+
 # Generate a PSF stack
-sz = 21
+sz = 20
 roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
 xe = sz/2
 ye = sz/2

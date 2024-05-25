@@ -46,10 +46,10 @@ end
 
 # load FD PSF
 
-filename = raw"Y:\Projects\Super Critical Angle Localization Microscopy\Data\10-06-2023\Data4\psf_tilt2_insitu_zernike_single_5D_tilt.h5"
+filename = raw"Y:\Projects\Super Critical Angle Localization Microscopy\Data\10-06-2023\Data4\psf_kmed_tilt2_insitu_zernike_single_5D_tilt.h5"
 p, PSFstack, z, h = PSF.importpsf(filename,"splinePSF_FD");  
 
-psffile = splitext(filename)[1]*".jld2"
+psffile = splitext(filename)[1]*"_1.jld2"
 PSF.save(psffile,p)
 ip = PSF.load(psffile);
 
@@ -57,14 +57,44 @@ sz = 20
 roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
 xe = sz/2
 ye = sz/2
-pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=-0.675:0.1:0.675]
-cor = (0,245)
+pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.1:1.3]
+cor = (245,0)
 
 
 for j=eachindex(pos)
     ims=PSF.pdf(ip,roi,pos[j],cor)
     zpos = pos[j][3]
-    fig = Figure(size = (400, 400))
+    fig = Figure(size = (100, 100))
+    ax = CM.Axis(fig[1, 1],title="PSF, z: $zpos",aspect=1,xreversed=true)
+    hm = CM.heatmap!(ax, ims[:,:,1],colormap=:inferno)
+    #hidedecorations!(ax)
+    fig
+    display(fig)
+    sleep(.1)
+    print(sum(ims))
+    print("\n")
+end
+
+# load stage tilt 4D PSF
+filename = raw"Y:\Projects\Super Critical Angle Localization Microscopy\Data\10-06-2023\Data4\psf_kmed2_insitu_zernike_single_4D_tilt.h5"
+p, PSFstack, z, h = PSF.importpsf(filename,"splinePSF_tilt");  
+
+psffile = splitext(filename)[1]*"_1.jld2"
+PSF.save(psffile,p)
+ip = PSF.load(psffile);
+
+sz = 20
+roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
+xe = sz/2
+ye = sz/2
+pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.01:0.1]
+stpos = 0.0
+
+
+for j=eachindex(pos)
+    ims=PSF.pdf(ip,roi,pos[j],stpos)
+    zpos = pos[j][3]
+    fig = Figure(size = (100, 100))
     ax = CM.Axis(fig[1, 1],title="PSF, z: $zpos",aspect=1,xreversed=true)
     hm = CM.heatmap!(ax, ims[:,:,1],colormap=:inferno)
     #hidedecorations!(ax)

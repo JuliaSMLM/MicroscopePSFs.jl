@@ -52,6 +52,10 @@ end
 function pdf(p::PSF,roi::Array,x_emitter::Tuple,cor::Tuple)
     return pdf.(p,roi,Ref(x_emitter),Ref(cor))
 end
+
+function pdf(p::PSF,roi::Array,x_emitter::Tuple,stpos::Float64)
+    return pdf.(p,roi,Ref(x_emitter),Ref(stpos))
+end
 """
     pdfₐ(p::PSF,roi::Array,x_emitter::Tuple)
 
