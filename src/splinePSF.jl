@@ -42,11 +42,11 @@ function SplinePSF(psfstack::Array{Float32,4};pixelsize_z=0.05,pixelsize=0.1,pix
  
     itp = interpolate(psfstack, BSpline(Cubic(Line(OnGrid()))))
     psf_size = size(psfstack)
-    x = -psf_size[1]/2+0.5:psf_size[1]/2-0.5
-    y = -psf_size[2]/2+0.5:psf_size[2]/2-0.5
+    y = -psf_size[1]/2+0.5:psf_size[1]/2-0.5
+    x = -psf_size[2]/2+0.5:psf_size[2]/2-0.5
     z = (0:psf_size[3]-1)*pixelsize_z
     zs = (0:psf_size[4]-1)*pixelsize_st
-    sitp = scale(itp, x, y, z, zs)
+    sitp = scale(itp, y, x, z, zs)
 
     return SplinePSF(psfstack,sitp,pixelsize,pixelsize_z)
 end
@@ -79,8 +79,8 @@ function pdf(p::SplinePSF, pixel::Tuple,x_emitter::Tuple, cor::Tuple)
 end   
 
 function pdf(p::SplinePSF, pixel::Tuple,x_emitter::Tuple,z_stage::Float64)
-    x=x_emitter.-pixel # convert to pixels
-    x = (x...,z_stage)
+    x=pixel.-x_emitter # convert to pixels
+    x = (x[1],x[2],-x[3],z_stage)
     return p.sitp[x...]
 end 
 # needed for broadcasting

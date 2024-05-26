@@ -3,6 +3,8 @@ using Revise
 using MicroscopePSFs
 PSF=MicroscopePSFs
 using Plots
+using CairoMakie
+CM = CairoMakie
 
 
 filename = raw"/home/kiwibogo/shares/cellpath/Genmab/Data/230207_CHOK1_HAEGFR-IgG12F8-RGY/IgG1-2F8-647-5ugmL-10min/Cell_02/Label_01/psfmodel_iter1_insitu_zernike_single.h5"
@@ -84,19 +86,21 @@ PSF.save(psffile,p)
 ip = PSF.load(psffile);
 
 sz = 20
-roi=[(x,y,k) for x=0:sz-1,y=0:sz-1,k=0:0]
+roi=[(y,x,k) for y=0:sz-1,x=0:sz-1,k=0:0]
 xe = sz/2
 ye = sz/2
-pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0:0.01:0.1]
+pos = [(y,x,k) for y=ye:ye,x=xe:xe,k=0:0.02:0.2]
 stpos = 0.0
+
+
 
 
 for j=eachindex(pos)
     ims=PSF.pdf(ip,roi,pos[j],stpos)
     zpos = pos[j][3]
-    fig = Figure(size = (100, 100))
-    ax = CM.Axis(fig[1, 1],title="PSF, z: $zpos",aspect=1,xreversed=true)
-    hm = CM.heatmap!(ax, ims[:,:,1],colormap=:inferno)
+    fig = CM.Figure(size = (100, 100))
+    ax = CM.Axis(fig[1, 1],title="PSF, z: $zpos",aspect=1,yreversed=true)
+    hm = CM.heatmap!(ax, ims[:,:,1]',colormap=:inferno)
     #hidedecorations!(ax)
     fig
     display(fig)
@@ -104,3 +108,10 @@ for j=eachindex(pos)
     print(sum(ims))
     print("\n")
 end
+
+
+img = PSFstack[:,:,100,1]
+fig = Figure(size = (100, 100))
+ax = CM.Axis(fig[1, 1],aspect=1,yreversed=true)
+hm = CM.heatmap!(ax, img',colormap=:inferno)
+fig
