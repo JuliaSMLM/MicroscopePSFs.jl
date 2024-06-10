@@ -8,25 +8,13 @@ CM = CairoMakie
 na=1.49
 n=[1.33,1.52,1.52] # refractive indices (sample medium, cover glass, immersion)
 λ=.69
-pixelsize=.1
+pixelsize=.05
 dipole_ang = [0,0].*pi./180
-p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang;ksize=128,excitationfield=1.0)
-
-# look at pupil
-#h1 = p.pupilfunctionx.pupil[:,:,1].^2+p.pupilfunctiony.pupil[:,:,1].^2
-#p1 = heatmap(h1, aspectratio=:equal, yflip = true, axis = nothing,showaxis=false,c=:viridis)
-#
-#h1 = (p.pupilfunctionx.pupil[:,:,1].*p.apodization[:,:,1]).^2+(p.pupilfunctiony.pupil[:,:,1].*p.apodization[:,:,1]).^2
-#h1 = p.apodization[:,:,1].^2
-#p1 = heatmap(h1, aspectratio=:equal, yflip = true, axis = nothing,showaxis=false,c=:viridis)
-hx = p.pupilfunctionx.pupil[:,:,1].*exp.(im*p.pupilfunctionx.pupil[:,:,2])
-hy = p.pupilfunctiony.pupil[:,:,1].*exp.(im*p.pupilfunctiony.pupil[:,:,2])
-normf = sqrt(real(sum(hx.*conj(hx))+sum(hy.*conj(hy))))
+p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang;normf =normf, ksize=128,excitationfield=1.0,mvtype="stage") # scalar excitation, for fast rotating dipole
+#p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang;normf =normf, ksize=128,excitationfield=[0,0,1],mvtype="stage") # polarized excitation, for slow rotating dipole
 
 
-
-dipole_ang = [90,0].*pi./180
-p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang;normf =normf, ksize=128)
+#look at pupil
 hx = p.pupilfunctionx.pupil[:,:,1].*exp.(im*p.pupilfunctionx.pupil[:,:,2])
 hy = p.pupilfunctiony.pupil[:,:,1].*exp.(im*p.pupilfunctiony.pupil[:,:,2])
 fig = Figure(size = (600, 300))
@@ -38,23 +26,17 @@ hm = CM.heatmap!(ax, abs.(hy),colormap=:inferno)
 hidedecorations!(ax)
 fig
 
+#simulate PSF
+sz=40 
+roi=[(y,x,0) for y=1:sz, x=1:sz] 
 
-#p1 = heatmap(abs.(p.pupilfunctionx.pupil[:,:,1]), aspectratio=:equal, yflip = true, axis = nothing,showaxis=false, colorbar=false,c=:inferno)
-#p2 = heatmap(abs.(p.pupilfunctiony.pupil[:,:,1]), aspectratio=:equal, yflip = true, axis = nothing,showaxis=false,colorbar=false,c=:inferno)
-#h = plot(p1,p2,layout=(1,2),size=(800,400))
-#savefig(h,"dipole_pupil_90.png")
-
-#calculate the PSF in a region
-sz=40 # there is a permutation in PSF calculation
-roi=[(x,y,0) for x=-sz/2:(sz/2-1), y=-sz/2:(sz/2-1)] 
-
-pos_emitter = (0.0,0.0,0.0)
+pos_emitter = (sz/2,sz/2,0.0)
 p.electricfield = 'x'
 imx=PSF.pdf(p,roi,pos_emitter)
 p.electricfield = 'y'
 imy=PSF.pdf(p,roi,pos_emitter)
 
-#look at psf
+#look at psf in x and y polarization
 fig = Figure(size = (800, 400))
 ax = CM.Axis(fig[1, 1],title="Ex psf",aspect=1)
 hm = CM.heatmap!(ax, imx,colormap=:inferno)
@@ -65,9 +47,10 @@ hidedecorations!(ax)
 fig
 
 
-xe = 0.0
-ye = 0.0
-pos = [(x,y,k) for x=xe:xe,y=ye:ye,k=0.0:0.1:0.5]
+#look at psf with both polarizations at different z positions
+xe = sz/2
+ye = sz/2
+pos = [(ye,xe,k) for k=0.0:0.1:0.5]
 out = zeros(sz,sz,length(pos))
 for j=eachindex(pos)
     p.electricfield = 'x'
@@ -78,7 +61,7 @@ for j=eachindex(pos)
     zpos = pos[j][3]
 
     fig = Figure(size = (400, 400))
-    ax = CM.Axis(fig[1, 1],title="PSF, z: $zpos",aspect=1)
+    ax = CM.Axis(fig[1, 1],title="PSF, z: $zpos μm",aspect=1)
     hm = CM.heatmap!(ax, ims,colormap=:inferno)
     hidedecorations!(ax)
     fig
@@ -88,9 +71,10 @@ for j=eachindex(pos)
     print("\n")
 end
 
-
-ang = []
+# generate isotropic dipole angles
 Nθ = 12
+ang = []
+append!(ang, [(0.01, 0.0)])
 θ = Array(range(0, pi, Nθ))
 dθ = θ[2] - θ[1]
 for j in eachindex(θ)
@@ -102,9 +86,9 @@ for j in eachindex(θ)
         end
     end
 end
-append!(ang, [(0.0, 0.0)])
-append!(ang, [(pi, 0.0)])
+append!(ang, [(pi+0.01, 0.0)])
 
+# plot dipole angles
 ang_array = [tup[j] for tup in ang,j = 1:2]
 α = ang_array[:,1]
 β = ang_array[:,2]
@@ -114,7 +98,7 @@ y = sin.(α).*sin.(β)
 r = hcat(x,y,z)
 r1 = sortslices(r,dims=1,by=x->x[3],rev=true)
 fig = Figure(size = (400, 400))
-ax = CM.Axis3(fig[1, 1],aspect = :equal,xlabel="x (nm)",ylabel="y (nm)",zlabel="z (nm)")
+ax = CM.Axis3(fig[1, 1],aspect = :equal,xlabel="x",ylabel="y",zlabel="z")
 CM.scatter!(ax,r1[:,1],r1[:,2],r1[:,3],markersize=10,marker=:circle)
 CM.lines!(ax,r1[:,1],r1[:,2],r1[:,3])
 fig

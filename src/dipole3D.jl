@@ -37,7 +37,7 @@ mutable struct Dipole3D{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
 end
 
 
-function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; normf=1.0, zstage=0.0, excitationfield=1.0,electricfield='x', Σ=0.0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1))
+function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; normf=1.0, zstage=0.0, excitationfield=1.0,electricfield='x', Σ=0.0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1),mvtype="bead")
 
     pupilx = zeros(ksize, ksize, 2)
     pupily = zeros(ksize, ksize, 2)
@@ -100,9 +100,15 @@ function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; normf=1.0,
     pupilx[:,:,1] = pupilx[:,:,1].*kpixelsize
     pupily[:,:,1] = pupily[:,:,1].*kpixelsize
 
-    px = PupilFunction(nₐ, λ, n[1], pixelsize, kpixelsize, pupilx)
-    py = PupilFunction(nₐ, λ, n[1], pixelsize, kpixelsize, pupily)
-
+    if mvtype == "bead"
+        px = PupilFunction(nₐ, λ, n[1], pixelsize, kpixelsize, pupilx)
+        py = PupilFunction(nₐ, λ, n[1], pixelsize, kpixelsize, pupily)
+    elseif mvtype == "stage"
+        px = PupilFunction(nₐ, λ, n[3], pixelsize, kpixelsize, pupilx)
+        py = PupilFunction(nₐ, λ, n[3], pixelsize, kpixelsize, pupily)
+    else
+        error("mvtype not recognized")
+    end
     
     #normalize!(px)
     #normalize!(py)

@@ -45,13 +45,13 @@ function ImmPSF(nₐ, λ, n::Vector, pixelsize; zstage = 0.0,inputpupil=nothing,
         Tp, Ts, sinθ₁, cosθ₁, _, cosθ₃ = calFresnel(kr2,λ,n)
         #immphase = exp(2*pi*(n[1]/λ*cosθ₁*n[1]/n[3]*zstage-n[3]/λ*cosθ₃*zstage)*im)
         immphase = exp(-2*pi*(n[3]/λ*cosθ₃*zstage)*im)
-
+        Eex = 1.0 # excitation field, scalar
         if kr2 < (nₐ / λ)^2 
             apod = sqrt(cosθ₃)/cosθ₁
             
             ρ=sqrt(kr2)/(nₐ / λ)
             ϕ=atan(ky,kx)
-            _, _, h = calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁)
+            _, _, h = calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁,Eex)
             pupil_mag = 0.0
             pupil_phase = 0.0
             for nn=1:length(z.mag)
