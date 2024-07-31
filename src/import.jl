@@ -25,7 +25,7 @@ function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead"
     if source == "python"
         f = h5open(filename, "r")
         PSFstack = read(f["res/I_model"])
-        PSFstack = permutedims(PSFstack,(2,1,3,4))
+        
         #normf = sum(PSFstack,dims=(1,2))
         #PSFstack ./= normf
         params = JSON.parse(attrs(f)["params"])
@@ -77,6 +77,7 @@ function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead"
         end
 
         if psftype == "splinePSF_tilt"
+            PSFstack = permutedims(PSFstack,(2,1,3,4))
             p = SplinePSF(PSFstack; pixelsize_z=pixelsize_z, pixelsize=pixelsize_x)
         end
     end
