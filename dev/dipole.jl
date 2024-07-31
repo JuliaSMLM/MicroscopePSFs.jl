@@ -10,8 +10,8 @@ n=[1.33,1.52,1.52] # refractive indices (sample medium, cover glass, immersion)
 λ=.69
 pixelsize=.05
 dipole_ang = [0,0].*pi./180
-p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang;normf =normf, ksize=128,excitationfield=1.0,mvtype="stage") # scalar excitation, for fast rotating dipole
-#p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang;normf =normf, ksize=128,excitationfield=[0,0,1],mvtype="stage") # polarized excitation, for slow rotating dipole
+p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang; ksize=128,excitationfield=1.0,mvtype="stage") # scalar excitation, for fast rotating dipole
+#p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang; ksize=128,excitationfield=[0,0,1],mvtype="stage") # polarized excitation, for slow rotating dipole
 
 
 #look at pupil
