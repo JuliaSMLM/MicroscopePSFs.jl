@@ -37,7 +37,16 @@ mutable struct Dipole3D{PF<:PupilFunction,T<:AbstractFloat,I<:Int} <: PSF
 end
 
 
-function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; normf=1.0, zstage=0.0, excitationfield=1.0,electricfield='x', Σ=0.0, ksize=256, z::ZernikeCoefficients=ZernikeCoefficients(1),mvtype="bead")
+function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; 
+    normf=1.0, 
+    zstage=0.0, 
+    excitationfield=1.0,
+    electricfield='x', 
+    Σ=0.0, 
+    ksize=256, 
+    z::ZernikeCoefficients=ZernikeCoefficients(1),
+    mvtype="bead",
+    δ::Union{Nothing,Float64}=nothing)
 
     pupilx = zeros(ksize, ksize, 2)
     pupily = zeros(ksize, ksize, 2)
@@ -65,7 +74,7 @@ function Dipole3D(nₐ, λ, n::Vector, pixelsize, dipole_ang::Vector; normf=1.0,
             ρ=sqrt(kr2)/(nₐ / λ)
             ϕ=atan(ky,kx)
 
-            hx, hy, _ = calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁, excitationfield; dvec=dvec)
+            hx, hy, _ = calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁, excitationfield,δ; dvec=dvec)
             pupil_mag = 0.0
             pupil_phase = 0.0
 
@@ -134,7 +143,8 @@ function pdfₐ(p::Dipole3D, roi::Array,x_emitter::Tuple)
 end    
 
 function pdf(p::Dipole3D, pixel::Tuple,x_emitter::Tuple)
-    return abs2(pdfₐ(p, pixel, x_emitter)) 
+    out = pdfₐ(p, pixel, x_emitter)
+    return real(out*conj(out))
 end    
 
 function pdf(p::Dipole3D,roi::Array,x_emitter::Tuple)
@@ -197,7 +207,7 @@ Calculate electric field of a given dipole orientation
 - y component of the electric field
 - A vector of six components of the electric field from dipole radiation
 """
-function calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁,Eex::Vector; dvec = [1,1,1])
+function calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁,Eex::Vector,δ::Nothing; dvec = [1,1,1])
     dvec = dvec./norm(dvec)
     Eex = Eex./norm(Eex)
     E0 = dot(Eex,dvec)
@@ -209,7 +219,7 @@ function calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁,Eex::Vector; dvec = [1,1,1])
     return sum(hx), sum(hy), hcat(hx,hy)
 end
 
-function calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁, Eex::Float64; dvec = [1,1,1])
+function calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁, Eex::Float64,δ::Nothing; dvec = [1,1,1])
     dvec = dvec./norm(dvec)
     dvec = dvec.*Eex
     pvec = [cosθ₁*cos(ϕ),cosθ₁*sin(ϕ),-sinθ₁].*Tp.*dvec
@@ -217,4 +227,34 @@ function calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁, Eex::Float64; dvec = [1,1,1])
     hx = pvec.*cos(ϕ)-svec.*sin(ϕ)
     hy = pvec.*sin(ϕ)+svec.*cos(ϕ)
     return sum(hx), sum(hy), hcat(hx,hy)
+end
+
+function calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁, Eex::Float64,δ::Float64; dvec = [1,1,1])
+    dvec = dvec./norm(dvec)
+    dvec = dvec.*Eex
+    pvec = [cosθ₁*cos(ϕ),cosθ₁*sin(ϕ),-sinθ₁].*Tp.*dvec
+    svec = [-sin(ϕ),cos(ϕ),0.0].*Ts.*dvec
+    hx = pvec.*cos(ϕ)-svec.*sin(ϕ)
+    hy = pvec.*sin(ϕ)+svec.*cos(ϕ)
+    h_rad = sum(pvec)
+    h_azi = sum(svec)
+    h_qx = h_rad*cos(δ/2)*im-sum(hx)*sin(δ/2)
+    h_qy = -h_azi*cos(δ/2)*im-sum(hy)*sin(δ/2)
+    return h_qx, h_qy, hcat(hx,hy)
+end
+
+function calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁, Eex::Vector,δ::Float64; dvec = [1,1,1])
+    dvec = dvec./norm(dvec)
+    Eex = Eex./norm(Eex)
+    E0 = dot(Eex,dvec)
+    dvec = dvec.*E0
+    pvec = [cosθ₁*cos(ϕ),cosθ₁*sin(ϕ),-sinθ₁].*Tp.*dvec
+    svec = [-sin(ϕ),cos(ϕ),0.0].*Ts.*dvec
+    hx = pvec.*cos(ϕ)-svec.*sin(ϕ)
+    hy = pvec.*sin(ϕ)+svec.*cos(ϕ)
+    h_rad = sum(pvec)
+    h_azi = sum(svec)
+    h_qx = h_rad*cos(δ/2)*im-sum(hx)*sin(δ/2)
+    h_qy = -h_azi*cos(δ/2)*im-sum(hy)*sin(δ/2)
+    return h_qx, h_qy, hcat(hx,hy)
 end

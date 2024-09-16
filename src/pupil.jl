@@ -72,7 +72,8 @@ end
 
 
 function pdf(p::PupilFunction, pixel::Tuple,x_emitter::Tuple)
-    return abs2(pdfₐ(p::PupilFunction, pixel::Tuple,x_emitter::Tuple))
+    out = pdfₐ(p::PupilFunction, pixel::Tuple,x_emitter::Tuple)
+    return real(out*conj(out))
 end
 
 
