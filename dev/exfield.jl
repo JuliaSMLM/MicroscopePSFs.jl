@@ -225,7 +225,3 @@ write(fh, "phasemask", p.phasemask)
 close(fh)
 
 
-@load raw"C:\Users\Sheng\Documents\git\julia\papers-sliver-dipole\out\Fig9\fit_sliver_q_d5.jld2" θ_fit LL_fit
-
-mean(θ_fit, dims=2)
-std(θ_fit, dims=2)

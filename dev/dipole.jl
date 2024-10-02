@@ -9,7 +9,7 @@ n=[1.33,1.52,1.52] # refractive indices (sample medium, cover glass, immersion)
 λ=.69
 pixelsize=.05
 dipole_ang = [0,0].*pi./180
-p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang; ksize=128,excitationfield=1.0,mvtype="stage",δ=nothing) # scalar excitation, for fast rotating dipole
+p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang; ksize=64,excitationfield=1.0,mvtype="stage",δ=0.0) # scalar excitation, for fast rotating dipole
 #p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang; ksize=128,excitationfield=[0,0,1],mvtype="stage") # polarized excitation, for slow rotating dipole
 
 
@@ -32,7 +32,7 @@ roi=[(y,x,0) for y=1:sz, x=1:sz]
 
 pos_emitter = (sz/2,sz/2,0.0)
 p.electricfield = 'x'
-imx=PSF.pdf(p,roi,pos_emitter)
+@time imx=PSF.pdf(p,roi,pos_emitter)
 p.electricfield = 'y'
 imy=PSF.pdf(p,roi,pos_emitter)
 
@@ -42,7 +42,7 @@ ax = CM.Axis(fig[1, 1],title="Ex psf",aspect=1)
 hm = CM.heatmap!(ax, imx,colormap=:inferno)
 hidedecorations!(ax)
 ax = CM.Axis(fig[1, 2],title="Ey psf",aspect=1)
-hm = CM.heatmap!(ax, imx+imy,colormap=:inferno)
+hm = CM.heatmap!(ax, imy,colormap=:inferno)
 hidedecorations!(ax)
 fig
 
