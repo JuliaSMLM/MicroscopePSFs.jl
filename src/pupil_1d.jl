@@ -10,19 +10,14 @@ struct PupilFunction1d{T <: AbstractFloat} <: PSF
 end 
 
 function pdfₐ(pupil::Array,kpixelsize,x,y,z,n,λ,f::Function)
-    
-    
+        
     ksize = size(pupil, 2) # square 
-    kmax = kpixelsize*ksize
-    kr = sqrt.(range(0,1,length=ksize+1)).*kmax
-    dkr = diff(kr)
-    kr = kr[1:end-1].+dkr./2
-    kr2 = kr.^2
-
     a_complex = ComplexF64(0.0)
-    for ii in eachindex(kr)
-        defocus = z * sqrt(ComplexF64((n / λ)^2 - kr2[ii]))
-        a_complex += f(kr[ii],x,y)*exp(2 * pi * im * defocus)*kr[ii]*dkr[ii] #f(kr[ii],x,y)
+    for ii in 1:ksize
+        kr = kpixelsize * (ii - 0.5)
+        kr2 = kr^2
+        defocus = z * sqrt(ComplexF64((n / λ)^2 - kr2))
+        a_complex += f(kr,x,y)*exp(2 * pi * im * defocus)*kr*kpixelsize #f(kr[ii],x,y)
     end
     #defocus = z .* sqrt.(complex((n / λ)^2 .- kr2))
     #a_complex = f.(kr,Ref(x),Ref(y)).*exp.(2 * pi * im .* defocus).*kr.*dkr

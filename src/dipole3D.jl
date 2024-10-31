@@ -179,10 +179,10 @@ function calFresnel(kr2,λ,n::Vector)
     cosθ₂ = sqrt(complex(1-kr2*λ*λ/n[2]/n[2]))
     cosθ₃ = sqrt(complex(1-kr2*λ*λ/n[3]/n[3]))
 
-    FresnelP₁₂ = 2*n[1]*cosθ₁/(n[1]*cosθ₂+n[2]*cosθ₁)
-    FresnelS₁₂ = 2*n[1]*cosθ₁/(n[1]*cosθ₁+n[2]*cosθ₂)  
-    FresnelP₂₃ = 2*n[2]*cosθ₂/(n[2]*cosθ₃+n[3]*cosθ₂) 
-    FresnelS₂₃ = 2*n[2]*cosθ₂/(n[2]*cosθ₂+n[3]*cosθ₃) 
+    FresnelP₁₂ = 2.0*n[1]*cosθ₁/(n[1]*cosθ₂+n[2]*cosθ₁)
+    FresnelS₁₂ = 2.0*n[1]*cosθ₁/(n[1]*cosθ₁+n[2]*cosθ₂)  
+    FresnelP₂₃ = 2.0*n[2]*cosθ₂/(n[2]*cosθ₃+n[3]*cosθ₂) 
+    FresnelS₂₃ = 2.0*n[2]*cosθ₂/(n[2]*cosθ₂+n[3]*cosθ₃) 
     Tp = FresnelP₁₂*FresnelP₂₃
     Ts = FresnelS₁₂*FresnelS₂₃
 

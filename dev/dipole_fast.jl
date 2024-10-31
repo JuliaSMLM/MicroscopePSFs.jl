@@ -9,9 +9,9 @@ using BenchmarkTools
 using SpecialFunctions
 # Create a scalar PSF
 na=1.5
-n=[1.52,1.52,1.52] # refractive indices (sample medium, cover glass, immersion)
+n=[1.33,1.516,1.516] # refractive indices (sample medium, cover glass, immersion)
 λ=.69
-pixelsize=.01
+pixelsize=λ/na/16
 dipole_ang = [90,0].*pi./180
 p=PSF.Dipole3D_fast(na,λ,n,pixelsize,dipole_ang; ksize=256,excitationfield=[1.0,0.0,0.0],mvtype="stage",δ=nothing); # scalar excitation, for fast rotating dipole
 
@@ -39,7 +39,7 @@ hidedecorations!(ax)
 fig
 
 # kmax = na / λ
-# kr = sqrt.(range(0,1,length=p.ksize+1)).*kmax
+# kr = (range(0,1,length=p.ksize+1)).*kmax
 # dkr = diff(kr)
 # kr = kr[1:end-1].+dkr./2
 # a_complex = zeros(ComplexF64, p.ksize)
@@ -50,12 +50,12 @@ fig
 # sum(a_complex)
 
 
-f = (x) -> PSF.pdf(p,roi[10],(x,sz/2,0.0)) 
+f = (x) -> PSF.pdf(p,roi[1],(x[1],x[2],x[3]))*x[4]+x[5] 
 
 using Zygote
-@time μ_s,grad_s = Zygote.forward_jacobian((x) -> f(x), 10.5) 
+#grad_s = Zygote.gradient((x) -> f(x), 10.5) 
 
-
+@time grad_s = Zygote.forward_jacobian((x) -> f(x), [10.5,10.5,0.0,1.0,0.0])
 # using CUDA
 #     # Convert inputs to CuArrays
 #     sz = 200*16
@@ -126,3 +126,21 @@ using Zygote
 #     #out[j] = SpecialFunctions.besselj(0,r)
 # end
 
+xs = collect(1:sz/2)
+fs = zeros(length(xs))
+for j in eachindex(xs)
+
+    x = xs[j]*pixelsize
+    y = x
+    r = sqrt(x^2 + y^2)
+    cosϕᵣ = x/r
+    a_complex = ComplexF64(0.0)
+    ksize = size(p.pupilfunctionx.pupil, 2) 
+    for ii in 1:ksize
+        kr = p.pupilfunctionx.kpixelsize * (ii - 0.5)
+        sinθ₁ = kr*λ/n[1]
+        J1 = PSF.bJ(1,kr*r)
+        a_complex += sinθ₁*2*pi*im*J1*cosϕᵣ*p.pupilfunctionx.kpixelsize
+    end
+    fs[j] = a_complex*conj(a_complex)
+end

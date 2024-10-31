@@ -125,9 +125,11 @@ Calculate electric field of a given dipole orientation
 - A vector of six components of the electric field from dipole radiation
 """
 function calEfield_1d(kr,x,y,n,λ,zstage,Eex::Vector,δ::Nothing; dvec = [1,1,1])
-    dvec = dvec./norm(dvec)
-    Eex = Eex./norm(Eex)
-    E0 = dot(Eex,dvec)
+    #dvec = dvec
+    #Eex = Eex
+    normdvec = norm(dvec)
+    normEex = norm(Eex)
+    E0 = dot(Eex,dvec)/normdvec/normEex/normdvec
     #dvec = dvec.*E0
     kr2=kr^2
     Tp, Ts, sinθ₁, cosθ₁,  _, cosθ₃ = calFresnel(kr2,λ,n)
@@ -149,7 +151,7 @@ function calEfield_1d(kr,x,y,n,λ,zstage,Eex::Vector,δ::Nothing; dvec = [1,1,1]
 
     hy = -cosθ₁*pi*J2*sin2ϕᵣ*Tp*dvec[1]+cosθ₁*pi*(J0+J2*cos2ϕᵣ)*Tp*dvec[2]-sinθ₁*2*pi*im*J1*sinϕᵣ*Tp*dvec[3]+
         pi*J2*sin2ϕᵣ*Ts*dvec[1]+pi*(J0-J2*cos2ϕᵣ)*Ts*dvec[2]
-
+        
     hx = hx*immphase*apod*E0
     hy = hy*immphase*apod*E0
 
@@ -164,8 +166,9 @@ end
 
 
 function calEfield_1d(kr,x,y,n,λ,zstage,Eex::Float64,δ::Nothing; dvec = [1,1,1])
-    dvec = dvec./norm(dvec)
+    #dvec = dvec./norm(dvec)
     #dvec = dvec.*Eex
+    normdvec = norm(dvec)
     kr2=kr^2
     Tp, Ts, sinθ₁, cosθ₁,  _, cosθ₃ = calFresnel(kr2,λ,n)
     immphase = exp(-2*pi*(n[3]/λ*cosθ₃*zstage)*im)
@@ -190,14 +193,15 @@ function calEfield_1d(kr,x,y,n,λ,zstage,Eex::Float64,δ::Nothing; dvec = [1,1,1
     hy = -cosθ₁*pi*J2*sin2ϕᵣ*Tp*dvec[1]+cosθ₁*pi*(J0+J2*cos2ϕᵣ)*Tp*dvec[2]-sinθ₁*2*pi*im*J1*sinϕᵣ*Tp*dvec[3]+
         pi*J2*sin2ϕᵣ*Ts*dvec[1]+pi*(J0-J2*cos2ϕᵣ)*Ts*dvec[2]
 
-    hx = hx*immphase*apod*Eex
-    hy = hy*immphase*apod*Eex
+    hx = hx*immphase*apod*Eex/normdvec
+    hy = hy*immphase*apod*Eex/normdvec
     return hx, hy
 end
 
 function calEfield_1d(kr,x,y,n,λ,zstage,Eex::Float64,δ::Float64; dvec = [1,1,1])
-    dvec = dvec./norm(dvec)
+    #dvec = dvec./norm(dvec)
     #dvec = dvec.*Eex
+    normdvec = norm(dvec)
     kr2=kr^2
     Tp, Ts, sinθ₁, cosθ₁,  _, cosθ₃ = calFresnel(kr2,λ,n)
     immphase = exp(-2*pi*(n[3]/λ*cosθ₃*zstage)*im)
@@ -222,16 +226,18 @@ function calEfield_1d(kr,x,y,n,λ,zstage,Eex::Float64,δ::Float64; dvec = [1,1,1
     h_qx = h_rad*cos(δ/2)*im-hx*sin(δ/2)
     h_qy = -h_azi*cos(δ/2)*im-hy*sin(δ/2)
 
-    h_qx = h_qx*immphase*apod*Eex
-    h_qy = h_qy*immphase*apod*Eex
+    h_qx = h_qx*immphase*apod*Eex/normdvec
+    h_qy = h_qy*immphase*apod*Eex/normdvec
 
     return h_qx,h_qy
 end
 
 function calEfield_1d(kr,x,y,n,λ,zstage,Eex::Vector,δ::Float64; dvec = [1,1,1])
-    dvec = dvec./norm(dvec)
-    Eex = Eex./norm(Eex)
-    E0 = dot(Eex,dvec)
+    #dvec = dvec./norm(dvec)
+    #Eex = Eex./norm(Eex)
+    normdvec = norm(dvec)
+    normEex = norm(Eex)
+    E0 = dot(Eex,dvec)/normdvec/normEex/normdvec
     #dvec = dvec.*E0
     kr2=kr^2
     Tp, Ts, sinθ₁, cosθ₁,  _, cosθ₃ = calFresnel(kr2,λ,n)
