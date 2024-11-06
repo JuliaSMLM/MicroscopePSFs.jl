@@ -53,7 +53,7 @@ function pdfₐ(pupil::Array{<:Real,3},kpixelsize,x,y,z,n,λ,nₐ)
 
     end
 
-    return a_real+a_im*im
+    return (a_real+a_im*im)*kpixelsize
 
 end
 
@@ -62,8 +62,8 @@ end
 function pdfₐ(p::PupilFunction, pixel::Tuple,x_emitter::Tuple)
     
     # calculate a defocus Phase
-    Δx=p.pixelsize.*(x_emitter[1].-pixel[1])
-    Δy=p.pixelsize.*(x_emitter[2].-pixel[2])
+    Δx=p.pixelsize.*(x_emitter[2].-pixel[2])
+    Δy=p.pixelsize.*(x_emitter[1].-pixel[1])
     Δz=x_emitter[3].-pixel[3]
 
     return pdfₐ(p.pupil,p.kpixelsize,Δx,Δy,Δz,p.n,p.λ,p.nₐ)
@@ -72,7 +72,8 @@ end
 
 
 function pdf(p::PupilFunction, pixel::Tuple,x_emitter::Tuple)
-    return abs2(pdfₐ(p::PupilFunction, pixel::Tuple,x_emitter::Tuple))
+    out = pdfₐ(p::PupilFunction, pixel::Tuple,x_emitter::Tuple)
+    return real(out*conj(out))
 end
 
 

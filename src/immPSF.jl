@@ -34,7 +34,7 @@ function ImmPSF(nₐ, λ, n::Vector, pixelsize; zstage = 0.0,inputpupil=nothing,
 
     pupil = [zeros(ksize, ksize, 2) for x=1:6]
     kpixelsize = 2 * nₐ / λ / ksize
-    
+    #apod = zeros(ksize,ksize,2)
     k0 = (ksize + 1) / 2
 
     for ii in 1:ksize, jj in 1:ksize # jj is index along y  
@@ -45,11 +45,13 @@ function ImmPSF(nₐ, λ, n::Vector, pixelsize; zstage = 0.0,inputpupil=nothing,
         Tp, Ts, sinθ₁, cosθ₁, _, cosθ₃ = calFresnel(kr2,λ,n)
         #immphase = exp(2*pi*(n[1]/λ*cosθ₁*n[1]/n[3]*zstage-n[3]/λ*cosθ₃*zstage)*im)
         immphase = exp(-2*pi*(n[3]/λ*cosθ₃*zstage)*im)
-
+        Eex = 1.0 # excitation field, scalar
         if kr2 < (nₐ / λ)^2 
+            apod = sqrt(cosθ₃)/cosθ₁
+            
             ρ=sqrt(kr2)/(nₐ / λ)
             ϕ=atan(ky,kx)
-            _, _, h = calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁)
+            _, _, h = calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁,Eex)
             pupil_mag = 0.0
             pupil_phase = 0.0
             for nn=1:length(z.mag)
@@ -57,14 +59,14 @@ function ImmPSF(nₐ, λ, n::Vector, pixelsize; zstage = 0.0,inputpupil=nothing,
                     pupil_mag += z.mag[nn]*zernikepolynomial(nn-1,ρ,ϕ)
                 end
             end
-            pupil_mag *= abs(immphase)
+            pupil_mag *= abs(immphase)*abs(apod)
 
             for nn=1:length(z.phase)
                 if abs(z.phase[nn])>0.0
                     pupil_phase += z.phase[nn]*zernikepolynomial(nn-1,ρ,ϕ)
                 end
             end
-            pupil_phase += angle(immphase)
+            pupil_phase += angle(immphase)+angle(apod)
             for l in eachindex(h)
                 pupil[l][jj,ii,1] = pupil_mag*abs(h[l])
                 pupil[l][jj,ii,2] = pupil_phase+angle(h[l])
