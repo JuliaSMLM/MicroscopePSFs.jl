@@ -1,28 +1,34 @@
 module MicroscopePSFs
-
-using SpecialFunctions
-using LoopVectorization
-using Interpolations
-using JSON
-using HDF5
-using JLD2
-using Statistics
+using FFTW
 using LinearAlgebra
+using SpecialFunctions
+using Interpolations
+using Zygote
+using SMLMData
+using HDF5
+using JSON3
 
-include("psftypes.jl")
-include("airy2D.jl")
-include("gauss2D.jl")
-include("zernike.jl")
-include("helpers.jl")
-include("pupil.jl")
-include("scalar3D.jl")
-include("interpolate.jl")
-include("import.jl")
-include("splinePSF.jl")
-include("dipole3D.jl")
-include("immPSF.jl")
-include("focusfield.jl")
-include("pupil_1d.jl")
-include("dipole3D_fast.jl")
+# Core types and interfaces
+export AbstractPSF
+export integrate_pixels, amplitude, integrate_pixels_amplitude
+export save_psf, load_psf
+export cache_field, load_cached_field
+
+# PSF implementations
+export Gaussian2D, Airy2D, Scalar3D, Vector3D
+
+include("psfs/types.jl")
+include("psfs/functions.jl")
+include("interfaces.jl")
+include("utils.jl")
+include("integration.jl")
+# include("interpolation.jl")
+# include("io.jl")
+
+# Individual PSF implementations
+include("psfs/gaussian2d.jl")
+include("psfs/airy2d.jl")
+# include("psfs/scalar3d.jl")
+# include("psfs/vector3d.jl")
 
 end
