@@ -25,6 +25,7 @@ function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead"
     if source == "python"
         f = h5open(filename, "r")
         PSFstack = read(f["res/I_model"])
+        
         #normf = sum(PSFstack,dims=(1,2))
         #PSFstack ./= normf
         params = JSON.parse(attrs(f)["params"])
@@ -39,7 +40,7 @@ function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead"
         z = []
         h = []
 
-        if haskey(f, "res/zernike_coeff")
+        if haskey(f, "res/zernike_coeff") && psftype != "splinePSF_FD" && psftype != "splinePSF_tilt"
             zernike_coeff = read(f["res/zernike_coeff"])
             N = size(zernike_coeff)[1]
             j_osa = Array(0:N-1)
@@ -49,7 +50,7 @@ function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead"
             z = ZernikeCoefficients(mag, phase)
         end
 
-        if haskey(f, "res/pupil")
+        if haskey(f, "res/pupil") && psftype != "splinePSF_FD" && psftype != "splinePSF_tilt"
             pupilcomplex = read(f["res/pupil"])
             ksize = size(pupilcomplex, 1)
             kpixelsize = 2 * na / λ / ksize
@@ -67,6 +68,16 @@ function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead"
         end
 
         if psftype == "splinePSF"
+            p = SplinePSF(PSFstack; pixelsize_z=pixelsize_z, pixelsize=pixelsize_x)
+        end
+
+        if psftype == "splinePSF_FD"
+            imgsz = read(f["rois/image_size"])
+            p = SplinePSF(PSFstack; pixelsize_z=pixelsize_z, pixelsize=pixelsize_x,image_size=[imgsz[3],imgsz[2]])
+        end
+
+        if psftype == "splinePSF_tilt"
+            PSFstack = permutedims(PSFstack,(2,1,3,4))
             p = SplinePSF(PSFstack; pixelsize_z=pixelsize_z, pixelsize=pixelsize_x)
         end
     end
