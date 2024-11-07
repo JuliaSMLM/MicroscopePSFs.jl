@@ -1,107 +1,166 @@
-## Abstract type and methods assuming a known pupil function 
-
 """
-    PupilFunction
+    PupilFunction{T}
 
-A structure defines the pupil function.
+Represents a pupil function with physical parameters.
 
 # Fields
-- `nₐ`              : Numerical Aperture           
-- `λ`               : Emission Wavelength           
-- `n`               : Immersion Index           
-- `pixelsize`       : Linear size of a back-projected pixel
-- 'kpixelsize'      : Number of pixels used in pupil function image
-- 'pupil'           : Pupil function with a dimension of (ksize, ksize, 2), including the amplitude and phase  
-
-Calculations of various 3D PSF types will involve calculations based around 
-Pupil Funciton.  They differ in the complexity and approach used to calculate 
-Pupil Function. 
+- `nₐ`: Numerical aperture
+- `λ`: Wavelength in μm
+- `n`: Refractive index
+- `data`: Complex-valued pupil function array
 """
-struct PupilFunction{T <: AbstractFloat} <: PSF 
+struct PupilFunction{T<:AbstractFloat}
     nₐ::T
     λ::T
     n::T
-    pixelsize::T
-    kpixelsize::T
-    pupil::Array{T}
-end 
+    data::Array{Complex{T},2}
 
-function pdfₐ(pupil::Array{<:Real,3},kpixelsize,x,y,z,n,λ,nₐ)
-    
-    a_real = 0
-    a_im = 0
-    
-    sz = size(pupil, 1) # square 
-
-    # calculate a defocus Phase
-    # A(x,y,z)=∱∱ pupil*exp(2πi(kx*x+ky*y))*exp( 2πi*z* sqrt( (n/λ)²-(kx²+ky²) ) )dkx dky
-    
-    kmax2 = (nₐ / λ)^2
-    k0 = (sz + 1) / 2
-
-    for ii in 1:sz, jj in 1:sz # jj is index along y  
-        kx = kpixelsize * (ii - k0)
-        ky = kpixelsize * (jj - k0)
-        kr2 = kx^2 + ky^2
-        
-        if kr2 < kmax2
-            defocus = z * sqrt(complex((n / λ)^2 - kr2))
-            θ = pupil[jj,ii,2] + 2 * pi * (defocus + x * kx + y * ky)
-            a_real += pupil[jj,ii,1] * cos(real(θ))*exp(-imag(θ))
-            a_im += pupil[jj,ii,1] * sin(real(θ))*exp(-imag(θ))
-        end
-
+    function PupilFunction(nₐ::Real, λ::Real, n::Real, data::Array{<:Complex})
+        nₐ > 0 || throw(ArgumentError("Numerical aperture must be positive"))
+        λ > 0 || throw(ArgumentError("Wavelength must be positive"))
+        n > 0 || throw(ArgumentError("Refractive index must be positive"))
+        T = promote_type(typeof(nₐ), typeof(λ), typeof(n), real(eltype(data)))
+        new{T}(T(nₐ), T(λ), T(n), convert(Array{Complex{T}}, data))
     end
-
-    return a_real+a_im*im
-
 end
 
+# Computed properties
+"""Get maximum spatial frequency in μm⁻¹"""
+kmax(p::PupilFunction) = p.nₐ / p.λ
 
+"""Get central wavevector magnitude in μm⁻¹"""
+k₀(p::PupilFunction) = p.n / p.λ
 
-function pdfₐ(p::PupilFunction, pixel::Tuple,x_emitter::Tuple)
+"""Get pupil plane sampling in μm⁻¹"""
+kpixelsize(p::PupilFunction) = 2kmax(p) / (size(p.data,1) - 1)
+
+# Constructor from Zernike coefficients
+"""
+    PupilFunction(nₐ::Real, λ::Real, n::Real, 
+                 coeffs::AbstractVector, 
+                 orders::AbstractVector{<:Tuple{Int,Int}};
+                 grid_size::Int=64)
+
+Create a PupilFunction from Zernike coefficients.
+"""
+function PupilFunction(nₐ::Real, λ::Real, n::Real,
+                      coeffs::AbstractVector,
+                      orders::AbstractVector{<:Tuple{Int,Int}};
+                      grid_size::Int=64)
+    T = promote_type(typeof(nₐ), typeof(λ), typeof(n), eltype(coeffs))
+    data = zeros(Complex{T}, grid_size, grid_size)
     
-    # calculate a defocus Phase
-    Δx=p.pixelsize.*(x_emitter[1].-pixel[1])
-    Δy=p.pixelsize.*(x_emitter[2].-pixel[2])
-    Δz=x_emitter[3].-pixel[3]
-
-    return pdfₐ(p.pupil,p.kpixelsize,Δx,Δy,Δz,p.n,p.λ,p.nₐ)
-
+    # Generate normalized coordinate grid
+    xs = ys = range(-1, 1, length=grid_size)
+    
+    for i in 1:grid_size, j in 1:grid_size
+        x, y = xs[i], ys[j]
+        ρ = sqrt(x^2 + y^2)
+        ρ > 1 && continue
+        θ = atan(y, x)
+        
+        for (c, (n,m)) in zip(coeffs, orders)
+            data[j,i] += c * zernike(n, m, ρ, θ)
+        end
+    end
+    
+    return PupilFunction(nₐ, λ, n, data)
 end
 
-
-function pdf(p::PupilFunction, pixel::Tuple,x_emitter::Tuple)
-    return abs2(pdfₐ(p::PupilFunction, pixel::Tuple,x_emitter::Tuple))
-end
-
-
-
+# Normalization
 """
     normalize!(p::PupilFunction)
 
-normalize pupil using Parseval's theorem
+Normalize pupil function to unit energy using Parseval's theorem.
+Returns the normalized PupilFunction.
 """
 function normalize!(p::PupilFunction)
-
-    sz = size(p.pupil, 1) # square 
-    α = 0
-
-    # find total energy
-    for ii in 1:sz, jj in 1:sz # jj is index along y  
-        idx1 = (ii - 1) * sz + jj
-        α += p.pupil[idx1]^2
-    end
-
-    α = sqrt(α)/p.kpixelsize
-
-     # normalize
-    for ii in 1:sz, jj in 1:sz # jj is index along y  
-        idx1 = (ii - 1) * sz + jj
-        p.pupil[idx1] = p.pupil[idx1] / α
-    end
-
+    # Energy normalization using Parseval's theorem
+    total_energy = sum(abs2, p.data) * kpixelsize(p)^2
+    p.data ./= sqrt(total_energy)
+    return p
 end
 
+# Display and visualization
+function Base.show(io::IO, p::PupilFunction)
+    sz = size(p.data, 1)
+    print(io, "PupilFunction(NA=$(p.nₐ), λ=$(p.λ)μm, n=$(p.n), $(sz)x$(sz))")
+end
 
+# Utility functions for pupil manipulation
+"""
+    apply_defocus!(p::PupilFunction, z::Real)
+
+Apply defocus phase to pupil function for propagation distance z.
+"""
+function apply_defocus!(p::PupilFunction, z::Real)
+    sz = size(p.data, 1)
+    kpix = kpixelsize(p)
+    k0_center = (sz + 1) ÷ 2
+    
+    for i in 1:sz, j in 1:sz
+        kx = kpix * (i - k0_center)
+        ky = kpix * (j - k0_center)
+        kr2 = kx^2 + ky^2
+        
+        if kr2 < kmax(p)^2
+            kz = sqrt(complex(k₀(p)^2 - kr2))
+            p.data[j,i] *= exp(2π * im * z * kz)
+        end
+    end
+    return p
+end
+
+"""
+    apply_aperture!(p::PupilFunction, radius::Real=1.0)
+
+Apply circular aperture to pupil function. Radius is relative to NA.
+"""
+function apply_aperture!(p::PupilFunction, radius::Real=1.0)
+    sz = size(p.data, 1)
+    xs = ys = range(-1, 1, length=sz)
+    
+    for i in 1:sz, j in 1:sz
+        x, y = xs[i], ys[j]
+        if sqrt(x^2 + y^2) > radius
+            p.data[j,i] = 0
+        end
+    end
+    return p
+end
+
+"""
+Calculate complex amplitude from pupil function integration.
+
+# Arguments
+- `p::PupilFunction`: Pupil function
+- `x::Real`: X position in μm
+- `y::Real`: Y position in μm
+- `z::Real`: Z position in μm
+
+Returns complex amplitude at specified position.
+"""
+function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where T
+    sz = size(p.data, 1)
+    kpix = kpixelsize(p)
+    k0_center = (sz + 1) ÷ 2
+    
+    result = zero(Complex{T})
+    kmax² = kmax(p)^2
+    k₀² = k₀(p)^2
+    
+    @inbounds for i in 1:sz, j in 1:sz
+        kx = kpix * (i - k0_center)
+        ky = kpix * (j - k0_center)
+        kr2 = kx^2 + ky^2
+        
+        if kr2 < kmax²
+            kz = sqrt(complex(k₀² - kr2))
+            phase = 2π * (x*kx + y*ky + z*kz)
+            result += p.data[j,i] * exp(im * phase)
+        end
+    end
+    
+    return result * kpix^2
+end
 
