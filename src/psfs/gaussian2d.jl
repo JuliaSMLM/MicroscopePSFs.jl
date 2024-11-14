@@ -1,23 +1,6 @@
 # Type defined in types.jl 
 
 """
-    Gaussian2D{T<:AbstractFloat} <: AbstractPSF
-
-Isotropic 2D Gaussian PSF.
-
-# Fields
-- `σ`: Standard deviation in physical units (microns)
-"""
-struct Gaussian2D{T<:AbstractFloat} <: AbstractPSF
-    σ::T
-
-    function Gaussian2D(σ::Real)
-        σ > zero(σ) || throw(ArgumentError("σ must be positive"))
-        new{float(typeof(σ))}(σ)
-    end
-end
-
-"""
     (psf::Gaussian2D)(x, y)
 
 Gaussian PSF intensity. Radially symmetric with standard deviation σ.

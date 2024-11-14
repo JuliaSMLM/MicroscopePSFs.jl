@@ -7,20 +7,20 @@ Represents a pupil function with physical parameters.
 - `nₐ`: Numerical aperture
 - `λ`: Wavelength in μm
 - `n`: Refractive index
-- `data`: Complex-valued pupil function array
+- `field`: Complex-valued pupil function array
 """
 struct PupilFunction{T<:AbstractFloat}
     nₐ::T
     λ::T
     n::T
-    data::Array{Complex{T},2}
+    field::Array{Complex{T},2}
 
-    function PupilFunction(nₐ::Real, λ::Real, n::Real, data::Array{<:Complex})
+    function PupilFunction(nₐ::Real, λ::Real, n::Real, field::Array{<:Complex})
         nₐ > 0 || throw(ArgumentError("Numerical aperture must be positive"))
         λ > 0 || throw(ArgumentError("Wavelength must be positive"))
         n > 0 || throw(ArgumentError("Refractive index must be positive"))
-        T = promote_type(typeof(nₐ), typeof(λ), typeof(n), real(eltype(data)))
-        new{T}(T(nₐ), T(λ), T(n), convert(Array{Complex{T}}, data))
+        T = promote_type(typeof(nₐ), typeof(λ), typeof(n), real(eltype(field)))
+        new{T}(T(nₐ), T(λ), T(n), convert(Array{Complex{T}}, field))
     end
 end
 
@@ -32,40 +32,104 @@ kmax(p::PupilFunction) = p.nₐ / p.λ
 k₀(p::PupilFunction) = p.n / p.λ
 
 """Get pupil plane sampling in μm⁻¹"""
-kpixelsize(p::PupilFunction) = 2kmax(p) / (size(p.data,1) - 1)
+kpixelsize(p::PupilFunction) = 2kmax(p) / (size(p.field, 1) - 1)
 
-# Constructor from Zernike coefficients
 """
     PupilFunction(nₐ::Real, λ::Real, n::Real, 
-                 coeffs::AbstractVector, 
-                 orders::AbstractVector{<:Tuple{Int,Int}};
-                 grid_size::Int=64)
+                  zc::ZernikeCoefficients;
+                  grid_size::Int=64)
 
-Create a PupilFunction from Zernike coefficients.
+Create a PupilFunction from ZernikeCoefficients type.
+
+# Arguments
+- `nₐ`: Numerical aperture
+- `λ`: Wavelength in microns
+- `n`: Refractive index
+- `zc`: ZernikeCoefficients containing amplitude and phase coefficients
+- `grid_size`: Size of square sampling grid (default: 64)
+
+# Returns
+- `PupilFunction` with complex field computed from Zernike polynomials
 """
 function PupilFunction(nₐ::Real, λ::Real, n::Real,
-                      coeffs::AbstractVector,
-                      orders::AbstractVector{<:Tuple{Int,Int}};
-                      grid_size::Int=64)
-    T = promote_type(typeof(nₐ), typeof(λ), typeof(n), eltype(coeffs))
-    data = zeros(Complex{T}, grid_size, grid_size)
-    
+    zc::ZernikeCoefficients;
+    grid_size::Int=64)
+    T = promote_type(typeof(nₐ), typeof(λ), typeof(n), eltype(zc.phase))
+    field = zeros(Complex{T}, grid_size, grid_size)
+
     # Generate normalized coordinate grid
     xs = ys = range(-1, 1, length=grid_size)
-    
+
+    # Maximum radial order from coefficient length
+    max_n = max_radial_order(length(zc.phase))
+
     for i in 1:grid_size, j in 1:grid_size
         x, y = xs[i], ys[j]
         ρ = sqrt(x^2 + y^2)
-        ρ > 1 && continue
-        θ = atan(y, x)
-        
-        for (c, (n,m)) in zip(coeffs, orders)
-            data[j,i] += c * zernike(n, m, ρ, θ)
+        if ρ > 1
+            continue
         end
+        θ = atan(y, x)
+
+        # Initialize amplitude and phase at this point
+        amplitude = 1.0
+        total_phase = 0.0
+
+        # Accumulate amplitude aberrations
+        for n_rad in 0:max_n
+            for m in -n_rad:2:n_rad
+                idx = nl2osa(n_rad, m) + 1  # +1 for 1-based indexing
+                if idx > length(zc.mag)
+                    continue
+                end
+
+                # Retrieve the amplitude coefficient
+                amp_coeff = zc.mag[idx]
+
+                # Skip negligible coefficients
+                if abs(amp_coeff) < 1e-10
+                    continue
+                end
+
+                # Evaluate Zernike polynomial
+                Z = zernikepolynomial(n_rad, m, ρ, θ)
+
+                # Accumulate amplitude contribution
+                amplitude += amp_coeff * Z
+            end
+        end
+
+        # Accumulate phase aberrations
+        for n_rad in 0:max_n
+            for m in -n_rad:2:n_rad
+                idx = nl2osa(n_rad, m) + 1
+                if idx > length(zc.phase)
+                    continue
+                end
+
+                # Retrieve the phase coefficient (in radians)
+                phase_coeff = zc.phase[idx]
+
+                # Skip negligible coefficients
+                if abs(phase_coeff) < 1e-10
+                    continue
+                end
+
+                # Evaluate Zernike polynomial
+                Z = zernikepolynomial(n_rad, m, ρ, θ)
+
+                # Accumulate phase contribution
+                total_phase += phase_coeff * Z
+            end
+        end
+
+        # Compute the complex field at this point
+        field[j, i] = amplitude * exp(im * total_phase)
     end
-    
-    return PupilFunction(nₐ, λ, n, data)
+
+    return PupilFunction(nₐ, λ, n, field)
 end
+
 
 # Normalization
 """
@@ -76,14 +140,14 @@ Returns the normalized PupilFunction.
 """
 function normalize!(p::PupilFunction)
     # Energy normalization using Parseval's theorem
-    total_energy = sum(abs2, p.data) * kpixelsize(p)^2
-    p.data ./= sqrt(total_energy)
+    total_energy = sum(abs2, p.field) * kpixelsize(p)^2
+    p.field ./= sqrt(total_energy)
     return p
 end
 
 # Display and visualization
 function Base.show(io::IO, p::PupilFunction)
-    sz = size(p.data, 1)
+    sz = size(p.field, 1)
     print(io, "PupilFunction(NA=$(p.nₐ), λ=$(p.λ)μm, n=$(p.n), $(sz)x$(sz))")
 end
 
@@ -94,18 +158,18 @@ end
 Apply defocus phase to pupil function for propagation distance z.
 """
 function apply_defocus!(p::PupilFunction, z::Real)
-    sz = size(p.data, 1)
+    sz = size(p.field, 1)
     kpix = kpixelsize(p)
     k0_center = (sz + 1) ÷ 2
-    
+
     for i in 1:sz, j in 1:sz
         kx = kpix * (i - k0_center)
         ky = kpix * (j - k0_center)
         kr2 = kx^2 + ky^2
-        
+
         if kr2 < kmax(p)^2
             kz = sqrt(complex(k₀(p)^2 - kr2))
-            p.data[j,i] *= exp(2π * im * z * kz)
+            p.field[j, i] *= exp(2π * im * z * kz)
         end
     end
     return p
@@ -117,13 +181,13 @@ end
 Apply circular aperture to pupil function. Radius is relative to NA.
 """
 function apply_aperture!(p::PupilFunction, radius::Real=1.0)
-    sz = size(p.data, 1)
+    sz = size(p.field, 1)
     xs = ys = range(-1, 1, length=sz)
-    
+
     for i in 1:sz, j in 1:sz
         x, y = xs[i], ys[j]
         if sqrt(x^2 + y^2) > radius
-            p.data[j,i] = 0
+            p.field[j, i] = 0
         end
     end
     return p
@@ -140,27 +204,26 @@ Calculate complex amplitude from pupil function integration.
 
 Returns complex amplitude at specified position.
 """
-function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where T
-    sz = size(p.data, 1)
+function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
+    sz = size(p.field, 1)
     kpix = kpixelsize(p)
     k0_center = (sz + 1) ÷ 2
-    
+
     result = zero(Complex{T})
     kmax² = kmax(p)^2
     k₀² = k₀(p)^2
-    
+
     @inbounds for i in 1:sz, j in 1:sz
         kx = kpix * (i - k0_center)
         ky = kpix * (j - k0_center)
         kr2 = kx^2 + ky^2
-        
+
         if kr2 < kmax²
             kz = sqrt(complex(k₀² - kr2))
-            phase = 2π * (x*kx + y*ky + z*kz)
-            result += p.data[j,i] * exp(im * phase)
+            phase = 2π * (x * kx + y * ky + z * kz)
+            result += p.field[j, i] * exp(im * phase)
         end
     end
-    
+
     return result * kpix^2
 end
-

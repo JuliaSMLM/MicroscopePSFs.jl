@@ -8,27 +8,62 @@ using SMLMData
 using HDF5
 using JSON3
 
-# Core types and interfaces
+# First include the Zernike module
+include("zernike/Zernike.jl")
+
+# Use everything from Zernike within MicroscopePSFs
+using .Zernike: ZernikeCoefficients, ZernikeIndexing, OSA, Noll,
+                # Basic manipulation
+                add_aberration!, reset!, propagate_field, evaluate_pupil, zernikepolynomial, radialpolynomial, max_radial_order,
+                # Common aberrations
+                add_defocus!, add_spherical!, add_astigmatism!, add_coma!,
+                # Coefficient manipulation
+                scale!, merge!, rms, trim!,
+                # Analysis
+                significant_terms,
+                # Index conversion exports
+                nl2osa, osa2nl, nl2noll, noll2nl, osa2noll, noll2osa, convert_index
+
+# Re-export specific Zernike components
+export Zernike
+export ZernikeCoefficients, ZernikeIndexing, OSA, Noll
+
+# Common operations
+export add_aberration!, reset!, propagate_zernike, evaluate_pupil, zernikepolynomial, radialpolynomial
+
+# Common aberration functions
+export add_defocus!, add_spherical!, add_astigmatism!, add_coma!
+
+# Coefficient manipulation and analysis
+export scale!, merge!, rms, trim!, significant_terms
+
+# Rest of exports unchanged...
 export AbstractPSF
 export integrate_pixels, amplitude, integrate_pixels_amplitude
 export save_psf, load_psf
 export cache_field, load_cached_field
 
-# PSF implementations
-export Gaussian2D, Airy2D, Scalar3D, Vector3D
+# Pupil Function types
+export PupilFunction, Scalar3DPupilPSF
 
+# PSF implementations
+export Gaussian2D, Airy2D, Scalar3DPSF, Vector3DPSF
+
+# Re-export from SMLMData
+export AbstractCamera, IdealCamera
+export AbstractEmitter, Emitter2D, Emitter3D
+
+# File includes...
+include("pupil.jl")
 include("psfs/types.jl")
-include("psfs/functions.jl")
 include("interfaces.jl")
 include("utils.jl")
 include("integration.jl")
-# include("interpolation.jl")
-# include("io.jl")
 
 # Individual PSF implementations
 include("psfs/gaussian2d.jl")
 include("psfs/airy2d.jl")
-# include("psfs/scalar3d.jl")
+include("psfs/scalar3d.jl")
 # include("psfs/vector3d.jl")
 
 end

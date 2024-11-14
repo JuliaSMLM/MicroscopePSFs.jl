@@ -10,5 +10,6 @@
 *.bson
 *.jld2
 *.h5
+*.png
 
 dev/Manifest.toml
