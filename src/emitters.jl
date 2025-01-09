@@ -1,3 +1,5 @@
+# src/emitters.jl
+
 import SMLMData: AbstractEmitter 
 
 """

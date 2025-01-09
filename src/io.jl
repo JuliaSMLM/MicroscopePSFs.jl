@@ -1,3 +1,5 @@
+# src/pupil.jl
+
 """
 IO functionality for PSFs including serialization and caching
 """

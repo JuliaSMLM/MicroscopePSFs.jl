@@ -1,3 +1,5 @@
+# src/pupil.jl
+
 """
     PupilFunction{T}
 

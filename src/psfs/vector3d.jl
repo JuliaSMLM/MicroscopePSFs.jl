@@ -1,3 +1,5 @@
+# src/psfs/vector3d.jl
+
 """
     calculate_pupil_field(ϕ, Tp, Ts, sinθ₁, cosθ₁, dipole::DipoleVector)
 
