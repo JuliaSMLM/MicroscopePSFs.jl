@@ -25,13 +25,22 @@ struct PupilFunction{T<:AbstractFloat}
 end
 
 # Computed properties
-"""Get maximum spatial frequency in μm⁻¹"""
+"""
+    kmax(p::PupilFunction)
+
+Get maximum spatial frequency in μm⁻¹"""
 kmax(p::PupilFunction) = p.nₐ / p.λ
 
-"""Get central wavevector magnitude in μm⁻¹"""
+"""
+    k₀(p::PupilFunction)
+
+Get central wavevector magnitude in μm⁻¹"""
 k₀(p::PupilFunction) = p.n / p.λ
 
-"""Get pupil plane sampling in μm⁻¹"""
+"""
+    kpixelsize(p::PupilFunction)
+
+Get pupil plane sampling in μm⁻¹"""
 kpixelsize(p::PupilFunction) = 2kmax(p) / (size(p.field, 1) - 1)
 
 """
@@ -46,6 +55,8 @@ Create a PupilFunction from ZernikeCoefficients type.
 - `λ`: Wavelength in microns
 - `n`: Refractive index
 - `zc`: ZernikeCoefficients containing amplitude and phase coefficients
+
+# Keyword Arguments
 - `grid_size`: Size of square sampling grid (default: 64)
 
 # Returns
@@ -136,7 +147,6 @@ end
     normalize!(p::PupilFunction)
 
 Normalize pupil function to unit energy using Parseval's theorem.
-Returns the normalized PupilFunction.
 """
 function normalize!(p::PupilFunction)
     # Energy normalization using Parseval's theorem
@@ -194,16 +204,15 @@ function apply_aperture!(p::PupilFunction, radius::Real=1.0)
 end
 
 """
+    amplitude(p::PupilFunction, x::Real, y::Real, z::Real)
+
 Calculate complex amplitude from pupil function integration.
 
 # Arguments
 - `p::PupilFunction`: Pupil function
 - `x::Real`: X position in μm
 - `y::Real`: Y position in μm
-- `z::Real`: Z position in μm
-
-Returns complex amplitude at specified position.
-"""
+- `z::Real`: Z position in μm"""
 function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
     sz = size(p.field, 1)
     kpix = kpixelsize(p)
@@ -227,3 +236,64 @@ function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
 
     return result * kpix^2
 end
+
+"""
+    VectorPupilFunction{T}
+
+Vector pupil function with Ex,Ey components from x,y,z dipoles.
+
+# Fields
+- `nₐ`: Numerical aperture
+- `λ`: Wavelength in μm
+- `n`: Refractive index
+- `pupils`: Array of 6 PupilFunctions for [Ex_x,Ex_y,Ex_z,Ey_x,Ey_y,Ey_z]
+"""
+struct VectorPupilFunction{T<:AbstractFloat} 
+    nₐ::T
+    λ::T
+    n::T
+    pupils::Vector{PupilFunction{T}}
+
+    function VectorPupilFunction(nₐ::Real, λ::Real, n::Real, 
+                               pupils::Vector{<:PupilFunction})
+        length(pupils) == 6 || throw(ArgumentError("Must provide 6 pupil functions"))
+        T = promote_type(typeof(nₐ), typeof(λ), typeof(n), 
+                        real(eltype(first(pupils).field)))
+        new{T}(T(nₐ), T(λ), T(n), convert(Vector{PupilFunction{T}}, pupils))
+    end
+end
+
+
+"""
+    amplitude(p::VectorPupilFunction, x::Real, y::Real, z::Real; orientation=:x)
+    
+Calculate vector amplitude at given position
+    
+# Arguments
+- `p::VectorPupilFunction`: Vector pupil function
+- `x::Real`: X position in μm
+- `y::Real`: Y position in μm 
+- `z::Real`: Z position in μm
+
+# Keyword Arguments
+- `orientation`: Dipole orientation (:x, :y, or :z), defaults to :x
+    
+# Returns 
+- `Vector{Complex}`: [Ex,Ey] components of E-field"""
+function amplitude(p::VectorPupilFunction{T}, x::Real, y::Real, z::Real;
+                  orientation::Symbol=:x) where {T}
+    if orientation == :x
+        Ex = amplitude(p.pupils[1], x, y, z)
+        Ey = amplitude(p.pupils[4], x, y, z)
+    elseif orientation == :y
+        Ex = amplitude(p.pupils[2], x, y, z) 
+        Ey = amplitude(p.pupils[5], x, y, z)
+    elseif orientation == :z 
+        Ex = amplitude(p.pupils[3], x, y, z)
+        Ey = amplitude(p.pupils[6], x, y, z)
+    else
+        throw(ArgumentError("orientation must be :x, :y or :z"))
+    end
+    return [Ex, Ey]
+end
+

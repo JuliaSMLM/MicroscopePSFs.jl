@@ -21,7 +21,7 @@ cam_size = nx * pixel_size
 # Create PSF with astigmatism
 zc = ZernikeCoefficients(15)
 # add_astigmatism!(zc, 1.0, pi/2)  
-# zc.phase[6] = 1.0
+zc.phase[6] = 1.0
 
 # Create PupilFunction
 pupil = PupilFunction(na, λ, n, zc)

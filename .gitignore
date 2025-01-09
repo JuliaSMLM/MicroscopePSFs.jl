@@ -11,5 +11,5 @@
 *.jld2
 *.h5
 *.png
-
+*.gif
 dev/Manifest.toml
