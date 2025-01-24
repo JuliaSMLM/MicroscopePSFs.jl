@@ -1,3 +1,5 @@
+# src/zernike/polynomials.jl
+
 """
 Implementations of Zernike polynomial calculations and pupil function generation.
 Includes radial polynomials, full Zernike polynomials, and pupil function evaluation.

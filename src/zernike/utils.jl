@@ -1,3 +1,5 @@
+# src/zernike/utils.jl
+
 """
 Utility functions for working with Zernike polynomials and coefficients.
 Includes common operations, aberration helpers, and manipulation functions.

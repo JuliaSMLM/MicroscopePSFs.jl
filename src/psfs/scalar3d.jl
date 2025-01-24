@@ -1,3 +1,5 @@
+# src/psfs/scalar3d.jl
+
 # Factory function with more flexible input handling
 function Scalar3DPSF(nₐ::Real, λ::Real, n::Real; 
                     pupil=nothing, 

@@ -1,3 +1,5 @@
+# src/zernike/fitting.jl
+
 """
 Functions for fitting complex pupil functions to Zernike polynomial bases.
 Includes both magnitude and phase fitting capabilities.
