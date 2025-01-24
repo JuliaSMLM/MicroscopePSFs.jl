@@ -170,7 +170,7 @@ Apply defocus phase to pupil function for propagation distance z.
 function apply_defocus!(p::PupilFunction, z::Real)
     sz = size(p.field, 1)
     kpix = kpixelsize(p)
-    k0_center = (sz + 1) ÷ 2
+    k0_center = (sz + 1) / 2
 
     for i in 1:sz, j in 1:sz
         kx = kpix * (i - k0_center)
@@ -216,7 +216,8 @@ Calculate complex amplitude from pupil function integration.
 function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
     sz = size(p.field, 1)
     kpix = kpixelsize(p)
-    k0_center = (sz + 1) ÷ 2
+    # k0_center = (sz + 1) ÷ 2
+    k0_center = (sz + 1) / 2
 
     result = zero(Complex{T})
     kmax² = kmax(p)^2
