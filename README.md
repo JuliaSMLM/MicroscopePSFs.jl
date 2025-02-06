@@ -79,7 +79,7 @@ x_edges = range(0, nx * pixel_size, nx + 1)
 y_edges = range(0, ny * pixel_size, ny + 1)
 camera = IdealCamera(x_edges, y_edges)
 
-# Create emitter at (1μm, 1μm)
+# Create emitter at (1 μm, 1 μm)
 emitter = Emitter2D(1.0, 1.0, 1000.0)  # x, y, photons
 
 # Integrate PSF over pixels
