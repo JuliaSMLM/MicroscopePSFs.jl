@@ -99,7 +99,7 @@ The `sampling` parameter controls subpixel sampling density for numerical integr
 Represents an isotropic 2D Gaussian PSF:
 
 ```julia
-psf = Gaussian2D(0.15)  # σ = 150nm
+psf = Gaussian2D(0.15)  # σ = 150 nm
 ```
 
 ### Airy2D
