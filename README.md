@@ -26,7 +26,7 @@ The high-level interface is designed to facilitate generation of synthetic data 
 Pixel and source locations are in pixels for $x,y$ and in physical unit (typically micron) for $z$.  This was chosen as it is the most natural units for simulating and interpreting data because the camera is referenced in pixels and stage movements in the $z$ dimention are in micron.  
 
 ## Examples
-
+ 
 ### Airy PSF 
 
 ```julia
