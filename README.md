@@ -72,7 +72,7 @@ emitter = Emitter2D(x=1.0, y=1.0, photons=1000)
 The package integrates with camera geometry defined by the SMLMData.jl package. Pixel coordinates follow the standard image convention with (0,0) at the top-left:
 
 ```julia
-# Create camera with 100nm pixels
+# Create camera with 100 nm pixels
 pixel_size = 0.1  # μm
 nx, ny = 32, 32
 x_edges = range(0, nx * pixel_size, nx + 1)
