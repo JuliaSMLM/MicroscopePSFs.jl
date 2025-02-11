@@ -1,227 +1,199 @@
 # src/psfs/vector3d.jl
 
 """
-    calculate_pupil_field(ϕ, Tp, Ts, sinθ₁, cosθ₁, dipole::DipoleVector)
+    calculate_fresnel_coefficients(kr2::Real, λ::Real, 
+                                 n_medium::Real, n_immersion::Real)
 
-Computes electric field components in the pupil plane for a dipole emitter.
+Compute Fresnel transmission coefficients including super-critical angle fluorescence.
 
-# Physics
-- Uses angular spectrum representation for high-NA imaging
-- Includes both p-(radial) and s-(azimuthal) polarization components
-- Accounts for Fresnel transmission coefficients (Tp, Ts)
-- Optional phase retardation δ for birefringent media
-
-# Parameters
-- ϕ: Azimuthal angle in pupil plane
-- Tp: p-polarization Fresnel transmission coefficient
-- Ts: s-polarization Fresnel transmission coefficient
-- sinθ₁, cosθ₁: Sine/cosine of polar angle in medium 1
-- δ: Phase retardation (optional)
-- dvec: Dipole moment orientation vector [default: [1,1,1]]
+# Arguments
+- `kr2`: Radial spatial frequency squared
+- `λ`: Wavelength in microns
+- `n_medium`: Sample medium refractive index
+- `n_immersion`: Immersion medium refractive index
 
 # Returns
-- Ex, Ey: Electric field components in x,y
-- field_matrix: Matrix of field components
+- Tuple of (Tp, Ts, sinθ₁, cosθ₁, apod):
+  * Tp: p-polarization transmission coefficient
+  * Ts: s-polarization transmission coefficient
+  * sinθ₁: Sine of angle in medium
+  * cosθ₁: Cosine of angle in medium
+  * apod: Apodization factor for angular spectrum
 """
-function calculate_pupil_field(ϕ, Tp, Ts, sinθ₁, cosθ₁, dipole::DipoleVector)
-    # Normalize dipole vector
-    dvec = [dipole.px, dipole.py, dipole.pz] ./ norm([dipole.px, dipole.py, dipole.pz])
+function calculate_fresnel_coefficients(kr2::Real, λ::Real, 
+                                     n_medium::Real, n_immersion::Real)
+    # Calculate angles using complex sqrt for automatic handling of evanescent waves
+    sinθ₁ = complex(sqrt(kr2)*λ/n_medium)  # Explicitly make complex
+    cosθ₁ = sqrt(complex(1 - kr2*λ^2/n_medium^2))
+    cosθᵢ = sqrt(complex(1 - kr2*λ^2/n_immersion^2))
     
+    # Calculate Fresnel coefficients
+    Tp = 2.0*n_medium*cosθ₁/(n_medium*cosθᵢ + n_immersion*cosθ₁)
+    Ts = 2.0*n_medium*cosθ₁/(n_medium*cosθ₁ + n_immersion*cosθᵢ)
+    
+    # Apodization factor including SAF contribution
+    apod = sqrt(cosθᵢ)/cosθ₁
+    
+    return Tp, Ts, sinθ₁, cosθ₁, apod
+end
+
+"""
+    calculate_wave_vectors(kr2::Real, λ::Real, n_medium::Real, n_immersion::Real)
+
+Calculate wave vectors for both media including evanescent waves.
+
+# Arguments
+- `kr2`: Radial spatial frequency squared
+- `λ`: Wavelength in microns
+- `n_medium`: Sample medium refractive index
+- `n_immersion`: Immersion medium refractive index
+
+# Returns
+- Tuple of (kz_medium, kz_immersion): z-components of wave vectors in each medium
+"""
+function calculate_wave_vectors(kr2::Real, λ::Real, n_medium::Real, n_immersion::Real)
+    k₀ = 2π/λ
+    
+    # Wave vector z-components in both media (can be complex)
+    kz_medium = k₀ * sqrt(complex(n_medium^2 - kr2*λ^2))
+    kz_immersion = k₀ * sqrt(complex(n_immersion^2 - kr2*λ^2))
+    
+    return kz_medium, kz_immersion
+end
+
+"""
+    calculate_field_components(ϕ::Real, Tp::Complex, Ts::Complex, 
+                             sinθ₁::Complex, cosθ₁::Complex, 
+                             dipole::DipoleVector)
+
+Compute vectorial field components including polarization effects.
+
+# Arguments
+- `ϕ`: Azimuthal angle in pupil plane
+- `Tp`: p-polarization transmission coefficient
+- `Ts`: s-polarization transmission coefficient
+- `sinθ₁`: Sine of angle in medium
+- `cosθ₁`: Cosine of angle in medium
+- `dipole`: Dipole orientation vector
+
+# Returns
+- Tuple (Ex, Ey) of complex field components
+"""
+function calculate_field_components(ϕ::Complex, Tp::Complex, Ts::Complex,
+                                 sinθ₁::Complex, cosθ₁::Complex,
+                                 dipole::DipoleVector)
     # Compute the vectorial field components based on the dipole orientation
-    Eθ = (Tp .* (dvec[1]*cosϕ + dvec[2]*sinϕ) * cosθ₁ - Tp .* dvec[3] * sinθ₁)
-    Eϕ = Ts .* (-dvec[1]*sinϕ + dvec[2]*cosϕ)
+    Eθ = (Tp * (dipole.px*cos(ϕ) + dipole.py*sin(ϕ)) * cosθ₁ - 
+          Tp * dipole.pz * sinθ₁)
+    Eϕ = Ts * (-dipole.px*sin(ϕ) + dipole.py*cos(ϕ))
     
     # Convert to Cartesian coordinates
-    Ex = Eθ * cosϕ - Eϕ * sinϕ
-    Ey = Eθ * sinϕ + Eϕ * cosϕ
+    Ex = Eθ * cos(ϕ) - Eϕ * sin(ϕ)
+    Ey = Eθ * sin(ϕ) + Eϕ * cos(ϕ)
     
     return Ex, Ey
 end
 
 """
-    calculate_fresnel_coefficients(kr2::Real, λ::Real, n_medium::Real, n_immersion::Real)
+    Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
+                base_pupil::Union{Nothing, PupilFunction}=nothing,
+                base_zernike::Union{Nothing, ZernikeCoefficients}=nothing,
+                n_medium::Real=1.33,
+                n_coverslip::Real=1.52,
+                n_immersion::Real=1.52,
+                focal_z::Real=0.0,
+                grid_size::Integer=128)
 
-Calculates Fresnel transmission coefficients for light passing through an interface.
-
-# Physics
-- Handles dielectric interfaces between media with indices n₁ and n₂
-- Uses Snell's law: n₁sinθ₁ = n₂sinθ₂
-- Computes both p-(TM) and s-(TE) polarization coefficients
-- Valid for arbitrary incidence angles below critical angle
-
-# Parameters
-- kr2: Radial spatial frequency squared
-- λ: Wavelength in microns
-- n_medium: Refractive index of medium
-- n_immersion: Refractive index of immersion medium
-
-# Returns
-- FresnelP: p-polarization transmission coefficient
-- FresnelS: s-polarization transmission coefficient
-- sinθ₁: Sine of incident angle
-- cosθ₁: Cosine of incident angle
-"""
-function calculate_fresnel_coefficients(kr2::Real, λ::Real, n_medium::Real, n_immersion::Real)
-    # Calculate angles using complex sqrt for automatic handling
-    sinθ₁ = sqrt(kr2)*λ/n_medium
-    cosθ₁ = sqrt(complex(1 - kr2*λ^2/n_medium^2))
-    cosθᵢ = sqrt(complex(1 - kr2*λ^2/n_immersion^2))
-
-    # Calculate Fresnel coefficients
-    FresnelP = 2.0*n_medium*cosθ₁/(n_medium*cosθᵢ + n_immersion*cosθ₁)
-    FresnelS = 2.0*n_medium*cosθ₁/(n_medium*cosθ₁ + n_immersion*cosθᵢ)
-
-    return FresnelP, FresnelS, sinθ₁, cosθ₁
-end
-
-"""
-    Vector3DPupilPSF(nₐ::Real, λ::Real, pupil::PupilFunction; kwargs...)
-
-Construct Vector3DPSF with pupil function calculated from vectorial diffraction theory.
+Create a vector PSF using either a pupil-based or Zernike-based approach.
 
 # Arguments
-- `nₐ`: Numerical aperture 
+- `nₐ`: Numerical aperture
 - `λ`: Wavelength in microns
-- `pupil`: Base pupil function containing aberrations
+- `dipole`: Dipole orientation vector
 
-# Keyword Arguments 
-- `n_medium::Real=1.33`: Sample medium refractive index (water)
-- `n_coverslip::Real=1.52`: Cover slip refractive index (glass)
-- `n_immersion::Real=1.52`: Immersion medium refractive index (oil)
-- `Σ::Union{Matrix,Nothing}=nothing`: 2×2 OTF rescaling matrix. Identity if nothing.
+# Keyword Arguments
+- `base_pupil`: Optional base aberration pupil function
+- `base_zernike`: Optional Zernike coefficients for base aberration
+- `n_medium`: Sample medium refractive index (default: 1.33)
+- `n_coverslip`: Cover slip refractive index (default: 1.52)
+- `n_immersion`: Immersion medium refractive index (default: 1.52)
+- `focal_z`: Focal plane position in microns (default: 0.0)
+- `grid_size`: Size of pupil grid (default: 128)
+
+# Returns
+- Vector3DPupilPSF instance
 """
-function Vector3DPupilPSF(nₐ::Real, λ::Real, pupil::PupilFunction;
-                         n_medium::Real=1.33,
-                         n_coverslip::Real=1.52, 
-                         n_immersion::Real=1.52,
-                         Σ::Union{Matrix,Nothing}=nothing)
+function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
+    base_pupil::Union{Nothing, PupilFunction}=nothing,
+    base_zernike::Union{Nothing, ZernikeCoefficients}=nothing,
+    n_medium::Real=1.33,
+    n_coverslip::Real=1.52,
+    n_immersion::Real=1.52,
+    focal_z::Real=0.0,
+    grid_size::Integer=128)
     
-    grid_size = size(pupil.field, 1)
-    xs = ys = range(-1, 1, length=grid_size)
-    kmax = nₐ/λ
-    kpix = 2kmax/(grid_size-1)
+    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium), typeof(focal_z))
     
-    # Initialize 6 pupil functions for field components
-    pupils = Vector{PupilFunction}(undef, 6)
-    for i in 1:6
-        pupils[i] = PupilFunction(nₐ, λ, n_medium, 
-                                zeros(Complex{Float64}, grid_size, grid_size))
+    # Convert Zernike coeffs to pupil if provided
+    base_pupil = if !isnothing(base_zernike)
+        PupilFunction(nₐ, λ, n_medium, base_zernike; grid_size=grid_size)
+    else
+        base_pupil
     end
     
-    # Fill pupil functions
-    for i in 1:grid_size, j in 1:grid_size
-        x, y = xs[i], ys[j]
-        ρ = sqrt(x^2 + y^2)
-        
-        if ρ > 1
-            continue
-        end
-        
-        # Get base aberrated field
-        base_field = pupil.field[j,i]
-        
-        # Calculate angles
-        ϕ = atan(y, x)
-        
-        # Before angle calculations, replace with:
-        kr2 = (ρ * nₐ/λ)^2
-        Tp, Ts, sinθ₁, cosθ₁ = calculate_fresnel_coefficients(kr2, λ, n_medium, n_immersion)
-        
-        # Calculate field components for each dipole orientation
-        for (d, dipole) in enumerate([:x, :y, :z])
-            # Calculate pupil field for this dipole
-            Ex, Ey = calculate_pupil_field(ϕ, Tp, Ts, sinθ₁, cosθ₁;
-                                         dvec=dipole==:x ? [1,0,0] :
-                                              dipole==:y ? [0,1,0] : [0,0,1])
-            
-            # Combine with base aberrated field
-            pupils[d].field[j,i] = Ex * base_field
-            pupils[d+3].field[j,i] = Ey * base_field
-        end
+    # Create vector pupil
+    vpupil = VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, grid_size)
+    
+    # Fill with vector components using base aberration
+    if !isnothing(base_pupil)
+        fill_vector_pupil!(vpupil, dipole, focal_z, base_pupil)
+    else
+        fill_vector_pupil!(vpupil, dipole, focal_z)
     end
     
-    # Normalize pupils
-    for p in pupils
-        normalize!(p)
-    end
-    
-    # Create VectorPupilFunction to handle the 6 components
-    vpupil = VectorPupilFunction(nₐ, λ, n_medium, pupils)
-    
-    # Use default identity matrix for Σ if not provided
-    Σ_mat = isnothing(Σ) ? Matrix{Float64}(I, 2, 2) : Σ
-    
-    # Create final Vector3DPupilPSF using main constructor
-    Vector3DPupilPSF(nₐ, λ, n_medium, n_coverslip, n_immersion, Σ_mat, vpupil)
+    return Vector3DPupilPSF{T}(
+        T(nₐ), T(λ), T(n_medium), T(n_coverslip),
+        T(n_immersion), dipole, T(focal_z), vpupil
+    )
 end
 
 """
-    amplitude(p::Vector3DPupilPSF, x::Real, y::Real, z::Real, dipole::DipoleVector)
+    amplitude(psf::Vector3DPupilPSF, x::Real, y::Real, z::Real)
 
-Calculate complex vector amplitude at given position for specific dipole orientation.
-"""
-function amplitude(p::Vector3DPupilPSF{T}, x::Real, y::Real, z::Real, dipole::DipoleVector) where T
-    # Compute the pupil function field at the given position
-    Ex, Ey = amplitude(p.pupil, x, y, z, dipole)
-    return [Ex, Ey]
-end
+Compute complex vector amplitude at given position.
 
-"""
-    (psf::Vector3DPupilPSF)(x::Real, y::Real, z::Real, dipole::DipoleVector)
+# Arguments
+- `psf`: Vector PSF instance
+- `x, y`: Lateral position in microns relative to PSF center
+- `z`: Axial position in microns relative to focal plane
 
-Evaluate PSF intensity for specific dipole orientation.
+# Returns
+- Vector [Ex, Ey] of complex field amplitudes
+
+# Notes
+- z coordinate is relative to current focal plane position (psf.focal_z)
+- Includes both UAF and SAF contributions automatically
 """
-function (psf::Vector3DPupilPSF)(x::Real, y::Real, z::Real, dipole::DipoleVector)
-    E = amplitude(psf, x, y, z, dipole)
-    return abs2(E[1]) + abs2(E[2])
+function amplitude(psf::Vector3DPupilPSF, x::Real, y::Real, z::Real)
+    return amplitude(psf.pupil, x, y, z)
 end
 
 """
     (psf::Vector3DPupilPSF)(x::Real, y::Real, z::Real)
 
-Evaluate PSF intensity for randomly oriented dipoles by summing over three orthogonal orientations.
+Compute PSF intensity at given position by summing squared field amplitudes.
+
+# Arguments
+- `x, y`: Lateral position in microns relative to PSF center
+- `z`: Axial position in microns relative to focal plane
+
+# Returns
+- Total intensity |Ex|² + |Ey|²
+
+# Notes
+- For randomly oriented dipoles, evaluate three orthogonal orientations and average
 """
 function (psf::Vector3DPupilPSF)(x::Real, y::Real, z::Real)
-    # Calculate field for each orthogonal dipole orientation
-    Ex = amplitude(psf, x, y, z, DipoleVector(1,0,0))
-    Ey = amplitude(psf, x, y, z, DipoleVector(0,1,0))
-    Ez = amplitude(psf, x, y, z, DipoleVector(0,0,1))
-    
-    # Sum intensities and normalize by number of orientations
-    return (abs2(Ex[1]) + abs2(Ex[2]) + 
-            abs2(Ey[1]) + abs2(Ey[2]) + 
-            abs2(Ez[1]) + abs2(Ez[2])) / 3
+    E = amplitude(psf, x, y, z)
+    return abs2(E[1]) + abs2(E[2])
 end
-
-"""
-    integrate_pixels(psf::Vector3DPupilPSF, camera::AbstractCamera, 
-                    emitter::DipoleEmitter3D; sampling::Integer=2)
-
-Calculate integrated pixel values for vector PSF and dipole emitter.
-"""
-function integrate_pixels(psf::Vector3DPupilPSF, camera::AbstractCamera,
-                        emitter::DipoleEmitter3D; sampling::Integer=2)
-    return _integrate_pixels_generic(
-        psf, camera, emitter,
-        (p,x,y) -> p(x, y, emitter.z, emitter.dipole),
-        typeof(emitter.photons);
-        sampling=sampling
-    )
-end
-
-"""
-    integrate_pixels(psf::Vector3DPupilPSF, camera::AbstractCamera,
-                    emitter::Emitter3D; sampling::Integer=2)
-
-Calculate integrated pixel values for vector PSF and non-dipole emitter.
-"""
-function integrate_pixels(psf::Vector3DPupilPSF, camera::AbstractCamera,
-                        emitter::Emitter3D; sampling::Integer=2)
-    return _integrate_pixels_generic(
-        psf, camera, emitter,
-        (p,x,y) -> p(x, y, emitter.z),
-        typeof(emitter.photons);
-        sampling=sampling
-    )
-end
-

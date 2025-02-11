@@ -1,0 +1,189 @@
+# src/vector_pupil.jl
+
+"""
+    VectorPupilFunction{T}
+
+Vector pupil function storing Ex,Ey field components as PupilFunctions.
+
+# Fields
+- `nₐ::T`: Numerical aperture
+- `λ::T`: Wavelength in μm
+- `n_medium::T`: Refractive index of the sample medium
+- `n_coverslip::T`: Refractive index of the coverslip
+- `n_immersion::T`: Refractive index of the immersion medium
+- `Ex::PupilFunction{T}`: x-component of electric field
+- `Ey::PupilFunction{T}`: y-component of electric field
+"""
+struct VectorPupilFunction{T<:AbstractFloat}
+    nₐ::T
+    λ::T
+    n_medium::T
+    n_coverslip::T
+    n_immersion::T
+    Ex::PupilFunction{T}
+    Ey::PupilFunction{T}
+
+    function VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real, n_coverslip::Real, n_immersion::Real,
+                               Ex::PupilFunction, Ey::PupilFunction)
+        # Validation
+        nₐ > 0 || throw(ArgumentError("Numerical aperture must be positive"))
+        λ > 0 || throw(ArgumentError("Wavelength must be positive"))
+        n_medium > 0 || throw(ArgumentError("n_medium must be positive"))
+        n_coverslip > 0 || throw(ArgumentError("n_coverslip must be positive"))
+        n_immersion > 0 || throw(ArgumentError("n_immersion must be positive"))
+        
+        size(Ex.field) == size(Ey.field) || 
+            throw(ArgumentError("Ex and Ey pupils must have same size"))
+        
+        T = promote_type(typeof(nₐ), typeof(λ),
+                        typeof(n_medium), typeof(n_coverslip), typeof(n_immersion),
+                        real(eltype(Ex.field)), real(eltype(Ey.field)))
+        
+        new{T}(T(nₐ), T(λ), T(n_medium), T(n_coverslip), T(n_immersion), Ex, Ey)
+    end
+end
+
+"""
+    VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real, n_coverslip::Real, n_immersion::Real, grid_size::Integer)
+
+Create a vector pupil function with empty field components.
+
+# Arguments
+- `nₐ`: Numerical aperture
+- `λ`: Wavelength in μm
+- `n_medium`: Sample medium refractive index
+- `n_coverslip`: Cover slip refractive index
+- `n_immersion`: Immersion medium refractive index
+- `grid_size`: Size of pupil grid (grid_size × grid_size)
+
+# Returns
+- `VectorPupilFunction` with zero-initialized field components
+"""
+function VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real, n_coverslip::Real, n_immersion::Real, grid_size::Integer)
+    Ex = PupilFunction(nₐ, λ, n_medium, zeros(Complex{Float64}, grid_size, grid_size))
+    Ey = PupilFunction(nₐ, λ, n_medium, zeros(Complex{Float64}, grid_size, grid_size))
+    VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
+end
+
+# Computed properties
+"""Get maximum spatial frequency in μm⁻¹"""
+kmax(p::VectorPupilFunction) = kmax(p.Ex)
+
+"""Get central wavevector magnitude in μm⁻¹"""
+k₀(p::VectorPupilFunction) = k₀(p.Ex)
+
+"""Get pupil plane sampling in μm⁻¹"""
+kpixelsize(p::VectorPupilFunction) = kpixelsize(p.Ex)
+
+"""
+    normalize!(p::VectorPupilFunction)
+
+Normalize the electric field components of the vector pupil function.
+Ensures total energy across both components equals 1.
+
+# Arguments
+- `p`: Vector pupil function to normalize
+
+# Returns
+- Normalized vector pupil function
+"""
+function normalize!(p::VectorPupilFunction)
+    kpix² = kpixelsize(p)^2
+    total_energy = (sum(abs2, p.Ex.field) + sum(abs2, p.Ey.field)) * kpix²
+    scale = 1/sqrt(total_energy)
+    
+    p.Ex.field .*= scale
+    p.Ey.field .*= scale
+    return p
+end
+
+"""
+    fill_vector_pupil!(vpupil::VectorPupilFunction, dipole::DipoleVector, focal_z::Real,
+                      base_pupil::Union{Nothing, PupilFunction}=nothing)
+
+Fill vector pupil function with field components including focal shift and base aberrations.
+
+# Arguments
+- `vpupil`: Vector pupil function to fill
+- `dipole`: Dipole orientation vector
+- `focal_z`: Focal plane position in μm relative to nominal focus
+- `base_pupil`: Optional base aberration pupil function
+
+# Returns
+- Filled and normalized vector pupil function
+"""
+function fill_vector_pupil!(vpupil::VectorPupilFunction, 
+                          dipole::DipoleVector, 
+                          focal_z::Real,
+                          base_pupil::Union{Nothing, PupilFunction}=nothing)
+    
+    grid_size = size(vpupil.Ex.field, 1)
+    xs = ys = range(-1, 1, length=grid_size)
+    kmax = vpupil.nₐ/vpupil.λ
+    
+    for i in 1:grid_size, j in 1:grid_size
+        x, y = xs[i], ys[j]
+        ρ = sqrt(x^2 + y^2)
+        ρ > 1 && continue
+        
+        kr2 = (ρ * kmax)^2
+        
+        # Calculate Fresnel coefficients using proper refractive indices
+        # Convert ϕ to ComplexF64 to match Fresnel coefficient types
+        ϕ = ComplexF64(atan(y, x))
+        
+        Tp, Ts, sinθ₁, cosθ₁, apod = calculate_fresnel_coefficients(
+            kr2, vpupil.λ, vpupil.n_medium, vpupil.n_immersion)
+        
+        # Calculate wave vectors for phase
+        kz_medium, kz_immersion = calculate_wave_vectors(
+            kr2, vpupil.λ, vpupil.n_medium, vpupil.n_immersion)
+        
+        # Calculate field components - all inputs should be Complex now
+        Ex, Ey = calculate_field_components(ϕ, Tp, Ts, sinθ₁, cosθ₁, dipole)
+        
+        # Phase from defocus
+        phase = exp(im * focal_z * kz_immersion)
+        
+        # Combine with base aberration if provided
+        if !isnothing(base_pupil)
+            base_field = base_pupil.field[j,i]
+            Ex *= base_field
+            Ey *= base_field
+        end
+        
+        # Apply apodization and phase
+        vpupil.Ex.field[j,i] = Ex * apod * phase
+        vpupil.Ey.field[j,i] = Ey * apod * phase
+    end
+    
+    normalize!(vpupil)
+    return vpupil
+end
+
+"""
+    amplitude(p::VectorPupilFunction, x::Real, y::Real, z::Real)
+
+Compute complex vector amplitude at given position.
+
+# Arguments
+- `p`: Vector pupil function
+- `x, y`: Lateral position in μm relative to center
+- `z`: Axial position in μm relative to focal plane
+
+# Returns
+- Vector [Ex, Ey] of complex field amplitudes
+"""
+function amplitude(p::VectorPupilFunction, x::Real, y::Real, z::Real)
+    Ex = amplitude(p.Ex, x, y, z)
+    Ey = amplitude(p.Ey, x, y, z)
+    return [Ex, Ey]
+end
+
+# Display methods
+function Base.show(io::IO, p::VectorPupilFunction)
+    sz = size(p.Ex.field, 1)
+    print(io, "VectorPupilFunction(NA=$(p.nₐ), λ=$(p.λ)μm, ",
+          "n_medium=$(p.n_medium), n_coverslip=$(p.n_coverslip), ",
+          "n_immersion=$(p.n_immersion), $(sz)x$(sz))")
+end

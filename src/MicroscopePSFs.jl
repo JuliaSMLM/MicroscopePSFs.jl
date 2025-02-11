@@ -68,6 +68,7 @@ export calculate_pupil_field, calculate_fresnel_coefficients
 # File includes...
 include("emitters.jl")
 include("pupil.jl")
+include("vector_pupil.jl")
 include("psfs/types.jl")
 include("interfaces.jl")
 include("utils.jl")
