@@ -53,6 +53,7 @@ export PupilFunction, VectorPupilFunction
 export Gaussian2D, Airy2D
 export Scalar3DPSF, Scalar3DPupilPSF, Scalar3DZernikePSF
 export Vector3DPSF, Vector3DPupilPSF
+export SplinePSF, save_spline_psf, load_spline_psf
 
 # Re-export from SMLMData
 export AbstractCamera, IdealCamera
@@ -74,10 +75,14 @@ include("interfaces.jl")
 include("utils.jl")
 include("integration.jl")
 
+# Spline support files
+include("psfs/spline_tools.jl")
+
 # Individual PSF implementations
 include("psfs/gaussian2d.jl")
 include("psfs/airy2d.jl")
 include("psfs/scalar3d.jl")
 include("psfs/vector3d.jl")
+include("psfs/spline_psf.jl")
 
 end
