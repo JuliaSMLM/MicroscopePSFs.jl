@@ -288,7 +288,7 @@ This method converts vectors to ranges assuming uniform spacing.
 # Deprecated
 Use the range-based constructor instead.
 """
-function SplinePSF(psf_stack::AbstractArray{<:Real,2};
+function SplinePSF(psf_stack::AbstractArray{<:Real,2},
                    x_coords::AbstractVector,
                    y_coords::AbstractVector;
                    order::Integer=3,
