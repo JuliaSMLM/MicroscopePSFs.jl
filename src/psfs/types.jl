@@ -47,15 +47,15 @@ where:
 """
 struct Airy2D{T<:AbstractFloat} <: Abstract2DPSF{T}
     nₐ::T
-    λ::T 
+    λ::T
     ν::T
 
     function Airy2D(nₐ::Real, λ::Real)
         T = promote_type(typeof(nₐ), typeof(λ))
         nₐ > 0 || throw(ArgumentError("Numerical aperture must be positive"))
         λ > 0 || throw(ArgumentError("Wavelength must be positive"))
-        ν = 2T(π)*nₐ/λ
-        new{T}(T(nₐ), T(λ), ν)    
+        ν = 2T(π) * nₐ / λ
+        new{T}(T(nₐ), T(λ), ν)
     end
 end
 
@@ -68,65 +68,27 @@ Abstract type for all 3D point spread functions.
 abstract type Abstract3DPSF{T<:AbstractFloat} <: AbstractPSF end
 
 """
-    AbstractScalar3DPSF{T<:AbstractFloat}
+    Scalar3DPSF{T} <: Abstract3DPSF{T}
 
-Abstract type for scalar 3D point spread functions.
-Implements scalar diffraction theory.
-"""
-abstract type AbstractScalar3DPSF{T} <: Abstract3DPSF{T} end
-
-"""
-    AbstractVector3DPSF{T<:AbstractFloat}
-
-Abstract type for vectorial 3D point spread functions.
-Implements full electromagnetic theory.
-"""
-abstract type AbstractVector3DPSF{T} <: Abstract3DPSF{T} end
-
-"""
-    Scalar3DZernikePSF{T<:AbstractFloat}
-
-Scalar 3D PSF using Zernike polynomial representation of pupil function.
+Scalar 3D PSF using explicit pupil function representation.
 
 # Fields
-- `nₐ`: Numerical aperture
-- `λ`: Wavelength in microns
-- `n`: Refractive index
-- `coeffs`: Zernike coefficients for pupil function
+- `nₐ::T`: Numerical aperture
+- `λ::T`: Wavelength in microns
+- `n::T`: Refractive index
+- `pupil::PupilFunction{T}`: Complex pupil function
+
+# Notes
+Can be initialized with either a PupilFunction or ZernikeCoefficients
+using the Scalar3DPSF factory function.
 """
-struct Scalar3DZernikePSF{T} <: AbstractScalar3DPSF{T}
-    nₐ::T
-    λ::T
-    n::T
-    coeffs::ZernikeCoefficients{T}
-
-    function Scalar3DZernikePSF(nₐ::Real, λ::Real, n::Real, coeffs::ZernikeCoefficients)
-        T = promote_type(typeof(nₐ), typeof(λ), typeof(n), eltype(coeffs.mag))
-        nₐ > 0 || throw(ArgumentError("NA must be positive"))
-        λ > 0 || throw(ArgumentError("wavelength must be positive"))
-        n > 0 || throw(ArgumentError("refractive index must be positive"))
-        new{T}(T(nₐ), T(λ), T(n), coeffs)
-    end
-end
-
-"""
-    Scalar3DPupilPSF{T<:AbstractFloat}
-
-Scalar 3D PSF using direct pupil function representation.
-
-# Fields
-- `nₐ`: Numerical aperture
-- `λ`: Wavelength in microns
-- `n`: Refractive index
-- `pupil`: Complex pupil function
-"""
-struct Scalar3DPupilPSF{T} <: AbstractScalar3DPSF{T}
+struct Scalar3DPSF{T} <: Abstract3DPSF{T}
     nₐ::T
     λ::T
     n::T
     pupil::PupilFunction{T}
 
-    function Scalar3DPupilPSF(nₐ::Real, λ::Real, n::Real, pupil::PupilFunction)
+    function Scalar3DPSF(nₐ::Real, λ::Real, n::Real, pupil::PupilFunction)
         T = promote_type(typeof(nₐ), typeof(λ), typeof(n), real(eltype(pupil.field)))
         nₐ > 0 || throw(ArgumentError("NA must be positive"))
         λ > 0 || throw(ArgumentError("wavelength must be positive"))
@@ -136,7 +98,7 @@ struct Scalar3DPupilPSF{T} <: AbstractScalar3DPSF{T}
 end
 
 """
-    Vector3DPupilPSF{T<:AbstractFloat} <: AbstractVector3DPSF{T}
+    Vector3DPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
 
 Vector PSF model using explicit pupil function representation.
 Allows direct manipulation of pupil function for custom aberrations.
@@ -151,7 +113,7 @@ Allows direct manipulation of pupil function for custom aberrations.
 - `focal_z::T`: Focal plane position (z) in microns relative to nominal focus
 - `pupil::VectorPupilFunction{T}`: Vector pupil function for Ex,Ey components
 """
-struct Vector3DPupilPSF{T<:AbstractFloat} <: AbstractVector3DPSF{T}
+struct Vector3DPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
     nₐ::T
     λ::T
     n_medium::T

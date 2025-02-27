@@ -51,8 +51,8 @@ export PupilFunction, VectorPupilFunction
 
 # PSF implementations
 export Gaussian2D, Airy2D
-export Scalar3DPSF, Scalar3DPupilPSF, Scalar3DZernikePSF
-export Vector3DPSF, Vector3DPupilPSF
+export Scalar3DPSF
+export Vector3DPSF
 export SplinePSF, save_spline_psf, load_spline_psf
 
 # Re-export from SMLMData

@@ -1,4 +1,6 @@
 # dev/test_scalar3d.jl
+using Pkg 
+Pkg.activate("dev")
 
 using Revise
 using MicroscopePSFs

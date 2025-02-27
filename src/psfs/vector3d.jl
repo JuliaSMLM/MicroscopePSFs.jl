@@ -121,7 +121,7 @@ Create a vector PSF using either a pupil-based or Zernike-based approach.
 - `grid_size`: Size of pupil grid (default: 128)
 
 # Returns
-- Vector3DPupilPSF instance
+- Vector3DPSF instance
 """
 function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     base_pupil::Union{Nothing, PupilFunction}=nothing,
@@ -151,14 +151,14 @@ function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
         fill_vector_pupil!(vpupil, dipole, focal_z)
     end
     
-    return Vector3DPupilPSF{T}(
+    return Vector3DPSF{T}(
         T(nₐ), T(λ), T(n_medium), T(n_coverslip),
         T(n_immersion), dipole, T(focal_z), vpupil
     )
 end
 
 """
-    amplitude(psf::Vector3DPupilPSF, x::Real, y::Real, z::Real)
+    amplitude(psf::Vector3DPSF, x::Real, y::Real, z::Real)
 
 Compute complex vector amplitude at given position.
 
@@ -174,12 +174,12 @@ Compute complex vector amplitude at given position.
 - z coordinate is relative to current focal plane position (psf.focal_z)
 - Includes both UAF and SAF contributions automatically
 """
-function amplitude(psf::Vector3DPupilPSF, x::Real, y::Real, z::Real)
+function amplitude(psf::Vector3DPSF, x::Real, y::Real, z::Real)
     return amplitude(psf.pupil, x, y, z)
 end
 
 """
-    (psf::Vector3DPupilPSF)(x::Real, y::Real, z::Real)
+    (psf::Vector3DPSF)(x::Real, y::Real, z::Real)
 
 Compute PSF intensity at given position by summing squared field amplitudes.
 
@@ -193,7 +193,12 @@ Compute PSF intensity at given position by summing squared field amplitudes.
 # Notes
 - For randomly oriented dipoles, evaluate three orthogonal orientations and average
 """
-function (psf::Vector3DPupilPSF)(x::Real, y::Real, z::Real)
+function (psf::Vector3DPSF)(x::Real, y::Real, z::Real)
     E = amplitude(psf, x, y, z)
     return abs2(E[1]) + abs2(E[2])
+end
+
+# Display method
+function Base.show(io::IO, psf::Vector3DPSF)
+    print(io, "Vector3DPSF(NA=$(psf.nₐ), λ=$(psf.λ)μm, n_medium=$(psf.n_medium))")
 end
