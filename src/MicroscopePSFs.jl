@@ -5,11 +5,11 @@ module MicroscopePSFs
 using FFTW
 using LinearAlgebra
 using SpecialFunctions
-using Interpolations
 using Zygote
 using SMLMData
 using HDF5
 using JSON3
+using Interpolations
 
 # First include the Zernike module
 include("zernike/Zernike.jl")
@@ -74,9 +74,6 @@ include("psfs/types.jl")
 include("interfaces.jl")
 include("utils.jl")
 include("integration.jl")
-
-# Spline support files
-include("psfs/spline_tools.jl")
 
 # Individual PSF implementations
 include("psfs/gaussian2d.jl")

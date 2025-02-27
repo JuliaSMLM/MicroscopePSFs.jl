@@ -1,213 +1,546 @@
 # src/psfs/spline_psf.jl
 
-"""
-    SplinePSF{T<:AbstractFloat} <: AbstractPSF
 
-PSF representation using cubic spline interpolation.
-Provides fast, accurate evaluation of PSFs from measured or simulated data.
+"""
+    SplinePSF{T<:AbstractFloat, IT<:AbstractInterpolation} <: AbstractPSF
+
+A point spread function (PSF) represented as a B-spline interpolation.
 
 # Fields
-- `coefficients::Array{T,7}`: Cubic spline coefficients [nx-1, ny-1, nz-1, 4, 4, 4]
-- `x_knots::Vector{T}`: x-coordinate knot positions
-- `y_knots::Vector{T}`: y-coordinate knot positions
-- `z_knots::Vector{T}`: z-coordinate knot positions
+- `spline`: The B-spline interpolation object 
+- `x_range`: Range of x-coordinates used for uniform grid interpolation
+- `y_range`: Range of y-coordinates used for uniform grid interpolation  
+- `z_range`: Range of z-coordinates for 3D PSFs, or `nothing` for 2D PSFs
 """
-struct SplinePSF{T<:AbstractFloat} <: AbstractPSF
-    coefficients::Array{T,7}
-    x_knots::Vector{T}
-    y_knots::Vector{T}
-    z_knots::Vector{T}
+struct SplinePSF{T<:AbstractFloat, IT<:AbstractInterpolation} <: AbstractPSF
+    spline::IT
+    x_range::StepRangeLen{T}
+    y_range::StepRangeLen{T}
+    z_range::Union{StepRangeLen{T}, Nothing}
 end
 
+# --- Positional argument constructors for AbstractPSF types ---
+
+# Constructor from AbstractPSF with 3D sampling
 """
-    SplinePSF(psf_stack::AbstractArray{<:Real,3};
-              x_coords::AbstractVector,
-              y_coords::AbstractVector,
-              z_coords::AbstractVector)
+    SplinePSF(psf::Abstract3DPSF, 
+              x_range::AbstractRange, 
+              y_range::AbstractRange,
+              z_range::AbstractRange;
+              order::Integer=3)
 
-Create a SplinePSF from a 3D PSF measurement stack.
-
-# Arguments
-- `psf_stack`: 3D array containing PSF intensity values [y, x, z]
-- `x_coords`, `y_coords`, `z_coords`: Physical coordinates for the grid points
-
-# Returns
-- `SplinePSF` with precomputed cubic spline coefficients
+Create a 3D SplinePSF by sampling a 3D PSF on a regular grid.
 """
-function SplinePSF(psf_stack::AbstractArray{<:Real,3};
-                   x_coords::AbstractVector,
-                   y_coords::AbstractVector,
-                   z_coords::AbstractVector)
-    
-    # Normalize PSF to sum to 1
-    normalized_psf = psf_stack / sum(psf_stack)
-    
-    # Calculate spline coefficients directly from the data
-    T = eltype(normalized_psf)
-    coefficients = calculate_spline_coefficients(normalized_psf, x_coords, y_coords, z_coords)
-    
-    return SplinePSF{T}(coefficients, x_coords, y_coords, z_coords)
-end
-
-"""
-    SplinePSF(psf::AbstractPSF; 
-              x_range::AbstractRange=range(-1.0, 1.0, length=21),
-              y_range::AbstractRange=range(-1.0, 1.0, length=21),
-              z_range::AbstractRange=range(-1.0, 1.0, length=21))
-
-Create a SplinePSF from any other PSF type by direct sampling.
-
-# Arguments
-- `psf`: Source PSF to sample
-- `x_range`, `y_range`, `z_range`: Coordinate ranges to sample
-
-# Returns
-- `SplinePSF` that evaluates much faster than the original PSF
-"""
-function SplinePSF(psf::AbstractPSF; 
-                  x_range::AbstractRange=range(-1.0, 1.0, length=21),
-                  y_range::AbstractRange=range(-1.0, 1.0, length=21),
-                  z_range::AbstractRange=range(-1.0, 1.0, length=21))
-    
-    # Sample PSF directly at the desired knot positions
+function SplinePSF(psf::Abstract3DPSF, 
+                  x_range::AbstractRange,
+                  y_range::AbstractRange,
+                  z_range::AbstractRange;
+                  order::Integer=3)
+    # Sample the PSF on the grid
     psf_stack = Array{Float64}(undef, length(y_range), length(x_range), length(z_range))
     for (iz, z) in enumerate(z_range)
-        for (iy, y) in enumerate(y_range)
-            for (ix, x) in enumerate(x_range)
+        for (ix, x) in enumerate(x_range)
+            for (iy, y) in enumerate(y_range)
                 psf_stack[iy, ix, iz] = psf(x, y, z)
             end
         end
     end
     
-    # Create SplinePSF directly from sampled values
-    return SplinePSF(psf_stack;
-                  x_coords=collect(x_range),
-                  y_coords=collect(y_range),
-                  z_coords=collect(z_range))
+    # Call the array constructor with the sampled data
+    return SplinePSF(psf_stack, x_range, y_range, z_range; order=order)
 end
 
-# Implement AbstractPSF interface
+# Constructor from AbstractPSF with 2D sampling
+"""
+    SplinePSF(psf::Abstract2DPSF, 
+              x_range::AbstractRange, 
+              y_range::AbstractRange;
+              order::Integer=3)
 
+Create a 2D SplinePSF by sampling a 2D PSF on a regular grid.
+"""
+function SplinePSF(psf::Abstract2DPSF, 
+                  x_range::AbstractRange,
+                  y_range::AbstractRange;
+                  order::Integer=3)
+    # Sample the PSF on the grid
+    psf_stack = Array{Float64}(undef, length(y_range), length(x_range))
+    for (ix, x) in enumerate(x_range)
+        for (iy, y) in enumerate(y_range)
+            psf_stack[iy, ix] = psf(x, y)
+        end
+    end
+    
+    # Call the array constructor with the sampled data
+    return SplinePSF(psf_stack, x_range, y_range; order=order)
+end
+
+# Fallback for any AbstractPSF with 3D sampling
+"""
+    SplinePSF(psf::AbstractPSF, 
+              x_range::AbstractRange, 
+              y_range::AbstractRange,
+              z_range::AbstractRange;
+              order::Integer=3)
+
+Create a 3D SplinePSF by sampling any PSF type on a regular grid.
+"""
+function SplinePSF(psf::AbstractPSF, 
+                  x_range::AbstractRange,
+                  y_range::AbstractRange,
+                  z_range::AbstractRange;
+                  order::Integer=3)
+    # Sample the PSF on the grid
+    psf_stack = Array{Float64}(undef, length(y_range), length(x_range), length(z_range))
+    for (iz, z) in enumerate(z_range)
+        for (ix, x) in enumerate(x_range)
+            for (iy, y) in enumerate(y_range)
+                psf_stack[iy, ix, iz] = psf(x, y, z)
+            end
+        end
+    end
+    
+    # Call the array constructor with the sampled data
+    return SplinePSF(psf_stack, x_range, y_range, z_range; order=order)
+end
+
+# Fallback for any AbstractPSF with 2D sampling
+"""
+    SplinePSF(psf::AbstractPSF, 
+              x_range::AbstractRange, 
+              y_range::AbstractRange;
+              order::Integer=3)
+
+Create a 2D SplinePSF by sampling any PSF type on a regular grid.
+"""
+function SplinePSF(psf::AbstractPSF, 
+                  x_range::AbstractRange,
+                  y_range::AbstractRange;
+                  order::Integer=3)
+    # Sample the PSF on the grid
+    psf_stack = Array{Float64}(undef, length(y_range), length(x_range))
+    for (ix, x) in enumerate(x_range)
+        for (iy, y) in enumerate(y_range)
+            psf_stack[iy, ix] = psf(x, y)
+        end
+    end
+    
+    # Call the array constructor with the sampled data
+    return SplinePSF(psf_stack, x_range, y_range; order=order)
+end
+
+# --- Array data constructors ---
+
+# 3D array constructor with positional arguments
+"""
+    SplinePSF(psf_stack::AbstractArray{<:Real,3}, 
+              x_range::AbstractRange,
+              y_range::AbstractRange,
+              z_range::AbstractRange;
+              order::Integer=3)
+
+Construct a 3D SplinePSF from a PSF stack and coordinate ranges.
+
+# Arguments
+- `psf_stack`: 3D array containing the PSF data
+- `x_range`: Range of uniformly spaced x coordinates
+- `y_range`: Range of uniformly spaced y coordinates
+- `z_range`: Range of uniformly spaced z coordinates
+- `order`: Interpolation order (default: 3)
+
+# Returns
+- `SplinePSF`: A 3D spline interpolation of the PSF
+"""
+function SplinePSF(psf_stack::AbstractArray{<:Real,3}, 
+                  x_range::AbstractRange,
+                  y_range::AbstractRange,
+                  z_range::AbstractRange;
+                  order::Integer=3)
+    # Normalize the PSF so it sums to 1
+    normalized_psf = psf_stack / sum(psf_stack)
+    
+    # Convert ranges to StepRangeLen{Float64} for consistent type
+    x_range_f64 = convert(StepRangeLen{Float64}, x_range)
+    y_range_f64 = convert(StepRangeLen{Float64}, y_range)
+    z_range_f64 = convert(StepRangeLen{Float64}, z_range)
+    
+    # Create the BSpline cubic interpolant
+    itp = interpolate(normalized_psf, BSpline(Cubic(Line(OnGrid()))))
+    scaled_itp = scale(itp, (y_range_f64, x_range_f64, z_range_f64))
+    
+    return SplinePSF{Float64, typeof(scaled_itp)}(scaled_itp, x_range_f64, y_range_f64, z_range_f64)
+end
+
+# 2D array constructor with positional arguments
+"""
+    SplinePSF(psf_stack::AbstractArray{<:Real,2}, 
+              x_range::AbstractRange,
+              y_range::AbstractRange;
+              order::Integer=3)
+
+Construct a 2D SplinePSF from a PSF stack and coordinate ranges.
+
+# Arguments
+- `psf_stack`: 2D array containing the PSF data
+- `x_range`: Range of uniformly spaced x coordinates
+- `y_range`: Range of uniformly spaced y coordinates
+- `order`: Interpolation order (default: 3)
+
+# Returns
+- `SplinePSF`: A 2D spline interpolation of the PSF
+"""
+function SplinePSF(psf_stack::AbstractArray{<:Real,2}, 
+                  x_range::AbstractRange,
+                  y_range::AbstractRange;
+                  order::Integer=3)
+    normalized_psf = psf_stack / sum(psf_stack)
+    
+    # Convert ranges to StepRangeLen{Float64}
+    x_range_f64 = convert(StepRangeLen{Float64}, x_range)
+    y_range_f64 = convert(StepRangeLen{Float64}, y_range)
+    
+    itp = interpolate(normalized_psf, BSpline(Cubic(Line(OnGrid()))))
+    scaled_itp = scale(itp, (y_range_f64, x_range_f64))
+    
+    return SplinePSF{Float64, typeof(scaled_itp)}(scaled_itp, x_range_f64, y_range_f64, nothing)
+end
+
+# --- Backward compatibility for keyword argument versions ---
+
+"""
+    SplinePSF(psf_stack::AbstractArray{<:Real,3};
+              x_range::AbstractRange, 
+              y_range::AbstractRange, 
+              z_range::AbstractRange,
+              order::Integer=3, 
+              smoothing::Real=0.0)
+
+Backward compatibility constructor for 3D PSFs.
+"""
+function SplinePSF(psf_stack::AbstractArray{<:Real,3};
+                  x_range::AbstractRange,
+                  y_range::AbstractRange,
+                  z_range::AbstractRange,
+                  order::Integer=3,
+                  smoothing::Real=0.0)
+    if smoothing > 0
+        @warn "Smoothing parameter is ignored; use the positional argument constructor directly."
+    end
+    return SplinePSF(psf_stack, x_range, y_range, z_range; order=order)
+end
+
+"""
+    SplinePSF(psf_stack::AbstractArray{<:Real,2};
+              x_range::AbstractRange, 
+              y_range::AbstractRange,
+              order::Integer=3, 
+              smoothing::Real=0.0)
+
+Backward compatibility constructor for 2D PSFs.
+"""
+function SplinePSF(psf_stack::AbstractArray{<:Real,2};
+                  x_range::AbstractRange,
+                  y_range::AbstractRange,
+                  order::Integer=3,
+                  smoothing::Real=0.0)
+    if smoothing > 0
+        @warn "Smoothing parameter is ignored; use the positional argument constructor directly."
+    end
+    return SplinePSF(psf_stack, x_range, y_range; order=order)
+end
+
+# --- Backward compatibility for vector inputs ---
+"""
+    SplinePSF(psf_stack::AbstractArray{<:Real,3}, 
+              x_coords::AbstractVector,
+              y_coords::AbstractVector,
+              z_coords::AbstractVector;
+              order::Integer=3)
+
+Construct a 3D SplinePSF from a PSF stack and coordinate vectors.
+This method converts vectors to ranges assuming uniform spacing.
+"""
+function SplinePSF(psf_stack::AbstractArray{<:Real,3}, 
+                  x_coords::AbstractVector,
+                  y_coords::AbstractVector,
+                  z_coords::AbstractVector;
+                  order::Integer=3)
+    @warn "Vector-based constructor is deprecated. Use ranges for uniform grid sampling instead."
+    
+    # Convert vectors to ranges
+    x_range = range(minimum(x_coords), maximum(x_coords), length=length(x_coords))
+    y_range = range(minimum(y_coords), maximum(y_coords), length=length(y_coords))
+    z_range = range(minimum(z_coords), maximum(z_coords), length=length(z_coords))
+    
+    return SplinePSF(psf_stack, x_range, y_range, z_range; order=order)
+end
+
+"""
+    SplinePSF(psf_stack::AbstractArray{<:Real,2};
+              x_coords::AbstractVector,
+              y_coords::AbstractVector;
+              order::Integer=3,
+              smoothing::Real=0.0)
+
+Construct a 2D SplinePSF from a PSF stack and coordinate vectors.
+This method converts vectors to ranges assuming uniform spacing.
+
+# Deprecated
+Use the range-based constructor instead.
+"""
+function SplinePSF(psf_stack::AbstractArray{<:Real,2};
+                   x_coords::AbstractVector,
+                   y_coords::AbstractVector;
+                   order::Integer=3,
+                   smoothing::Real=0.0)
+    @warn "Vector-based constructor is deprecated. Use ranges for uniform grid sampling instead."
+    
+    # Convert vectors to ranges
+    x_range = range(minimum(x_coords), maximum(x_coords), length=length(x_coords))
+    y_range = range(minimum(y_coords), maximum(y_coords), length=length(y_coords))
+    
+    return SplinePSF(psf_stack; x_range=x_range, y_range=y_range,
+                    order=order, smoothing=smoothing)
+end
+
+# --- Convenience constructor from an existing PSF ---
+
+
+# --- Define evaluation for 3D PSF ---
 """
     (psf::SplinePSF)(x::Real, y::Real, z::Real)
 
-Evaluate the spline PSF at a 3D position using the precomputed coefficients.
+Evaluate the 3D spline PSF at position (x, y, z).
+
+Returns 0 if the position is outside the PSF boundary.
 """
 function (psf::SplinePSF)(x::Real, y::Real, z::Real)
-    # Find the grid cell containing (x,y,z)
-    ix, iy, iz = find_cell(psf, x, y, z)
-    
-    # Return zero if outside the domain
-    if isnothing(ix)
-        return zero(eltype(psf.coefficients))
+    # Check bounds in x and y (and z if applicable)
+    if x < first(psf.x_range) || x > last(psf.x_range) ||
+       y < first(psf.y_range) || y > last(psf.y_range)
+        return zero(Float64)
     end
-    
-    # Get local coordinates within the cell (normalized to [0,1])
-    x_norm = (x - psf.x_knots[ix]) / (psf.x_knots[ix+1] - psf.x_knots[ix])
-    y_norm = (y - psf.y_knots[iy]) / (psf.y_knots[iy+1] - psf.y_knots[iy])
-    z_norm = (z - psf.z_knots[iz]) / (psf.z_knots[iz+1] - psf.z_knots[iz])
-    
-    # Evaluate the cubic polynomial using the stored coefficients
-    return evaluate_tricubic(psf.coefficients[ix, iy, iz, :, :, :], x_norm, y_norm, z_norm)
+    if psf.z_range !== nothing && (z < first(psf.z_range) || z > last(psf.z_range))
+        return zero(Float64)
+    end
+    # Evaluate using the scaled interpolant.
+    # Note the order: since our data is (y, x, z), we call it as (y, x, z).
+    return psf.spline(y, x, z)
 end
 
+# --- Define evaluation for 2D PSF ---
 """
     (psf::SplinePSF)(x::Real, y::Real)
 
-Evaluate the spline PSF at a 2D position in the focal plane (z=0).
+Evaluate the 2D spline PSF at position (x, y).
+
+Returns 0 if the position is outside the PSF boundary.
 """
 function (psf::SplinePSF)(x::Real, y::Real)
-    return psf(x, y, 0.0)
+    if x < first(psf.x_range) || x > last(psf.x_range) ||
+       y < first(psf.y_range) || y > last(psf.y_range)
+        return zero(Float64)
+    end
+    return psf.spline(y, x)
 end
 
+# --- Amplitude functions (unchanged) ---
 """
     amplitude(psf::SplinePSF, x::Real, y::Real, z::Real)
 
-Calculate amplitude at position (x,y,z).
-For real-valued PSFs, this is the square root of intensity.
+Calculate the complex amplitude of the 3D PSF at position (x, y, z).
+
+Returns the square root of the PSF intensity value.
 """
 function amplitude(psf::SplinePSF, x::Real, y::Real, z::Real)
     intensity = psf(x, y, z)
-    return sqrt(complex(intensity))  # Use complex to handle negative values that might occur from interpolation errors
+    return sqrt(complex(intensity))
 end
 
 """
     amplitude(psf::SplinePSF, x::Real, y::Real)
 
-Calculate amplitude at position (x,y) in focal plane.
+Calculate the complex amplitude of the PSF at position (x, y) with z=0.
+
+Returns the square root of the PSF intensity value.
 """
 function amplitude(psf::SplinePSF, x::Real, y::Real)
     return amplitude(psf, x, y, 0.0)
 end
 
-"""
-    find_cell(psf::SplinePSF, x::Real, y::Real, z::Real)
+# Integration methods for pixel calculation
 
-Find the grid cell indices containing position (x,y,z).
-Returns (ix, iy, iz) or (nothing, nothing, nothing) if outside domain.
 """
-function find_cell(psf::SplinePSF, x::Real, y::Real, z::Real)
-    # Check if position is within domain
-    if x < minimum(psf.x_knots) || x >= maximum(psf.x_knots) ||
-       y < minimum(psf.y_knots) || y >= maximum(psf.y_knots) ||
-       z < minimum(psf.z_knots) || z >= maximum(psf.z_knots)
-        return nothing, nothing, nothing
-    end
-    
-    # Find indices using binary search
-    ix = max(1, searchsortedlast(psf.x_knots, x))
-    iy = max(1, searchsortedlast(psf.y_knots, y))
-    iz = max(1, searchsortedlast(psf.z_knots, z))
-    
-    # Handle edge case - if at last knot
-    if ix == length(psf.x_knots) ix -= 1 end
-    if iy == length(psf.y_knots) iy -= 1 end
-    if iz == length(psf.z_knots) iz -= 1 end
-    
-    return ix, iy, iz
+    integrate_pixels(psf::SplinePSF, 
+                    camera::AbstractCamera, 
+                    emitter::AbstractEmitter;
+                    sampling::Integer=2)
+
+Integrate PSF over camera pixels using interpolation.
+"""
+function integrate_pixels(
+    psf::SplinePSF,
+    camera::AbstractCamera,
+    emitter::AbstractEmitter;
+    sampling::Integer=2
+)
+    result = _integrate_pixels_generic(
+        psf, camera, emitter, 
+        (p, x, y) -> p(x, y, emitter.z),
+        Float64; sampling=sampling
+    )
+    return result ./ sum(result)
 end
 
-# IO methods
+"""
+    integrate_pixels_amplitude(psf::SplinePSF,
+                              camera::AbstractCamera,
+                              emitter::AbstractEmitter;
+                              sampling::Integer=2)
+
+Integrate PSF amplitude (complex) over camera pixels.
+"""
+function integrate_pixels_amplitude(
+    psf::SplinePSF,
+    camera::AbstractCamera,
+    emitter::AbstractEmitter;
+    sampling::Integer=2
+)
+    return _integrate_pixels_generic(
+        psf, camera, emitter,
+        (p, x, y) -> amplitude(p, x, y, emitter.z),
+        Complex{Float64}; sampling=sampling
+    )
+end
+
+# I/O methods
 
 """
     save_spline_psf(filename::String, psf::SplinePSF)
 
-Save a SplinePSF to HDF5 file.
+Save a SplinePSF to an HDF5 file.
 """
 function save_spline_psf(filename::String, psf::SplinePSF)
     h5open(filename, "w") do file
-        file["coefficients"] = psf.coefficients
-        file["x_knots"] = psf.x_knots
-        file["y_knots"] = psf.y_knots
-        file["z_knots"] = psf.z_knots
+        # Save range information
+        file["x_start"] = first(psf.x_range)
+        file["x_step"] = step(psf.x_range)
+        file["x_length"] = length(psf.x_range)
+        
+        file["y_start"] = first(psf.y_range)
+        file["y_step"] = step(psf.y_range)
+        file["y_length"] = length(psf.y_range)
+        
+        if psf.z_range !== nothing
+            file["z_start"] = first(psf.z_range)
+            file["z_step"] = step(psf.z_range)
+            file["z_length"] = length(psf.z_range)
+            
+            # Sample the PSF on the grid
+            psf_values = Array{Float64}(undef, length(psf.y_range), length(psf.x_range), length(psf.z_range))
+            for (iz, z) in enumerate(psf.z_range)
+                for (ix, x) in enumerate(psf.x_range)
+                    for (iy, y) in enumerate(psf.y_range)
+                        psf_values[iy, ix, iz] = psf(x, y, z)
+                    end
+                end
+            end
+        else
+            # 2D case
+            file["z_range"] = "none"
+            
+            # Sample the PSF on the grid
+            psf_values = Array{Float64}(undef, length(psf.y_range), length(psf.x_range))
+            for (ix, x) in enumerate(psf.x_range)
+                for (iy, y) in enumerate(psf.y_range)
+                    psf_values[iy, ix] = psf(x, y)
+                end
+            end
+        end
+        
+        file["psf_values"] = psf_values
+        attrs = file["psf_values"]
+        attrs["type"] = "SplinePSF"
+        attrs["version"] = "1.1"  # Updated version
     end
 end
 
 """
     load_spline_psf(filename::String)
 
-Load a SplinePSF from HDF5 file.
+Load a SplinePSF from an HDF5 file.
 """
 function load_spline_psf(filename::String)
     h5open(filename, "r") do file
-        coefficients = read(file["coefficients"])
-        x_knots = read(file["x_knots"])
-        y_knots = read(file["y_knots"])
-        z_knots = read(file["z_knots"])
+        # Handle both old (vector-based) and new (range-based) formats
+        attrs = attributes(file["psf_values"])
+        version = read(attrs["version"])
         
-        T = eltype(coefficients)
-        return SplinePSF{T}(coefficients, x_knots, y_knots, z_knots)
+        if version == "1.0"
+            # Old format with vectors
+            x_coords = read(file["x_knots"])
+            y_coords = read(file["y_knots"])
+            z_coords = read(file["z_knots"])
+            psf_values = read(file["psf_values"])
+            
+            # Convert to ranges
+            x_range = range(minimum(x_coords), maximum(x_coords), length=length(x_coords))
+            y_range = range(minimum(y_coords), maximum(y_coords), length=length(y_coords))
+            z_range = range(minimum(z_coords), maximum(z_coords), length=length(z_coords))
+            
+            return SplinePSF(psf_values; 
+                            x_range=x_range, 
+                            y_range=y_range, 
+                            z_range=z_range)
+        else
+            # New format with ranges
+            x_start = read(file["x_start"])
+            x_step = read(file["x_step"])
+            x_length = read(file["x_length"])
+            
+            y_start = read(file["y_start"])
+            y_step = read(file["y_step"])
+            y_length = read(file["y_length"])
+            
+            psf_values = read(file["psf_values"])
+            
+            # Create ranges from saved parameters
+            x_range = range(x_start, step=x_step, length=x_length)
+            y_range = range(y_start, step=y_step, length=y_length)
+            
+            # Check if it's a 3D PSF
+            if haskey(file, "z_start")
+                z_start = read(file["z_start"])
+                z_step = read(file["z_step"])
+                z_length = read(file["z_length"])
+                z_range = range(z_start, step=z_step, length=z_length)
+                
+                return SplinePSF(psf_values; 
+                                x_range=x_range, 
+                                y_range=y_range, 
+                                z_range=z_range)
+            else
+                # 2D PSF
+                return SplinePSF(psf_values; 
+                                x_range=x_range, 
+                                y_range=y_range)
+            end
+        end
     end
 end
 
 # Pretty printing
 function Base.show(io::IO, psf::SplinePSF)
-    nx = length(psf.x_knots) - 1
-    ny = length(psf.y_knots) - 1
-    nz = length(psf.z_knots) - 1
+    nx = length(psf.x_range)
+    ny = length(psf.y_range)
     
-    x_range = maximum(psf.x_knots) - minimum(psf.x_knots)
-    z_range = maximum(psf.z_knots) - minimum(psf.z_knots)
+    x_size = last(psf.x_range) - first(psf.x_range)
     
-    print(io, "SplinePSF($(nx)×$(ny)×$(nz) grid, $(round(x_range, digits=2))×$(round(z_range, digits=2))μm)")
+    if psf.z_range !== nothing
+        nz = length(psf.z_range)
+        z_size = last(psf.z_range) - first(psf.z_range)
+        print(io, "SplinePSF($(ny)×$(nx)×$(nz) grid, $(round(x_size, digits=2))×$(round(z_size, digits=2))μm)")
+    else
+        print(io, "SplinePSF($(ny)×$(nx) grid, $(round(x_size, digits=2))μm)")
+    end
 end
