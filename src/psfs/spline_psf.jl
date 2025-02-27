@@ -238,8 +238,8 @@ end
     SplinePSF(psf::AbstractPSF; 
               lateral_range::Float64=2.0,
               axial_range::Float64=1.0,
-              lateral_samples::Integer=41,
-              axial_samples::Integer=21,
+              lateral_step::Float64=0.05,
+              axial_step::Float64=0.1,
               order::Integer=3)
 
 Create a SplinePSF with automatically calculated sampling ranges.
@@ -248,8 +248,8 @@ Create a SplinePSF with automatically calculated sampling ranges.
 - `psf`: Source PSF to sample
 - `lateral_range`: Half-width of lateral (xy) sampling range in microns
 - `axial_range`: Half-width of axial (z) sampling range in microns
-- `lateral_samples`: Number of samples in each lateral dimension
-- `axial_samples`: Number of samples in axial dimension
+- `lateral_step`: Step size in microns for lateral (xy) sampling (default: 0.05µm = 50nm)
+- `axial_step`: Step size in microns for axial (z) sampling (default: 0.1µm = 100nm)
 - `order`: Interpolation order (default: 3 for cubic)
 
 # Returns
@@ -259,17 +259,17 @@ Create a SplinePSF with automatically calculated sampling ranges.
 ```julia
 # Create a spline PSF with default sampling parameters
 scalar_psf = Scalar3DPSF(1.4, 0.532, 1.518)
-spline_psf = SplinePSF(scalar_psf)  # Uses default ranges and sampling
+spline_psf = SplinePSF(scalar_psf)  # Uses default ranges and step sizes
 ```
 """
 function SplinePSF(psf::AbstractPSF; 
                   lateral_range::Float64=2.0,
                   axial_range::Float64=1.0,
-                  lateral_samples::Integer=41,
-                  axial_samples::Integer=21,
+                  lateral_step::Float64=0.05,
+                  axial_step::Float64=0.1,
                   order::Integer=3)
-    # Calculate appropriate ranges
-    x_range = y_range = range(-lateral_range, lateral_range, length=lateral_samples)
+    # Calculate ranges with specified step size
+    x_range = y_range = range(-lateral_range, lateral_range, step=lateral_step)
     
     # Check if this is a 3D PSF by trying to call it with a z parameter
     is_3d = false
@@ -286,7 +286,7 @@ function SplinePSF(psf::AbstractPSF;
     
     # Create either a 2D or 3D SplinePSF based on the input PSF
     if is_3d
-        z_range = range(-axial_range, axial_range, length=axial_samples)
+        z_range = range(-axial_range, axial_range, step=axial_step)
         return SplinePSF(psf, x_range, y_range, z_range; order=order)
     else
         return SplinePSF(psf, x_range, y_range; order=order)
@@ -473,7 +473,27 @@ Integrate PSF amplitude (complex) over camera pixels.
 # Returns
 - Array of integrated PSF complex amplitudes with dimensions [ny, nx]
 """
-function integrate_pixels_amplitude(
+# Updated SplinePSF integrate_pixels method
+
+"""
+    integrate_pixels(psf::SplinePSF, 
+                    camera::AbstractCamera, 
+                    emitter::AbstractEmitter;
+                    sampling::Integer=2)
+
+Integrate PSF over camera pixels using interpolation.
+
+# Arguments
+- `psf`: SplinePSF instance
+- `camera`: Camera geometry
+- `emitter`: Emitter with position information
+- `sampling`: Subpixel sampling density for integration accuracy
+
+# Returns
+- Array of integrated PSF intensities with dimensions [ny, nx]
+- Values represent actual photon counts based on emitter's photon value
+"""
+function integrate_pixels(
     psf::SplinePSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
@@ -485,19 +505,22 @@ function integrate_pixels_amplitude(
             throw(ArgumentError("3D SplinePSF requires an emitter with a z-coordinate"))
         end
         
-        return _integrate_pixels_generic(
-            psf, camera, emitter,
-            (p, x, y) -> amplitude(p, x, y, emitter.z),
-            Complex{Float64}; sampling=sampling
+        result = _integrate_pixels_generic(
+            psf, camera, emitter, 
+            (p, x, y) -> p(x, y, emitter.z),
+            Float64; sampling=sampling
         )
     else
         # For 2D PSFs
-        return _integrate_pixels_generic(
-            psf, camera, emitter,
-            (p, x, y) -> amplitude(p, x, y),
-            Complex{Float64}; sampling=sampling
+        result = _integrate_pixels_generic(
+            psf, camera, emitter, 
+            (p, x, y) -> p(x, y),
+            Float64; sampling=sampling
         )
     end
+    
+    # Multiply by photon count to preserve physical meaning
+    return result .* emitter.photons
 end
 
 # --- I/O methods ---

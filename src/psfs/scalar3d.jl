@@ -18,6 +18,7 @@ function Scalar3DPSF(nₐ::Real, λ::Real, n::Real;
         PupilFunction(nₐ, λ, n, zernike_coeffs)
     end
 
+    normalize!(pupil_func)
     return Scalar3DPSF(nₐ, λ, n, pupil_func)
 end
 
@@ -36,10 +37,14 @@ function integrate_pixels(psf::Scalar3DPSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
     sampling::Integer=2)
-    return _integrate_pixels_generic(psf, camera, emitter,
+    
+    result = _integrate_pixels_generic(psf, camera, emitter,
         (p, x, y) -> p(x, y, emitter.z),
         Float64;
         sampling=sampling)
+    
+    # Multiply by photon count to preserve physical meaning
+    return result .* emitter.photons
 end
 
 # Display method
