@@ -32,8 +32,11 @@ end
 function pdfₐ(p::PupilFunction1d, pixel::Tuple,x_emitter::Tuple)
     
     # calculate a defocus Phase
-    Δx=p.pixelsize.*(x_emitter[2].-pixel[2])
-    Δy=p.pixelsize.*(x_emitter[1].-pixel[1])
+    #Δx=p.pixelsize.*(x_emitter[2].-pixel[2])
+    #Δy=p.pixelsize.*(x_emitter[1].-pixel[1])
+    Δx=p.pixelsize.*(pixel[2].-x_emitter[2])
+    Δy=p.pixelsize.*(pixel[1].-x_emitter[1])
+
     Δz=x_emitter[3].-pixel[3]
 
     return pdfₐ(p.pupil,p.kpixelsize,Δx,Δy,Δz,p.n,p.λ,p.fintegeral)
