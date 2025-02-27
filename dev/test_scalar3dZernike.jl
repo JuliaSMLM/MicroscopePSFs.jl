@@ -24,6 +24,10 @@ zc = ZernikeCoefficients(15)
 psf = Scalar3DPSF(na, λ, n, coeffs=zc)
 zc.phase[4] = 1.0  # Add phase shift for visualization
 
+# Check normalization over camera
+psf_normalized = integrate_pixels(psf, camera, Emitter3D(nx/2 * pixel_size, ny/2 * pixel_size, 0.0, 1.0))
+println("PSF normalization: ", sum(psf_normalized))
+
 # Evaluation coordinates
 x = y = range(-1, 1, 100)  # PSF field coordinates
 z_planes = [-1.0, -0.5, 0.0, 0.5, 1.0]  # z positions in microns
