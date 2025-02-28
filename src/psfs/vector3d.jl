@@ -198,6 +198,104 @@ function (psf::Vector3DPSF)(x::Real, y::Real, z::Real)
     return abs2(E[1]) + abs2(E[2])
 end
 
+"""
+    integrate_pixels(psf::Vector3DPSF,
+                    camera::AbstractCamera,
+                    emitter::AbstractEmitter;
+                    sampling::Integer=2)
+
+Integrate Vector3DPSF over camera pixels.
+
+# Arguments
+- `psf`: Vector3DPSF instance with fixed dipole orientation
+- `camera`: Camera geometry
+- `emitter`: Emitter with position information
+- `sampling`: Subpixel sampling density for integration accuracy
+
+# Returns
+- Array of integrated PSF intensities with dimensions [ny, nx]
+- Values represent actual photon counts based on emitter.photons
+
+# Notes
+- Dipole orientation comes from the PSF itself, not the emitter
+- For varying dipole orientations, create multiple PSFs
+"""
+function integrate_pixels(
+    psf::Vector3DPSF,
+    camera::AbstractCamera,
+    emitter::AbstractEmitter;
+    sampling::Integer=2
+)
+    # Check if emitter has required z-coordinate
+    if !hasfield(typeof(emitter), :z)
+        throw(ArgumentError("Vector3DPSF requires an emitter with a z-coordinate"))
+    end
+    
+    # Use the generic integration method
+    result = _integrate_pixels_generic(
+        psf, camera, emitter,
+        (p, x, y) -> p(x, y, emitter.z),
+        Float64; sampling=sampling
+    )
+    
+    # Multiply by photon count to preserve physical meaning
+    return result .* emitter.photons
+end
+
+"""
+    integrate_pixels_amplitude(psf::Vector3DPSF,
+                              camera::AbstractCamera,
+                              emitter::AbstractEmitter;
+                              sampling::Integer=2)
+
+Integrate Vector3DPSF complex amplitude over camera pixels.
+
+# Arguments
+- `psf`: Vector3DPSF instance with fixed dipole orientation
+- `camera`: Camera geometry
+- `emitter`: Emitter with position information
+- `sampling`: Subpixel sampling density for integration accuracy
+
+# Returns
+- Array of integrated complex field components with dimensions [ny, nx, 2]
+- First two dimensions are spatial, third dimension holds [Ex, Ey]
+
+# Notes
+- For coherent calculations in vectorial microscopy
+- Preserves relative phase information between field components
+"""
+function integrate_pixels_amplitude(
+    psf::Vector3DPSF,
+    camera::AbstractCamera,
+    emitter::AbstractEmitter;
+    sampling::Integer=2
+)
+    # Check if emitter has required z-coordinate
+    if !hasfield(typeof(emitter), :z)
+        throw(ArgumentError("Vector3DPSF requires an emitter with a z-coordinate"))
+    end
+    
+    # Integration for complex field components
+    Ex = _integrate_pixels_generic(
+        psf, camera, emitter,
+        (p, x, y) -> amplitude(p, x, y, emitter.z)[1],
+        Complex{Float64}; sampling=sampling
+    )
+    
+    Ey = _integrate_pixels_generic(
+        psf, camera, emitter,
+        (p, x, y) -> amplitude(p, x, y, emitter.z)[2],
+        Complex{Float64}; sampling=sampling
+    )
+    
+    # Combine into a 3D array: [ny, nx, 2] for Ex, Ey components
+    result = Array{Complex{Float64}, 3}(undef, size(Ex,1), size(Ex,2), 2)
+    result[:,:,1] = Ex
+    result[:,:,2] = Ey
+    
+    return result
+end
+
 # Display method
 function Base.show(io::IO, psf::Vector3DPSF)
     print(io, "Vector3DPSF(NA=$(psf.nₐ), λ=$(psf.λ)μm, n_medium=$(psf.n_medium))")

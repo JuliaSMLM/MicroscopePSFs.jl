@@ -27,26 +27,29 @@ psf_x = Vector3DPSF(na, λ, dipole_x;
     n_medium=n_medium, 
     n_coverslip=n_coverslip,
     n_immersion=n_immersion,
-    base_zernike=zc)
+    base_zernike=zc,
+    focal_z=1.0)
 
 psf_y = Vector3DPSF(na, λ, dipole_y;
     n_medium=n_medium,
     n_coverslip=n_coverslip,
     n_immersion=n_immersion,
-    base_zernike=zc)
+    base_zernike=zc,
+    focal_z=1.0)
 
 psf_z = Vector3DPSF(na, λ, dipole_z;
     n_medium=n_medium,
     n_coverslip=n_coverslip,
     n_immersion=n_immersion,
-    base_zernike=zc)
+    base_zernike=zc,
+    focal_z=1.0)
 
 # Create random orientation by averaging
 psf_random(x, y, z) = (psf_x(x, y, z) + psf_y(x, y, z) + psf_z(x, y, z))/3
 
 # Create visualization grids
 x = y = range(-1, 1, 100)
-z = range(-2, 2, 21)  # Axial range for XZ view
+z = range(-1, 1, 21)  # Axial range for XZ view
 
 # Compute intensities
 intensity_xy_x = [psf_x(xi, yi, 0.0) for yi in y, xi in x]
@@ -92,12 +95,12 @@ Colorbar(fig[2, 4], hm4)
 # XZ sections
 ax5 = Axis(fig[3, 1]; ylabel="z (μm)")
 setup_axis!(ax5, "XZ section - X dipole")
-hm5 = heatmap!(ax5, x, z, intensity_xz_x, colormap=:viridis)
+hm5 = heatmap!(ax5, x, z, intensity_xz_x', colormap=:viridis)
 Colorbar(fig[3, 2], hm5)
 
 ax6 = Axis(fig[3, 3]; ylabel="z (μm)")
 setup_axis!(ax6, "XZ section - Random")
-hm6 = heatmap!(ax6, x, z, intensity_xz_random, colormap=:viridis)
+hm6 = heatmap!(ax6, x, z, intensity_xz_random', colormap=:viridis)
 Colorbar(fig[3, 4], hm6)
 
 # Add descriptive title
