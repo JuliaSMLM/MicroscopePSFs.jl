@@ -1,134 +1,224 @@
 # dev/test_vector3d.jl
+using Pkg 
+Pkg.activate("dev")
 
-using Revise 
+using Revise
 using MicroscopePSFs
 using CairoMakie
 using Printf
+using SMLMData
 
-# Basic parameters
-λ = 0.532        # Wavelength (μm)
-na = 1.4         # Numerical aperture
-n_medium = 1.33  # Sample medium (water)
-n_coverslip = 1.52  # Cover slip (glass)
-n_immersion = 1.52  # Immersion medium (oil)
+# Microscope parameters
+λ = 0.532  # Green light wavelength in microns
+na = 1.4   # Numerical aperture
+n_medium = 1.33   # Sample medium refractive index (water)
+n_coverslip = 1.52  # Coverslip refractive index (glass)
+n_immersion = 1.52  # Immersion medium refractive index (oil)
+focal_z = 0.0  # Nominal focal plane position
 
-# Create three orthogonal dipoles
-dipole_x = DipoleVector(1.0, 0.0, 0.0)
-dipole_y = DipoleVector(0.0, 1.0, 0.0)
-dipole_z = DipoleVector(0.0, 0.0, 1.0)
+# Camera setup
+pixel_size = 0.1  # 100 nm pixels
+nx = 20           # Width
+ny = 10           # Height
+camera = IdealCamera(0:nx, 0:ny, pixel_size)
+cam_size = nx * pixel_size
 
-# Add some aberration via Zernike coefficients
-zc = ZernikeCoefficients(10)  # First 10 terms
-zc.phase[4] = 0.5  # Add some defocus
-zc.phase[8] = 0.2  # Add some spherical aberration
+# Create different dipole orientations to test
+dipoles = [
+    DipoleVector(1.0, 0.0, 0.0),    # x-oriented
+    DipoleVector(0.0, 1.0, 0.0),    # y-oriented
+    DipoleVector(0.0, 0.0, 1.0),    # z-oriented
+    DipoleVector(1.0, 1.0, 1.0),    # xyz-oriented (will be normalized)
+]
 
-# Create PSFs
-psf_x = Vector3DPSF(na, λ, dipole_x; 
+# Create PSF with astigmatism
+zc = ZernikeCoefficients(15)
+zc.phase[6] = 1.0  # Add vertical astigmatism for visualization
+
+# Create Vector3DPSF with the first dipole orientation (x-oriented)
+psf = Vector3DPSF(
+    na, λ, dipoles[1]; 
+    base_zernike=zc,
     n_medium=n_medium, 
-    n_coverslip=n_coverslip,
+    n_coverslip=n_coverslip, 
     n_immersion=n_immersion,
-    base_zernike=zc,
-    focal_z=1.0)
+    focal_z=focal_z
+)
 
-psf_y = Vector3DPSF(na, λ, dipole_y;
-    n_medium=n_medium,
-    n_coverslip=n_coverslip,
-    n_immersion=n_immersion,
-    base_zernike=zc,
-    focal_z=1.0)
+# Check normalization over camera
+emitter_center = Emitter3D(nx/2 * pixel_size, ny/2 * pixel_size, 0.0, 1.0)
+psf_normalized = integrate_pixels(psf, camera, emitter_center)
+println("PSF normalization: ", sum(psf_normalized))
 
-psf_z = Vector3DPSF(na, λ, dipole_z;
-    n_medium=n_medium,
-    n_coverslip=n_coverslip,
-    n_immersion=n_immersion,
-    base_zernike=zc,
-    focal_z=1.0)
+# Evaluation coordinates
+x = y = range(-1, 1, 100)  # PSF field coordinates
+z_planes = [-1.0, -0.5, 0.0, 0.5, 1.0]  # z positions in microns
 
-# Create random orientation by averaging
-psf_random(x, y, z) = (psf_x(x, y, z) + psf_y(x, y, z) + psf_z(x, y, z))/3
+# Emitter positions to test
+emitters = [
+    Emitter3D(1.0, 0.5, 0.0, 1000.0),    # center, in focus
+    Emitter3D(1.5, 0.3, 0.5, 1000.0),    # right side, above focus
+    Emitter3D(0.5, 0.7, -0.5, 1000.0),   # left side, below focus
+    Emitter3D(1.2, 0.4, 1.0, 1000.0),    # off center, far from focus
+]
 
-# Create visualization grids
-x = y = range(-1, 1, 100)
-z = range(-1, 1, 21)  # Axial range for XZ view
+# Create visualization
+fig = Figure(
+    size = (2000, 1600),
+    backgroundcolor = :white,
+    figure_padding = (40, 40, 40, 40)
+)
 
-# Compute intensities
-intensity_xy_x = [psf_x(xi, yi, 0.0) for yi in y, xi in x]
-intensity_xy_y = [psf_y(xi, yi, 0.0) for yi in y, xi in x]
-intensity_xy_z = [psf_z(xi, yi, 0.0) for yi in y, xi in x]
-intensity_xy_random = [psf_random(xi, yi, 0.0) for yi in y, xi in x]
-
-# Compute XZ sections
-intensity_xz_x = [psf_x(xi, 0.0, zi) for zi in z, xi in x]
-intensity_xz_random = [psf_random(xi, 0.0, zi) for zi in z, xi in x]
-
-# Create figure
-fig = Figure(size=(1200, 800))
-
-# Helper function for consistent axis formatting
+# Helper function for axis setup
 function setup_axis!(ax, title)
-    ax.aspect = DataAspect()
-    ax.xlabel = "x (μm)"
     ax.title = title
+    ax.xlabel = "x (μm)"
+    ax.ylabel = "y (μm)"
+    ax.aspect = DataAspect()
 end
 
-# XY slices for different dipole orientations
-ax1 = Axis(fig[1, 1]; ylabel="y (μm)")
-setup_axis!(ax1, "X dipole")
-hm1 = heatmap!(ax1, x, y, intensity_xy_x, colormap=:viridis)
-Colorbar(fig[1, 2], hm1)
+# Get camera coordinates for display
+x_cam = (camera.pixel_edges_x[1:end-1] + camera.pixel_edges_x[2:end]) ./ 2
+y_cam = (camera.pixel_edges_y[1:end-1] + camera.pixel_edges_y[2:end]) ./ 2
 
-ax2 = Axis(fig[1, 3])
-setup_axis!(ax2, "Y dipole")
-hm2 = heatmap!(ax2, x, y, intensity_xy_y, colormap=:viridis)
-Colorbar(fig[1, 4], hm2)
+# Row 1: Pupil field components - Ex and Ey amplitude
+ax_ex_amp = Axis(fig[1, 1], width=225, height=225)
+setup_axis!(ax_ex_amp, "Ex Pupil Amplitude")
+hm_ex_amp = heatmap!(ax_ex_amp, x, y, abs.(psf.vector_pupils.Ex.field), colormap=:viridis)
+Colorbar(fig[1, 2], hm_ex_amp)
 
-ax3 = Axis(fig[2, 1]; ylabel="y (μm)")
-setup_axis!(ax3, "Z dipole")
-hm3 = heatmap!(ax3, x, y, intensity_xy_z, colormap=:viridis)
-Colorbar(fig[2, 2], hm3)
+ax_ey_amp = Axis(fig[1, 3], width=225, height=225)
+setup_axis!(ax_ey_amp, "Ey Pupil Amplitude")
+hm_ey_amp = heatmap!(ax_ey_amp, x, y, abs.(psf.vector_pupils.Ey.field), colormap=:viridis)
+Colorbar(fig[1, 4], hm_ey_amp)
 
-ax4 = Axis(fig[2, 3])
-setup_axis!(ax4, "Random orientation")
-hm4 = heatmap!(ax4, x, y, intensity_xy_random, colormap=:viridis)
-Colorbar(fig[2, 4], hm4)
+# Row 2: Different dipole orientations (at z=0)
+for (i, dipole) in enumerate(dipoles)
+    ax = Axis(fig[2, i], width=225, height=225)
+    setup_axis!(ax, "Dipole: $(round.(typeof(dipole.px).([dipole.px, dipole.py, dipole.pz]), digits=1))")
+    
+    # Create PSF with this dipole orientation
+    @time dipole_psf = Vector3DPSF(
+        na, λ, dipole; 
+        base_zernike=zc,
+        n_medium=n_medium, 
+        n_coverslip=n_coverslip, 
+        n_immersion=n_immersion,
+        focal_z=focal_z
+    )
+    
+    # Compute intensity
+    intensity = [dipole_psf(xi, yi, 0.0) for yi in y, xi in x]
+    hm = heatmap!(ax, x, y, intensity, colormap=:viridis)
+    
+    if i == length(dipoles)
+        Colorbar(fig[2, i+1], hm)
+    end
+end
 
-# XZ sections
-ax5 = Axis(fig[3, 1]; ylabel="z (μm)")
-setup_axis!(ax5, "XZ section - X dipole")
-hm5 = heatmap!(ax5, x, z, intensity_xz_x', colormap=:viridis)
-Colorbar(fig[3, 2], hm5)
+# Row 3: PSF field through focus (with the primary dipole orientation)
+for (i, z) in enumerate(z_planes)
+    ax = Axis(fig[3, i], width=225, height=225)
+    setup_axis!(ax, @sprintf("z = %.1f μm", z))
+    intensity = [psf(xi, yi, z) for yi in y, xi in x]
+    hm = heatmap!(ax, x, y, intensity, colormap=:viridis)
+    if i == length(z_planes)
+        Colorbar(fig[3, i+1], hm)
+    end
+end
 
-ax6 = Axis(fig[3, 3]; ylabel="z (μm)")
-setup_axis!(ax6, "XZ section - Random")
-hm6 = heatmap!(ax6, x, z, intensity_xz_random', colormap=:viridis)
-Colorbar(fig[3, 4], hm6)
+# Row 4: Integrated pixels for different emitter positions
+for (i, emitter) in enumerate(emitters)
+    ax = Axis(fig[4, i], width=225, height=225)
+    setup_axis!(ax, @sprintf("(%.1f, %.1f, %.1f)μm", emitter.x, emitter.y, emitter.z))
+    ax.yreversed = true
+    
+    pixels = integrate_pixels(psf, camera, emitter)
+    hm = heatmap!(ax, x_cam, y_cam, pixels', colormap=:viridis)
+    scatter!(ax, [emitter.x], [emitter.y], color=:red, marker=:cross, markersize=15)
+    
+    if i == length(emitters)
+        Colorbar(fig[4, i+1], hm)
+    end
+end
 
-# Add descriptive title
-Label(fig[0, :], text="Vector PSF Tests (NA=$na, λ=$λ μm, n_medium=$n_medium)",
-    fontsize=20)
+# Row 5: Ex and Ey field components (for one emitter position)
+emitter_focus = emitters[1]  # Use the in-focus emitter
+field_components = integrate_pixels_amplitude(psf, camera, emitter_focus)
 
-# Print validation info
-println("\nValidation:")
-println("PSF parameters:")
-println("  NA = ", na)
-println("  λ = ", λ, " μm")
-println("  n_medium = ", n_medium)
-println("  n_coverslip = ", n_coverslip)
-println("  n_immersion = ", n_immersion)
+ax_ex = Axis(fig[5, 1], width=225, height=225)
+setup_axis!(ax_ex, "Ex amplitude")
+ax_ex.yreversed = true
+hm_ex = heatmap!(ax_ex, x_cam, y_cam, abs.(field_components[:,:,1])', colormap=:viridis)
+Colorbar(fig[5, 2], hm_ex)
 
-println("\nGrid parameters:")
-println("  XY range: [", extrema(x), "] μm")
-println("  Z range: [", extrema(z), "] μm")
-println("  Grid size: ", length(x), "x", length(y))
+ax_ey = Axis(fig[5, 3], width=225, height=225)
+setup_axis!(ax_ey, "Ey amplitude")
+ax_ey.yreversed = true
+hm_ey = heatmap!(ax_ey, x_cam, y_cam, abs.(field_components[:,:,2])', colormap=:viridis)
+Colorbar(fig[5, 4], hm_ey)
 
-println("\nEnergy conservation check:")
-total_energy_x = sum(intensity_xy_x) * (x[2]-x[1]) * (y[2]-y[1])
-total_energy_random = sum(intensity_xy_random) * (x[2]-x[1]) * (y[2]-y[1])
-println("  X dipole total energy: ", @sprintf("%.6f", total_energy_x))
-println("  Random dipole total energy: ", @sprintf("%.6f", total_energy_random))
+# Add polarization plot
+ax_pol = Axis(fig[5, 5], width=225, height=225)
+setup_axis!(ax_pol, "Polarization state")
+ax_pol.yreversed = true
+
+# Subsample the field for visualization
+subsample = 2
+x_sub = x_cam[1:subsample:end]
+y_sub = y_cam[1:subsample:end]
+ex_sub = field_components[1:subsample:end, 1:subsample:end, 1]
+ey_sub = field_components[1:subsample:end, 1:subsample:end, 2]
+
+# Create polarization ellipses
+for j in 1:length(y_sub)
+    for i in 1:length(x_sub)
+        ex_val = abs(ex_sub[j, i])
+        ey_val = abs(ey_sub[j, i])
+        
+        # Scale for visibility
+        scale_factor = 0.04 * subsample
+        
+        # Draw polarization line
+        lines!(ax_pol, 
+               [x_sub[i] - ex_val * scale_factor, x_sub[i] + ex_val * scale_factor],
+               [y_sub[j] - ey_val * scale_factor, y_sub[j] + ey_val * scale_factor],
+               color=:white, linewidth=1)
+    end
+end
+
+# Add labels and title
+Label(fig[1, 0], "Pupil\nComponents", rotation=π/2)
+Label(fig[2, 0], "Dipole\nOrientation", rotation=π/2)
+Label(fig[3, 0], "PSF\nFocus", rotation=π/2)
+Label(fig[4, 0], "Camera\nPixels", rotation=π/2)
+Label(fig[5, 0], "Field\nComponents", rotation=π/2)
+
+title_text = @sprintf("Vector3D PSF with Astigmatism\n(NA=%.1f, λ=%.3f μm, n₁=%.2f, n₂=%.2f, n₃=%.2f)", 
+                      na, λ, n_medium, n_coverslip, n_immersion)
+Label(fig[0, :], title_text, fontsize=20, padding=(0,0,20,0))
+
+# Adjust layout
+rowgap!(fig.layout, 40)
+colgap!(fig.layout, 40)
 
 # Save figure
 save("dev/vector3d_test.png", fig)
 
-# Return figure handle for display
+# Print parameters
+println("\nPSF parameters:")
+println("NA = $na, λ = $λ μm")
+println("Medium index = $n_medium")
+println("Coverslip index = $n_coverslip")
+println("Immersion index = $n_immersion")
+println("Focal plane = $focal_z μm")
+println("Astigmatism: 1 wave at 0 degrees")
+println("Field size: $(cam_size) × $(cam_size) μm")
+println("Pixel size: $(pixel_size) μm")
+println("Z planes: ", z_planes, " μm")
+println("Dipole orientations:")
+for (i, dipole) in enumerate(dipoles)
+    println("  $i: ($(dipole.px), $(dipole.py), $(dipole.pz))")
+end
+
 fig

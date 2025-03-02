@@ -1,100 +1,6 @@
 # src/psfs/vector3d.jl
 
 """
-    calculate_fresnel_coefficients(kr2::Real, λ::Real, 
-                                 n_medium::Real, n_immersion::Real)
-
-Compute Fresnel transmission coefficients including super-critical angle fluorescence.
-
-# Arguments
-- `kr2`: Radial spatial frequency squared
-- `λ`: Wavelength in microns
-- `n_medium`: Sample medium refractive index
-- `n_immersion`: Immersion medium refractive index
-
-# Returns
-- Tuple of (Tp, Ts, sinθ₁, cosθ₁, apod):
-  * Tp: p-polarization transmission coefficient
-  * Ts: s-polarization transmission coefficient
-  * sinθ₁: Sine of angle in medium
-  * cosθ₁: Cosine of angle in medium
-  * apod: Apodization factor for angular spectrum
-"""
-function calculate_fresnel_coefficients(kr2::Real, λ::Real, 
-                                     n_medium::Real, n_immersion::Real)
-    # Calculate angles using complex sqrt for automatic handling of evanescent waves
-    sinθ₁ = complex(sqrt(kr2)*λ/n_medium)  # Explicitly make complex
-    cosθ₁ = sqrt(complex(1 - kr2*λ^2/n_medium^2))
-    cosθᵢ = sqrt(complex(1 - kr2*λ^2/n_immersion^2))
-    
-    # Calculate Fresnel coefficients
-    Tp = 2.0*n_medium*cosθ₁/(n_medium*cosθᵢ + n_immersion*cosθ₁)
-    Ts = 2.0*n_medium*cosθ₁/(n_medium*cosθ₁ + n_immersion*cosθᵢ)
-    
-    # Apodization factor including SAF contribution
-    apod = sqrt(cosθᵢ)/cosθ₁
-    
-    return Tp, Ts, sinθ₁, cosθ₁, apod
-end
-
-"""
-    calculate_wave_vectors(kr2::Real, λ::Real, n_medium::Real, n_immersion::Real)
-
-Calculate wave vectors for both media including evanescent waves.
-
-# Arguments
-- `kr2`: Radial spatial frequency squared
-- `λ`: Wavelength in microns
-- `n_medium`: Sample medium refractive index
-- `n_immersion`: Immersion medium refractive index
-
-# Returns
-- Tuple of (kz_medium, kz_immersion): z-components of wave vectors in each medium
-"""
-function calculate_wave_vectors(kr2::Real, λ::Real, n_medium::Real, n_immersion::Real)
-    k₀ = 2π/λ
-    
-    # Wave vector z-components in both media (can be complex)
-    kz_medium = k₀ * sqrt(complex(n_medium^2 - kr2*λ^2))
-    kz_immersion = k₀ * sqrt(complex(n_immersion^2 - kr2*λ^2))
-    
-    return kz_medium, kz_immersion
-end
-
-"""
-    calculate_field_components(ϕ::Real, Tp::Complex, Ts::Complex, 
-                             sinθ₁::Complex, cosθ₁::Complex, 
-                             dipole::DipoleVector)
-
-Compute vectorial field components including polarization effects.
-
-# Arguments
-- `ϕ`: Azimuthal angle in pupil plane
-- `Tp`: p-polarization transmission coefficient
-- `Ts`: s-polarization transmission coefficient
-- `sinθ₁`: Sine of angle in medium
-- `cosθ₁`: Cosine of angle in medium
-- `dipole`: Dipole orientation vector
-
-# Returns
-- Tuple (Ex, Ey) of complex field components
-"""
-function calculate_field_components(ϕ::Complex, Tp::Complex, Ts::Complex,
-                                 sinθ₁::Complex, cosθ₁::Complex,
-                                 dipole::DipoleVector)
-    # Compute the vectorial field components based on the dipole orientation
-    Eθ = (Tp * (dipole.px*cos(ϕ) + dipole.py*sin(ϕ)) * cosθ₁ - 
-          Tp * dipole.pz * sinθ₁)
-    Eϕ = Ts * (-dipole.px*sin(ϕ) + dipole.py*cos(ϕ))
-    
-    # Convert to Cartesian coordinates
-    Ex = Eθ * cos(ϕ) - Eϕ * sin(ϕ)
-    Ey = Eθ * sin(ϕ) + Eϕ * cos(ϕ)
-    
-    return Ex, Ey
-end
-
-"""
     Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
                 base_pupil::Union{Nothing, PupilFunction}=nothing,
                 base_zernike::Union{Nothing, ZernikeCoefficients}=nothing,
@@ -143,19 +49,19 @@ function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
         base_pupil = PupilFunction(nₐ, λ, n_medium, base_zernike; grid_size=grid_size)
     end
     
-    # Create vector pupil
-    vpupil = VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, grid_size)
+    # Create vector pupil function with all position-independent factors
+    vector_pupils = VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, grid_size)
     
     # Fill with vector components using base aberration
     if !isnothing(base_pupil)
-        fill_vector_pupil!(vpupil, dipole, focal_z, base_pupil)
+        fill_vector_pupils!(vector_pupils, dipole, base_pupil)
     else
-        fill_vector_pupil!(vpupil, dipole, focal_z)
+        fill_vector_pupils!(vector_pupils, dipole)
     end
     
     return Vector3DPSF{T}(
         T(nₐ), T(λ), T(n_medium), T(n_coverslip),
-        T(n_immersion), dipole, T(focal_z), vpupil,
+        T(n_immersion), dipole, T(focal_z), vector_pupils,
         stored_base_pupil, stored_zernike
     )
 end
@@ -177,8 +83,48 @@ Compute complex vector amplitude at given position.
 - z coordinate is relative to current focal plane position (psf.focal_z)
 - Includes both UAF and SAF contributions automatically
 """
-function amplitude(psf::Vector3DPSF, x::Real, y::Real, z::Real)
-    return amplitude(psf.pupil, x, y, z)
+function amplitude(psf::Vector3DPSF{T}, x::Real, y::Real, z::Real) where {T}
+    # Get the relative defocus (emitter z relative to nominal focal plane)
+    defocus = z - psf.focal_z
+    
+    # Initialize result vector [Ex, Ey]
+    result = zeros(Complex{promote_type(T, typeof(x), typeof(y), typeof(z))}, 2)
+    
+    # Pupil parameters
+    vector_pupils = psf.vector_pupils
+    grid_size = size(vector_pupils.Ex.field, 1)
+    kmax_val = psf.nₐ / psf.λ
+    kpixel = 2 * kmax_val / (grid_size - 1)
+    center = (grid_size + 1) / 2
+    
+    # Integrate over pupil
+    for i in 1:grid_size, j in 1:grid_size
+        # Get k-space coordinates
+        kx = (i - center) * kpixel
+        ky = (j - center) * kpixel
+        kr2 = kx^2 + ky^2
+        
+        # Skip points outside the pupil
+        kr2 > kmax_val^2 && continue
+        
+        # Get wave vectors in each medium
+        kz_medium, kz_coverslip, kz_immersion = calculate_wave_vectors(
+            kr2, psf.λ, psf.n_medium, psf.n_coverslip, psf.n_immersion)
+        
+        # Calculate total phase with position dependence
+        lateral_phase = kx * x + ky * y
+        axial_phase = calculate_axial_phase(defocus, kz_medium, kz_coverslip, kz_immersion)
+        total_phase = 2π * (lateral_phase + axial_phase)
+        
+        # Apply phase to pre-calculated pupil field
+        phase_factor = exp(im * total_phase)
+        
+        # Add contribution to result
+        result[1] += vector_pupils.Ex.field[j,i] * phase_factor * kpixel^2
+        result[2] += vector_pupils.Ey.field[j,i] * phase_factor * kpixel^2
+    end
+    
+    return result
 end
 
 """
@@ -202,7 +148,7 @@ function (psf::Vector3DPSF)(x::Real, y::Real, z::Real)
 end
 
 """
-    update_pupil!(psf::Vector3DPSF) -> Vector3DPSF
+    update_pupils!(psf::Vector3DPSF) -> Vector3DPSF
 
 Update the vector pupil function based on stored Zernike coefficients and/or base pupil.
 This is useful after modifying aberrations to regenerate the pupil fields.
@@ -217,7 +163,7 @@ This is useful after modifying aberrations to regenerate the pupil fields.
 - Requires either stored Zernike coefficients or a base pupil
 - Returns the updated PSF for method chaining
 """
-function update_pupil!(psf::Vector3DPSF)
+function update_pupils!(psf::Vector3DPSF)
     # Check if we have necessary components to update
     if isnothing(psf.base_pupil) && isnothing(psf.zernike_coeffs)
         throw(ArgumentError("Cannot update pupil: no base pupil or Zernike coefficients stored"))
@@ -229,15 +175,15 @@ function update_pupil!(psf::Vector3DPSF)
         updated_base_pupil = PupilFunction(
             psf.nₐ, psf.λ, psf.n_medium, 
             psf.zernike_coeffs; 
-            grid_size=size(psf.pupil.Ex.field, 1)
+            grid_size=size(psf.vector_pupils.Ex.field, 1)
         )
     end
     
     # Fill the vector pupil with updated components
     if !isnothing(updated_base_pupil)
-        fill_vector_pupil!(psf.pupil, psf.dipole, psf.focal_z, updated_base_pupil)
+        fill_vector_pupils!(psf.vector_pupils, psf.dipole, updated_base_pupil)
     else
-        fill_vector_pupil!(psf.pupil, psf.dipole, psf.focal_z)
+        fill_vector_pupils!(psf.vector_pupils, psf.dipole)
     end
     
     return psf

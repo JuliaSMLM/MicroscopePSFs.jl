@@ -113,7 +113,8 @@ Allows direct manipulation of pupil function for custom aberrations.
 - `n_immersion::T`: Immersion medium refractive index
 - `dipole::DipoleVector{T}`: Dipole orientation
 - `focal_z::T`: Focal plane position (z) in microns relative to nominal focus
-- `pupil::VectorPupilFunction{T}`: Vector pupil function for Ex,Ey components
+- `vector_pupils::VectorPupilFunction{T}`: Pre-calculated pupil functions containing vector field components (Ex,Ey),
+  dipole orientation effects, base aberrations, apodization, and all position-independent factors
 - `base_pupil::Union{Nothing, PupilFunction{T}}`: Base pupil function representing system aberrations
 - `zernike_coeffs::Union{Nothing, ZernikeCoefficients{T}}`: Zernike coefficients used to create this PSF (if applicable)
 """
@@ -125,7 +126,7 @@ struct Vector3DPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
     n_immersion::T
     dipole::DipoleVector{T}
     focal_z::T
-    pupil::VectorPupilFunction{T}
+    vector_pupils::VectorPupilFunction{T}
     base_pupil::Union{Nothing, PupilFunction{T}}
     zernike_coeffs::Union{Nothing, ZernikeCoefficients{T}}
 end

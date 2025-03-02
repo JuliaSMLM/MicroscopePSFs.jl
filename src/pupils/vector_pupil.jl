@@ -98,24 +98,25 @@ function normalize!(p::VectorPupilFunction)
 end
 
 """
-    fill_vector_pupil!(vpupil::VectorPupilFunction, dipole::DipoleVector, focal_z::Real,
+    fill_vector_pupils!(vpupil::VectorPupilFunction, dipole::DipoleVector,
                       base_pupil::Union{Nothing, PupilFunction}=nothing)
 
-Fill vector pupil function with field components including focal shift and base aberrations.
+Fill vector pupil function with field components including dipole orientation,
+base aberrations, and proper apodization.
+
+This pre-calculates all position-independent factors of the pupil function.
 
 # Arguments
 - `vpupil`: Vector pupil function to fill
 - `dipole`: Dipole orientation vector
-- `focal_z`: Focal plane position in μm relative to nominal focus
 - `base_pupil`: Optional base aberration pupil function
 
 # Returns
 - Filled and normalized vector pupil function
 """
-function fill_vector_pupil!(vpupil::VectorPupilFunction, 
-                          dipole::DipoleVector, 
-                          focal_z::Real,
-                          base_pupil::Union{Nothing, PupilFunction}=nothing)
+function fill_vector_pupils!(vpupil::VectorPupilFunction, 
+                           dipole::DipoleVector, 
+                           base_pupil::Union{Nothing, PupilFunction}=nothing)
     
     grid_size = size(vpupil.Ex.field, 1)
     xs = ys = range(-1, 1, length=grid_size)
@@ -126,24 +127,33 @@ function fill_vector_pupil!(vpupil::VectorPupilFunction,
         ρ = sqrt(x^2 + y^2)
         ρ > 1 && continue
         
+        # Convert normalized pupil coordinates to k-space
         kr2 = (ρ * kmax)^2
         
-        # Calculate Fresnel coefficients using proper refractive indices
-        # Convert ϕ to ComplexF64 to match Fresnel coefficient types
+        # Calculate angles and convert to ComplexF64 to handle evanescent waves
         ϕ = ComplexF64(atan(y, x))
         
-        Tp, Ts, sinθ₁, cosθ₁, apod = calculate_fresnel_coefficients(
-            kr2, vpupil.λ, vpupil.n_medium, vpupil.n_immersion)
+        # Get wave vectors in each medium
+        kz_medium, kz_coverslip, kz_immersion = calculate_wave_vectors(
+            kr2, vpupil.λ, vpupil.n_medium, vpupil.n_coverslip, vpupil.n_immersion)
+            
+        # Calculate angles in medium for field components
+        sinθ = sqrt(complex(kr2*vpupil.λ^2/(4π^2*vpupil.n_medium^2)))
+        cosθ = sqrt(complex(1 - kr2*vpupil.λ^2/(4π^2*vpupil.n_medium^2)))
         
-        # Calculate wave vectors for phase
-        kz_medium, kz_immersion = calculate_wave_vectors(
-            kr2, vpupil.λ, vpupil.n_medium, vpupil.n_immersion)
+        # Calculate Fresnel coefficients for interfaces
+        Tp, Ts = calculate_fresnel_coefficients(
+            kr2, vpupil.λ, vpupil.n_medium, vpupil.n_coverslip, vpupil.n_immersion)
         
-        # Calculate field components - all inputs should be Complex now
-        Ex, Ey = calculate_field_components(ϕ, Tp, Ts, sinθ₁, cosθ₁, dipole)
+        # Calculate field components for dipole orientation
+        Ex, Ey = calculate_dipole_field_components(ϕ, sinθ, cosθ, dipole, Tp, Ts)
         
-        # Phase from defocus
-        phase = exp(im * focal_z * kz_immersion)
+        # Calculate apodization factor
+        apod = calculate_apodization(kr2, vpupil.λ, vpupil.n_medium, vpupil.n_immersion)
+        
+        # Apply apodization 
+        Ex *= apod
+        Ey *= apod
         
         # Combine with base aberration if provided
         if !isnothing(base_pupil)
@@ -152,33 +162,17 @@ function fill_vector_pupil!(vpupil::VectorPupilFunction,
             Ey *= base_field
         end
         
-        # Apply apodization and phase
-        vpupil.Ex.field[j,i] = Ex * apod * phase
-        vpupil.Ey.field[j,i] = Ey * apod * phase
+        # Store values in pupil
+        vpupil.Ex.field[j,i] = Ex
+        vpupil.Ey.field[j,i] = Ey
     end
     
+    # Normalize pupils
     normalize!(vpupil)
     return vpupil
 end
 
-"""
-    amplitude(p::VectorPupilFunction, x::Real, y::Real, z::Real)
 
-Compute complex vector amplitude at given position.
-
-# Arguments
-- `p`: Vector pupil function
-- `x, y`: Lateral position in μm relative to center
-- `z`: Axial position in μm relative to focal plane
-
-# Returns
-- Vector [Ex, Ey] of complex field amplitudes
-"""
-function amplitude(p::VectorPupilFunction, x::Real, y::Real, z::Real)
-    Ex = amplitude(p.Ex, x, y, z)
-    Ey = amplitude(p.Ey, x, y, z)
-    return [Ex, Ey]
-end
 
 # Display methods
 function Base.show(io::IO, p::VectorPupilFunction)
@@ -187,3 +181,6 @@ function Base.show(io::IO, p::VectorPupilFunction)
           "n_medium=$(p.n_medium), n_coverslip=$(p.n_coverslip), ",
           "n_immersion=$(p.n_immersion), $(sz)x$(sz))")
 end
+
+# Export updated function name
+export fill_dipole_pupils!
