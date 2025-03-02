@@ -20,11 +20,18 @@ ny = 10           # Height
 camera = IdealCamera(1:nx, 1:ny, pixel_size)
 cam_size = nx * pixel_size
 
+# Zernike polynomials in 1-based OSA/ANSI indexing:
+# Z₁ (n=0, m=0): Piston - constant phase, no effect on PSF shape
+# Z₂ (n=1, m=1): X-Tilt - lateral shift along x-axis
+# Z₃ (n=1, m=-1): Y-Tilt - lateral shift along y-axis
+# Z₄ (n=2, m=0): Defocus - moves focus along z-axis
+# Z₅ (n=2, m=2): Oblique astigmatism - elongation along 45° axes
+# Z₆ (n=2, m=-2): Vertical astigmatism - elongation along x/y axes
+
 # Create PSF with astigmatism
 zc = ZernikeCoefficients(15)
-# add_astigmatism!(zc, 2.0, 0.0)  # 2 waves of astigmatism at 0 degrees
+zc.phase[6] = 1.0  # Add phase shift for visualization
 psf = Scalar3DPSF(na, λ, n, coeffs=zc)
-zc.phase[4] = 1.0  # Add phase shift for visualization
 
 # Check normalization over camera
 psf_normalized = integrate_pixels(psf, camera, Emitter3D(nx/2 * pixel_size, ny/2 * pixel_size, 0.0, 1.0))

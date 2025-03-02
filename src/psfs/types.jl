@@ -77,6 +77,7 @@ Scalar 3D PSF using explicit pupil function representation.
 - `λ::T`: Wavelength in microns
 - `n::T`: Refractive index
 - `pupil::PupilFunction{T}`: Complex pupil function
+- `zernike_coeffs::Union{Nothing, ZernikeCoefficients{T}}`: Zernike coefficients used to create this PSF (if applicable)
 
 # Notes
 Can be initialized with either a PupilFunction or ZernikeCoefficients
@@ -87,13 +88,14 @@ struct Scalar3DPSF{T} <: Abstract3DPSF{T}
     λ::T
     n::T
     pupil::PupilFunction{T}
+    zernike_coeffs::Union{Nothing, ZernikeCoefficients{T}}
 
-    function Scalar3DPSF(nₐ::Real, λ::Real, n::Real, pupil::PupilFunction)
+    function Scalar3DPSF(nₐ::Real, λ::Real, n::Real, pupil::PupilFunction, zernike_coeffs::Union{Nothing, ZernikeCoefficients}=nothing)
         T = promote_type(typeof(nₐ), typeof(λ), typeof(n), real(eltype(pupil.field)))
         nₐ > 0 || throw(ArgumentError("NA must be positive"))
         λ > 0 || throw(ArgumentError("wavelength must be positive"))
         n > 0 || throw(ArgumentError("refractive index must be positive"))
-        new{T}(T(nₐ), T(λ), T(n), pupil)
+        new{T}(T(nₐ), T(λ), T(n), pupil, zernike_coeffs)
     end
 end
 
@@ -112,6 +114,8 @@ Allows direct manipulation of pupil function for custom aberrations.
 - `dipole::DipoleVector{T}`: Dipole orientation
 - `focal_z::T`: Focal plane position (z) in microns relative to nominal focus
 - `pupil::VectorPupilFunction{T}`: Vector pupil function for Ex,Ey components
+- `base_pupil::Union{Nothing, PupilFunction{T}}`: Base pupil function representing system aberrations
+- `zernike_coeffs::Union{Nothing, ZernikeCoefficients{T}}`: Zernike coefficients used to create this PSF (if applicable)
 """
 struct Vector3DPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
     nₐ::T
@@ -122,4 +126,6 @@ struct Vector3DPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
     dipole::DipoleVector{T}
     focal_z::T
     pupil::VectorPupilFunction{T}
+    base_pupil::Union{Nothing, PupilFunction{T}}
+    zernike_coeffs::Union{Nothing, ZernikeCoefficients{T}}
 end

@@ -134,11 +134,13 @@ function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     
     T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium), typeof(focal_z))
     
-    # Convert Zernike coeffs to pupil if provided
-    base_pupil = if !isnothing(base_zernike)
-        PupilFunction(nₐ, λ, n_medium, base_zernike; grid_size=grid_size)
-    else
-        base_pupil
+    # Store the base pupil and/or convert Zernike coeffs to pupil if provided
+    stored_base_pupil = base_pupil
+    stored_zernike = base_zernike
+    
+    if isnothing(base_pupil) && !isnothing(base_zernike)
+        # Create base pupil from Zernike coefficients
+        base_pupil = PupilFunction(nₐ, λ, n_medium, base_zernike; grid_size=grid_size)
     end
     
     # Create vector pupil
@@ -153,7 +155,8 @@ function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     
     return Vector3DPSF{T}(
         T(nₐ), T(λ), T(n_medium), T(n_coverslip),
-        T(n_immersion), dipole, T(focal_z), vpupil
+        T(n_immersion), dipole, T(focal_z), vpupil,
+        stored_base_pupil, stored_zernike
     )
 end
 
@@ -196,6 +199,48 @@ Compute PSF intensity at given position by summing squared field amplitudes.
 function (psf::Vector3DPSF)(x::Real, y::Real, z::Real)
     E = amplitude(psf, x, y, z)
     return abs2(E[1]) + abs2(E[2])
+end
+
+"""
+    update_pupil!(psf::Vector3DPSF) -> Vector3DPSF
+
+Update the vector pupil function based on stored Zernike coefficients and/or base pupil.
+This is useful after modifying aberrations to regenerate the pupil fields.
+
+# Arguments
+- `psf`: Vector3DPSF to update
+
+# Returns
+- Updated Vector3DPSF
+
+# Notes
+- Requires either stored Zernike coefficients or a base pupil
+- Returns the updated PSF for method chaining
+"""
+function update_pupil!(psf::Vector3DPSF)
+    # Check if we have necessary components to update
+    if isnothing(psf.base_pupil) && isnothing(psf.zernike_coeffs)
+        throw(ArgumentError("Cannot update pupil: no base pupil or Zernike coefficients stored"))
+    end
+    
+    # If we have Zernike coefficients but no base pupil, create it
+    updated_base_pupil = psf.base_pupil
+    if isnothing(updated_base_pupil) && !isnothing(psf.zernike_coeffs)
+        updated_base_pupil = PupilFunction(
+            psf.nₐ, psf.λ, psf.n_medium, 
+            psf.zernike_coeffs; 
+            grid_size=size(psf.pupil.Ex.field, 1)
+        )
+    end
+    
+    # Fill the vector pupil with updated components
+    if !isnothing(updated_base_pupil)
+        fill_vector_pupil!(psf.pupil, psf.dipole, psf.focal_z, updated_base_pupil)
+    else
+        fill_vector_pupil!(psf.pupil, psf.dipole, psf.focal_z)
+    end
+    
+    return psf
 end
 
 """
@@ -299,4 +344,17 @@ end
 # Display method
 function Base.show(io::IO, psf::Vector3DPSF)
     print(io, "Vector3DPSF(NA=$(psf.nₐ), λ=$(psf.λ)μm, n_medium=$(psf.n_medium))")
+    has_bp = !isnothing(psf.base_pupil)
+    has_zc = !isnothing(psf.zernike_coeffs)
+    
+    if has_bp || has_zc
+        print(io, " with ")
+        if has_bp
+            print(io, "base pupil")
+            has_zc && print(io, " and ")
+        end
+        if has_zc
+            print(io, "$(length(psf.zernike_coeffs)) Zernike terms")
+        end
+    end
 end
