@@ -424,73 +424,6 @@ Integrate PSF over camera pixels using interpolation.
 
 # Returns
 - Array of integrated PSF intensities with dimensions [ny, nx]
-- Values represent the true integral of the PSF over each pixel area
-"""
-function integrate_pixels(
-    psf::SplinePSF,
-    camera::AbstractCamera,
-    emitter::AbstractEmitter;
-    sampling::Integer=2
-)
-    # For 3D PSFs using z from the emitter
-    if psf.z_range !== nothing
-        if !hasfield(typeof(emitter), :z)
-            throw(ArgumentError("3D SplinePSF requires an emitter with a z-coordinate"))
-        end
-        
-        result = _integrate_pixels_generic(
-            psf, camera, emitter, 
-            (p, x, y) -> p(x, y, emitter.z),
-            Float64; sampling=sampling
-        )
-    else
-        # For 2D PSFs
-        result = _integrate_pixels_generic(
-            psf, camera, emitter, 
-            (p, x, y) -> p(x, y),
-            Float64; sampling=sampling
-        )
-    end
-    
-    # Return the raw integrated values without normalization
-    return result
-end
-
-"""
-    integrate_pixels_amplitude(psf::SplinePSF,
-                             camera::AbstractCamera,
-                             emitter::AbstractEmitter;
-                             sampling::Integer=2)
-
-Integrate PSF amplitude (complex) over camera pixels.
-
-# Arguments
-- `psf`: SplinePSF instance
-- `camera`: Camera geometry
-- `emitter`: Emitter with position information
-- `sampling`: Subpixel sampling density for integration accuracy
-
-# Returns
-- Array of integrated PSF complex amplitudes with dimensions [ny, nx]
-"""
-# Updated SplinePSF integrate_pixels method
-
-"""
-    integrate_pixels(psf::SplinePSF, 
-                    camera::AbstractCamera, 
-                    emitter::AbstractEmitter;
-                    sampling::Integer=2)
-
-Integrate PSF over camera pixels using interpolation.
-
-# Arguments
-- `psf`: SplinePSF instance
-- `camera`: Camera geometry
-- `emitter`: Emitter with position information
-- `sampling`: Subpixel sampling density for integration accuracy
-
-# Returns
-- Array of integrated PSF intensities with dimensions [ny, nx]
 - Values represent actual photon counts based on emitter's photon value
 """
 function integrate_pixels(
@@ -521,6 +454,50 @@ function integrate_pixels(
     
     # Multiply by photon count to preserve physical meaning
     return result .* emitter.photons
+end
+
+"""
+    integrate_pixels_amplitude(psf::SplinePSF,
+                             camera::AbstractCamera,
+                             emitter::AbstractEmitter;
+                             sampling::Integer=2)
+
+Integrate PSF amplitude (complex) over camera pixels.
+
+# Arguments
+- `psf`: SplinePSF instance
+- `camera`: Camera geometry
+- `emitter`: Emitter with position information
+- `sampling`: Subpixel sampling density for integration accuracy
+
+# Returns
+- Array of integrated PSF complex amplitudes with dimensions [ny, nx]
+"""
+function integrate_pixels_amplitude(
+    psf::SplinePSF,
+    camera::AbstractCamera,
+    emitter::AbstractEmitter;
+    sampling::Integer=2
+)
+    # For 3D PSFs using z from the emitter
+    if psf.z_range !== nothing
+        if !hasfield(typeof(emitter), :z)
+            throw(ArgumentError("3D SplinePSF requires an emitter with a z-coordinate"))
+        end
+        
+        return _integrate_pixels_generic(
+            psf, camera, emitter, 
+            (p, x, y) -> amplitude(p, x, y, emitter.z),
+            Complex{Float64}; sampling=sampling
+        )
+    else
+        # For 2D PSFs
+        return _integrate_pixels_generic(
+            psf, camera, emitter, 
+            (p, x, y) -> amplitude(p, x, y),
+            Complex{Float64}; sampling=sampling
+        )
+    end
 end
 
 # --- I/O methods ---
