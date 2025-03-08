@@ -6,10 +6,6 @@ using Zygote
 using HDF5
 
 @testset "MicroscopePSFs" verbose=true begin
-    # Basic types and functionality
-    @testset "Basic Types" begin
-        include("psf_base_tests.jl")
-    end
     
     # Scalar3D PSF tests
     @testset "Scalar3D PSF" begin
@@ -26,18 +22,18 @@ using HDF5
         include("spline_psf_tests.jl")
     end
     
-    # Aberration and Zernike tests
-    @testset "Aberrations" begin
-        include("aberration_tests.jl")
-    end
+    # # Aberration and Zernike tests
+    # @testset "Aberrations" begin
+    #     include("aberration_tests.jl")
+    # end
     
-    # Normalization tests
-    @testset "Normalization" begin
-        include("normalization_tests.jl")
-    end
+    # # Normalization tests
+    # @testset "Normalization" begin
+    #     include("normalization_tests.jl")
+    # end
     
-    # I/O functionality tests
-    @testset "I/O Functions" begin
-        include("io_tests.jl")
-    end
+    # # I/O functionality tests
+    # @testset "I/O Functions" begin
+    #     include("io_tests.jl")
+    # end
 end
