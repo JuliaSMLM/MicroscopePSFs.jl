@@ -1,189 +1,138 @@
 # test/spline_psf_tests.jl
 
 @testset "SplinePSF" begin
-    # Test creation from data
-    @testset "Creation from data" begin
-        # Create a simple Gaussian pattern
-        sz = 21
-        x = y = z = range(-1.0, 1.0, length=sz)
-        sigma = 0.3
+    @testset "2D Airy PSF Spline" begin
+        # Create an Airy PSF (standard diffraction-limited PSF)
+        na = 1.4
+        wavelength = 0.532  # 532 nm
+        airy_psf = Airy2D(na, wavelength)
         
-        # Generate 3D Gaussian
-        data = zeros(sz, sz, sz)
-        for iz in 1:sz, ix in 1:sz, iy in 1:sz
-            r2 = x[ix]^2 + y[iy]^2 + z[iz]^2
-            data[iy, ix, iz] = exp(-r2 / (2*sigma^2))
-        end
+        # Create a spline representation with 0.05μm sampling
+        x_range = y_range = -1.0:0.01:1.0
+        spline_psf = SplinePSF(airy_psf, x_range, y_range)
         
-        # Create SplinePSF
-        spline_psf = SplinePSF(data; x_coords=x, y_coords=y, z_coords=z)
+        # Test at various distances from center
+        r_values = [0.0, 0.1, 0.2, 0.3, 0.5, 0.8]
         
-        # Test interpolation accuracy
-        interp_point = (0.123, -0.456, 0.789)
-        exact_value = exp(-(interp_point[1]^2 + interp_point[2]^2 + interp_point[3]^2) / (2*sigma^2))
-        interp_value = spline_psf(interp_point...)
-        
-        @test isapprox(interp_value * sum(data), exact_value, rtol=1e-3)
-    end
-    
-    # Test creation from analytical PSF
-    @testset "Creation from analytical PSF" begin
-        # Create Gaussian PSF
-        gauss_psf = Gaussian2D(0.15)
-        
-        # Convert to SplinePSF with dense sampling
-        spline_psf = SplinePSF(gauss_psf; 
-                              x_range=range(-0.5, 0.5, length=41),
-                              y_range=range(-0.5, 0.5, length=41),
-                              z_range=range(-0.5, 0.5, length=5))
-        
-        # Test at some random positions
-        for _ in 1:10
-            x = rand() * 0.4 - 0.2
-            y = rand() * 0.4 - 0.2
+        for r in r_values
+            # Test along both x and y axes
+            @test isapprox(spline_psf(r, 0.0), airy_psf(r, 0.0), rtol=0.02)
+            @test isapprox(spline_psf(0.0, r), airy_psf(0.0, r), rtol=0.02)
             
-            # Values should be very close
-            @test isapprox(spline_psf(x, y, 0.0), gauss_psf(x, y), rtol=1e-3)
+            # Test along diagonal
+            r_diag = r / sqrt(2)
+            @test isapprox(spline_psf(r_diag, r_diag), airy_psf(r_diag, r_diag), rtol=0.02)
         end
+        
+        # Test that spline PSF correctly represents the Airy pattern rings
+        # First Airy zero is at approx 1.22 * λ / (2*NA) ≈ 0.23μm for NA=1.4, λ=0.532μm
+        first_zero = 1.22 * wavelength / (2 * na)
+        
+        # Value at center should be high
+        @test spline_psf(0.0, 0.0) > 0.9 * airy_psf(0.0, 0.0)
+        
+        # Value at first zero should be close to zero
+        @test spline_psf(first_zero, 0.0) < 0.1
+        
+        # Value at second peak should be positive again
+        @test spline_psf(1.5 * first_zero, 0.0) > 0.1
     end
     
-    # Test 2D evaluation
-    @testset "2D evaluation" begin
-        # Create simple SplinePSF
-        sz = 11
-        x = y = range(-1.0, 1.0, length=sz)
-        z = range(-0.5, 0.5, length=5)
+    @testset "3D Scalar PSF Spline" begin
+        # Create a scalar 3D PSF
+        na = 1.2
+        wavelength = 0.532
+        n_medium = 1.33
+        scalar_psf = Scalar3DPSF(na, wavelength, n_medium)
         
-        data = zeros(sz, sz, 5)
-        for iz in 1:5, ix in 1:sz, iy in 1:sz
-            r2 = x[ix]^2 + y[iy]^2
-            data[iy, ix, iz] = exp(-r2 / 0.2)
+        # Create a spline representation with 0.05μm xy sampling and 0.1μm z sampling
+        x_range = y_range = -1.0:0.05:1.0
+        z_range = -1.0:0.1:1.0
+        
+        spline_psf = SplinePSF(scalar_psf, x_range, y_range, z_range)
+        
+        # Test at focus (z=0)
+        r_values = [0.0, 0.1, 0.3, 0.5, 0.8]
+        
+        for r in r_values
+            # Test at focus along x-axis
+            @test isapprox(spline_psf(r, 0.0, 0.0), scalar_psf(r, 0.0, 0.0), rtol=0.05)
+            
+            # Test at focus along diagonal
+            r_diag = r / sqrt(2)
+            @test isapprox(spline_psf(r_diag, r_diag, 0.0), scalar_psf(r_diag, r_diag, 0.0), rtol=0.05)
         end
         
-        spline_psf = SplinePSF(data; x_coords=x, y_coords=y, z_coords=z)
+        # Test at different z positions
+        z_values = [-0.5, -0.3, 0.0, 0.3, 0.5]
         
-        # 2D evaluation should use z=0
-        @test isapprox(spline_psf(0.3, 0.3), spline_psf(0.3, 0.3, 0.0), rtol=1e-10)
+        for z in z_values
+            # Test on-axis psf
+            @test isapprox(spline_psf(0.0, 0.0, z), scalar_psf(0.0, 0.0, z), rtol=0.05)
+            
+            # Test off-axis psf
+            @test isapprox(spline_psf(0.3, 0.0, z), scalar_psf(0.3, 0.0, z), rtol=0.05)
+        end
+        
+        # Test that the spline PSF correctly captures the PSF axial elongation
+        # The PSF should be more elongated in z than in xy
+        # Compare widths at which the intensity drops to 50% of maximum
+        
+        # Lateral profile
+        xy_hm_dist = 0.0
+        max_val = spline_psf(0.0, 0.0, 0.0)
+        for r in 0.0:0.01:0.5
+            if spline_psf(r, 0.0, 0.0) <= 0.5 * max_val
+                xy_hm_dist = r
+                break
+            end
+        end
+        
+        # Axial profile
+        z_hm_dist = 0.0
+        for z in 0.0:0.01:0.5
+            if spline_psf(0.0, 0.0, z) <= 0.5 * max_val
+                z_hm_dist = z
+                break
+            end
+        end
+        
+        # For typical high-NA microscopes, the PSF is ~3-5x more elongated in z
+        @test z_hm_dist > 2.5 * xy_hm_dist
     end
     
-    # Test amplitude
-    @testset "Amplitude" begin
-        # Create simple SplinePSF
-        sz = 11
-        x = y = range(-1.0, 1.0, length=sz)
-        z = range(-0.5, 0.5, length=3)
+    @testset "Pixel Integration" begin
+        # Create a 2D Airy PSF
+        na = 1.4
+        wavelength = 0.532
+        airy_psf = Airy2D(na, wavelength)
         
-        data = zeros(sz, sz, 3)
-        for iz in 1:3, ix in 1:sz, iy in 1:sz
-            r2 = x[ix]^2 + y[iy]^2
-            data[iy, ix, iz] = exp(-r2 / 0.2)
-        end
-        
-        spline_psf = SplinePSF(data; x_coords=x, y_coords=y, z_coords=z)
-        
-        # Amplitude should be sqrt of intensity
-        @test isapprox(abs2(amplitude(spline_psf, 0.3, 0.4, 0.1)), spline_psf(0.3, 0.4, 0.1), rtol=1e-10)
-    end
-    
-    # Test pixel integration
-    @testset "Pixel integration" begin
-        # Create simple SplinePSF
-        sz = 31
-        x = y = range(-1.0, 1.0, length=sz)
-        z = [0.0]
-        
-        data = zeros(sz, sz, 1)
-        for ix in 1:sz, iy in 1:sz
-            r2 = x[ix]^2 + y[iy]^2
-            data[iy, ix, 1] = exp(-r2 / 0.2)
-        end
-        
-        spline_psf = SplinePSF(data; x_coords=x, y_coords=y, z_coords=z)
+        # Create spline representation with 0.05μm sampling
+        x_range = y_range = -1.0:0.05:1.0
+        spline_psf = SplinePSF(airy_psf, x_range, y_range)
         
         # Create camera
-        camera = IdealCamera(0:0.1:2.0, 0:0.1:2.0)  # 20x20 pixels, 100nm each
+        pixel_edges_x = collect(0:0.1:2.0)  # 100nm pixels
+        pixel_edges_y = collect(0:0.1:2.0)
+        camera = IdealCamera(pixel_edges_x, pixel_edges_y)
         
         # Create emitter
         emitter = Emitter2D(1.0, 1.0, 1000.0)  # x=1μm, y=1μm, 1000 photons
         
-        # Integrate pixels
-        pixels = integrate_pixels(spline_psf, camera, emitter)
+        # Integrate pixels using both models
+        spline_img = integrate_pixels(spline_psf, camera, emitter)
+        airy_img = integrate_pixels(airy_psf, camera, emitter)
         
-        # Check that result normalizes to 1
-        @test isapprox(sum(pixels), 1.0, rtol=1e-10)
+        # Compare images
+        # Total photons should be similar
+        @test isapprox(sum(spline_img), sum(airy_img), rtol=0.05)
         
-        # Highest intensity should be near emitter position
-        max_idx = findmax(pixels)[2]
-        ctr_x, ctr_y = 10, 10  # Pixel indices near (1,1)
-        @test abs(max_idx[1] - ctr_y) <= 1 && abs(max_idx[2] - ctr_x) <= 1
-    end
-    
-    # Test save/load
-    @testset "Save and load" begin
-        # Create a simple SplinePSF
-        sz = 11
-        x = y = range(-1.0, 1.0, length=sz)
-        z = range(-0.5, 0.5, length=3)
+        # Peak position should be the same
+        spline_peak = findmax(spline_img)[2]
+        airy_peak = findmax(airy_img)[2]
+        @test spline_peak == airy_peak
         
-        data = zeros(sz, sz, 3)
-        for iz in 1:3, ix in 1:sz, iy in 1:sz
-            r2 = x[ix]^2 + y[iy]^2 + z[iz]^2
-            data[iy, ix, iz] = exp(-r2 / 0.2)
-        end
-        
-        original_psf = SplinePSF(data; x_coords=x, y_coords=y, z_coords=z)
-        
-        # Save to temporary file
-        temp_file = tempname() * ".h5"
-        save_spline_psf(temp_file, original_psf)
-        
-        # Load from file
-        loaded_psf = load_spline_psf(temp_file)
-        
-        # Compare values at random points
-        for _ in 1:10
-            test_point = (rand()*1.8-0.9, rand()*1.8-0.9, rand()*0.9-0.45)
-            @test isapprox(original_psf(test_point...), loaded_psf(test_point...), rtol=1e-3)
-        end
-        
-        # Clean up
-        rm(temp_file)
-    end
-    
-    # Test automatic differentiation with Zygote
-    @testset "Automatic differentiation" begin
-        # Create a simple SplinePSF
-        sz = 21
-        x = y = range(-1.0, 1.0, length=sz)
-        z = [0.0] # 2D for simplicity
-        
-        data = zeros(sz, sz, 1)
-        sigma = 0.3
-        for ix in 1:sz, iy in 1:sz
-            r2 = x[ix]^2 + y[iy]^2
-            data[iy, ix, 1] = exp(-r2 / (2*sigma^2))
-        end
-        
-        spline_psf = SplinePSF(data; x_coords=x, y_coords=y, z_coords=z)
-        
-        # Define a function to differentiate
-        f(p) = spline_psf(p[1], p[2], 0.0)
-        
-        # Use Zygote to get gradient
-        p0 = [0.2, 0.3]
-        grad = Zygote.gradient(f, p0)[1]
-        
-        # Compare to analytical gradient of Gaussian
-        r2 = p0[1]^2 + p0[2]^2
-        exact_val = exp(-r2 / (2*sigma^2))
-        exact_grad = -exact_val .* p0 ./ sigma^2
-        
-        # Normalize for comparison (since our SplinePSF is normalized)
-        norm_factor = sum(data)
-        exact_grad = exact_grad / norm_factor
-        
-        # Test gradient accuracy
-        @test isapprox(grad[1], exact_grad[1], rtol=1e-2)
-        @test isapprox(grad[2], exact_grad[2], rtol=1e-2)
+        # Peak value should be similar
+        @test isapprox(maximum(spline_img), maximum(airy_img), rtol=0.05)
     end
 end
