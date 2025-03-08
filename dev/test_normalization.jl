@@ -65,7 +65,7 @@ println("  SplinePSF: Sum = $(sum(pixels_spline_z1))")
 
 function test_depth_dependence(psf::Vector3DPSF, max_depth::Real=5.0)
     depths = range(0, max_depth, length=20)
-    intensities = [sum(psf(0.0, 0.0, z)) for z in depths]
+    intensities = [psf(0.0, 0.0, z) for z in depths]
     
     # Should show decreasing intensity with depth
     for (z, I) in zip(depths, intensities)
@@ -73,3 +73,5 @@ function test_depth_dependence(psf::Vector3DPSF, max_depth::Real=5.0)
     end
 end
 test_depth_dependence(vector3d, 5.0)
+
+MicroscopePSFs.kpixelsize() 
