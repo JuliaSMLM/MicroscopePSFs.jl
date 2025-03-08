@@ -1,12 +1,18 @@
 # src/io.jl
 
 """
-I/O functionality for PSFs including serialization to/from HDF5 files
+    IO Module for MicroscopePSFs
+
+Provides unified functionality for saving and loading PSF objects and pupil functions to/from HDF5 files.
+All types share a common container format for better interoperability.
+
+Key functions:
+- save_psf: Save any PSF or pupil type to an HDF5 file
+- load_psf: Load any PSF or pupil type from an HDF5 file
 """
 
 # Import Base functions that we want to extend
 import Base: read, write
-import Base: save, load
 
 # Constants
 const IO_VERSION = v"1.0.0"  # Version of the I/O system
@@ -24,6 +30,19 @@ Save a PSF to an HDF5 file.
 
 # Returns
 - `filename` for chaining
+
+# Examples
+```julia
+# Save a PSF with metadata
+psf = Airy2D(1.4, 0.532)
+save_psf("airy_psf.h5", psf, metadata=Dict("description" => "Example Airy PSF"))
+
+# Save a PSF with Zernike aberrations
+zc = ZernikeCoefficients(15)
+add_astigmatism!(zc, 0.5)
+psf = Scalar3DPSF(1.4, 0.532, 1.518; coeffs=zc)
+save_psf("aberrated_psf.h5", psf)
+```
 """
 function save_psf(filename::String, psf::AbstractPSF; metadata::Dict=Dict())
     h5open(filename, "w") do file
@@ -54,7 +73,13 @@ Load a PSF from an HDF5 file.
 - `filename`: Path to the saved PSF file
 
 # Returns
-- PSF of the appropriate type
+- PSF of the appropriate type based on stored metadata
+
+# Examples
+```julia
+# Load a previously saved PSF
+psf = load_psf("my_psf.h5")
+```
 """
 function load_psf(filename::String)
     h5open(filename, "r") do file
@@ -96,8 +121,9 @@ function _load_psf_impl(file::HDF5.File, ::Type{T}) where {T <: AbstractPSF}
     error("Loading not implemented for PSF type $T")
 end
 
-# Implementations for specific PSF types
-# Gaussian2D
+# ======= Implementations for specific PSF types =======
+
+# ---- Gaussian2D ----
 function _save_psf_impl(file::HDF5.File, psf::Gaussian2D)
     params = create_group(file, "parameters")
     params["sigma"] = psf.σ
@@ -109,7 +135,7 @@ function _load_psf_impl(file::HDF5.File, ::Type{Gaussian2D})
     return Gaussian2D(σ)
 end
 
-# Airy2D
+# ---- Airy2D ----
 function _save_psf_impl(file::HDF5.File, psf::Airy2D)
     params = create_group(file, "parameters")
     params["na"] = psf.nₐ
@@ -123,12 +149,19 @@ function _load_psf_impl(file::HDF5.File, ::Type{Airy2D})
     return Airy2D(nₐ, λ)
 end
 
-# Scalar3DPSF
+# ---- Scalar3DPSF ----
 function _save_psf_impl(file::HDF5.File, psf::Scalar3DPSF)
     params = create_group(file, "parameters")
     params["na"] = psf.nₐ
     params["lambda"] = psf.λ
     params["n"] = psf.n
+    
+    # Save Zernike coefficients if available
+    if !isnothing(psf.zernike_coeffs)
+        zernike = create_group(file, "zernike_coefficients")
+        zernike["magnitude"] = psf.zernike_coeffs.mag
+        zernike["phase"] = psf.zernike_coeffs.phase
+    end
     
     # Save pupil field
     data = create_group(file, "data")
@@ -142,16 +175,26 @@ function _load_psf_impl(file::HDF5.File, ::Type{Scalar3DPSF})
     λ = read(params["lambda"])
     n = read(params["n"])
     
+    # Load pupil field
     data = file["data"]
     real_part = read(data["pupil_field_real"])
     imag_part = read(data["pupil_field_imag"])
     field = real_part + im * imag_part
     
+    # Load Zernike coefficients if available
+    zernike_coeffs = nothing
+    if haskey(file, "zernike_coefficients")
+        zc = file["zernike_coefficients"]
+        mag = read(zc["magnitude"])
+        phase = read(zc["phase"])
+        zernike_coeffs = ZernikeCoefficients(mag, phase)
+    end
+    
     pupil = PupilFunction(nₐ, λ, n, field)
-    return Scalar3DPSF(nₐ, λ, n, pupil)
+    return Scalar3DPSF(nₐ, λ, n, pupil, zernike_coeffs)
 end
 
-# SplinePSF
+# ---- SplinePSF ----
 function _save_psf_impl(file::HDF5.File, psf::SplinePSF)
     params = create_group(file, "parameters")
     
@@ -164,37 +207,22 @@ function _save_psf_impl(file::HDF5.File, psf::SplinePSF)
     params["y_step"] = step(psf.y_range)
     params["y_length"] = length(psf.y_range)
     
+    # Save interpolation order directly
+    params["interp_order"] = psf.interp_order
+    
     # Handle 2D vs 3D
     if psf.z_range !== nothing
         params["dimensions"] = "3D"
         params["z_start"] = first(psf.z_range)
         params["z_step"] = step(psf.z_range)
         params["z_length"] = length(psf.z_range)
-        
-        # Sample the PSF on the grid
-        grid = Array{Float64}(undef, length(psf.y_range), length(psf.x_range), length(psf.z_range))
-        for (iz, z) in enumerate(psf.z_range)
-            for (ix, x) in enumerate(psf.x_range)
-                for (iy, y) in enumerate(psf.y_range)
-                    grid[iy, ix, iz] = psf(x, y, z)
-                end
-            end
-        end
     else
         params["dimensions"] = "2D"
-        
-        # Sample the PSF on the grid
-        grid = Array{Float64}(undef, length(psf.y_range), length(psf.x_range))
-        for (ix, x) in enumerate(psf.x_range)
-            for (iy, y) in enumerate(psf.y_range)
-                grid[iy, ix] = psf(x, y)
-            end
-        end
     end
     
-    # Save the sampled grid
+    # Save the original grid - this is the key improvement
     data = create_group(file, "data")
-    data["spline_grid"] = grid
+    data["original_grid"] = psf.original_grid
 end
 
 function _load_psf_impl(file::HDF5.File, ::Type{SplinePSF})
@@ -213,9 +241,15 @@ function _load_psf_impl(file::HDF5.File, ::Type{SplinePSF})
     x_range = range(x_start, step=x_step, length=x_length)
     y_range = range(y_start, step=y_step, length=y_length)
     
-    # Read grid data
+    # Read interpolation order
+    interp_order = 3  # Default to cubic
+    if haskey(params, "interp_order")
+        interp_order = read(params["interp_order"])
+    end
+    
+    # Read the original grid
     data = file["data"]
-    grid = read(data["spline_grid"])
+    grid = read(data["original_grid"])
     
     # Handle 2D vs 3D
     dimensions = read(params["dimensions"])
@@ -225,13 +259,15 @@ function _load_psf_impl(file::HDF5.File, ::Type{SplinePSF})
         z_length = read(params["z_length"])
         z_range = range(z_start, step=z_step, length=z_length)
         
-        return SplinePSF(grid, x_range, y_range, z_range)
+        # Create the SplinePSF with the original grid and interpolation order
+        return SplinePSF(grid, x_range, y_range, z_range; order=interp_order)
     else
-        return SplinePSF(grid, x_range, y_range)
+        # Create the SplinePSF with the original grid and interpolation order
+        return SplinePSF(grid, x_range, y_range; order=interp_order)
     end
 end
 
-# Vector3DPSF
+# ---- Vector3DPSF ----
 function _save_psf_impl(file::HDF5.File, psf::Vector3DPSF)
     params = create_group(file, "parameters")
     params["na"] = psf.nₐ
@@ -240,6 +276,13 @@ function _save_psf_impl(file::HDF5.File, psf::Vector3DPSF)
     params["n_coverslip"] = psf.n_coverslip
     params["n_immersion"] = psf.n_immersion
     params["focal_z"] = psf.focal_z
+    
+    # Save Zernike coefficients if available
+    if !isnothing(psf.zernike_coeffs)
+        zernike = create_group(file, "zernike_coefficients")
+        zernike["magnitude"] = psf.zernike_coeffs.mag
+        zernike["phase"] = psf.zernike_coeffs.phase
+    end
     
     # Save dipole orientation
     dipole = create_group(file, "dipole")
@@ -250,12 +293,12 @@ function _save_psf_impl(file::HDF5.File, psf::Vector3DPSF)
     # Save pupil functions
     data = create_group(file, "data")
     pupil_ex = create_group(data, "pupil_ex")
-    pupil_ex["field_real"] = real(psf.pupil.Ex.field)
-    pupil_ex["field_imag"] = imag(psf.pupil.Ex.field)
+    pupil_ex["field_real"] = real(psf.vector_pupils.Ex.field)
+    pupil_ex["field_imag"] = imag(psf.vector_pupils.Ex.field)
     
     pupil_ey = create_group(data, "pupil_ey")
-    pupil_ey["field_real"] = real(psf.pupil.Ey.field)
-    pupil_ey["field_imag"] = imag(psf.pupil.Ey.field)
+    pupil_ey["field_real"] = real(psf.vector_pupils.Ey.field)
+    pupil_ey["field_imag"] = imag(psf.vector_pupils.Ey.field)
 end
 
 function _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF})
@@ -274,6 +317,15 @@ function _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF})
     pz = read(dipole_group["pz"])
     dipole = DipoleVector(px, py, pz)
     
+    # Load Zernike coefficients if available
+    zernike_coeffs = nothing
+    if haskey(file, "zernike_coefficients")
+        zc = file["zernike_coefficients"]
+        mag = read(zc["magnitude"])
+        phase = read(zc["phase"])
+        zernike_coeffs = ZernikeCoefficients(mag, phase)
+    end
+    
     # Load pupil fields
     data = file["data"]
     pupil_ex = data["pupil_ex"]
@@ -291,34 +343,17 @@ function _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF})
     Ey = PupilFunction(nₐ, λ, n_medium, ey_field)
     vpupil = VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
     
-    return Vector3DPSF(nₐ, λ, n_medium, n_coverslip, n_immersion, dipole, focal_z, vpupil)
+    # Create the Vector3DPSF with proper parameters
+    # For the base_pupil, we'd need to decide on a reconstruction strategy
+    base_pupil = nothing
+    
+    return Vector3DPSF{typeof(nₐ)}(
+        nₐ, λ, n_medium, n_coverslip, n_immersion,
+        dipole, focal_z, vpupil, base_pupil, zernike_coeffs
+    )
 end
 
-# Convenience aliases
-"""
-    save(filename::String, psf::AbstractPSF; kwargs...)
-
-Alias for save_psf.
-"""
-function save(filename::String, psf::AbstractPSF; kwargs...)
-    return save_psf(filename, psf; kwargs...)
-end
-
-"""
-    load(filename::String)
-
-Alias for load_psf.
-"""
-function load(filename::String)
-    return load_psf(filename)
-end
-
-# PupilFunction I/O
-"""
-    _save_psf_impl(file::HDF5.File, pupil::PupilFunction)
-
-Save a PupilFunction to an HDF5 file.
-"""
+# ---- PupilFunction ----
 function _save_psf_impl(file::HDF5.File, pupil::PupilFunction)
     params = create_group(file, "parameters")
     params["na"] = pupil.nₐ
@@ -331,11 +366,6 @@ function _save_psf_impl(file::HDF5.File, pupil::PupilFunction)
     data["field_imag"] = imag(pupil.field)
 end
 
-"""
-    _load_psf_impl(file::HDF5.File, ::Type{PupilFunction})
-
-Load a PupilFunction from an HDF5 file.
-"""
 function _load_psf_impl(file::HDF5.File, ::Type{PupilFunction})
     params = file["parameters"]
     nₐ = read(params["na"])
@@ -350,5 +380,64 @@ function _load_psf_impl(file::HDF5.File, ::Type{PupilFunction})
     return PupilFunction(nₐ, λ, n, field)
 end
 
-# Export the main public functions
-export save_psf, load_psf, save, load
+# ---- VectorPupilFunction ----
+function _save_psf_impl(file::HDF5.File, pupil::VectorPupilFunction)
+    params = create_group(file, "parameters")
+    params["na"] = pupil.nₐ
+    params["lambda"] = pupil.λ
+    params["n_medium"] = pupil.n_medium
+    params["n_coverslip"] = pupil.n_coverslip
+    params["n_immersion"] = pupil.n_immersion
+    
+    # Save Ex field data
+    ex_data = create_group(file, "ex_field")
+    ex_data["field_real"] = real(pupil.Ex.field)
+    ex_data["field_imag"] = imag(pupil.Ex.field)
+    
+    # Save Ey field data
+    ey_data = create_group(file, "ey_field")
+    ey_data["field_real"] = real(pupil.Ey.field)
+    ey_data["field_imag"] = imag(pupil.Ey.field)
+end
+
+function _load_psf_impl(file::HDF5.File, ::Type{VectorPupilFunction})
+    params = file["parameters"]
+    nₐ = read(params["na"])
+    λ = read(params["lambda"])
+    n_medium = read(params["n_medium"])
+    n_coverslip = read(params["n_coverslip"])
+    n_immersion = read(params["n_immersion"])
+    
+    # Load Ex field
+    ex_data = file["ex_field"]
+    ex_real = read(ex_data["field_real"])
+    ex_imag = read(ex_data["field_imag"])
+    ex_field = ex_real + im * ex_imag
+    
+    # Load Ey field
+    ey_data = file["ey_field"]
+    ey_real = read(ey_data["field_real"])
+    ey_imag = read(ey_data["field_imag"])
+    ey_field = ey_real + im * ey_imag
+    
+    # Create pupil functions
+    Ex = PupilFunction(nₐ, λ, n_medium, ex_field)
+    Ey = PupilFunction(nₐ, λ, n_medium, ey_field)
+    
+    return VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
+end
+
+# ---- ZernikeCoefficients ----
+function _save_psf_impl(file::HDF5.File, zc::ZernikeCoefficients)
+    data = create_group(file, "data")
+    data["magnitude"] = zc.mag
+    data["phase"] = zc.phase
+end
+
+function _load_psf_impl(file::HDF5.File, ::Type{ZernikeCoefficients})
+    data = file["data"]
+    mag = read(data["magnitude"])
+    phase = read(data["phase"])
+    return ZernikeCoefficients(mag, phase)
+end
+

@@ -4,6 +4,29 @@ using MicroscopePSFs
 using LinearAlgebra
 
 @testset "PSF Base Types" begin
+    # Check that basic objects can be created
+    @testset "Basic Object Creation" begin
+        @test isa(ZernikeCoefficients(5), ZernikeCoefficients)
+        @test isa(Gaussian2D(0.15), Gaussian2D)
+        @test isa(DipoleVector(1.0, 0.0, 0.0), DipoleVector)
+        
+        # Test Emitter types
+        emitter2d = Emitter2D(1.5, 2.0, 1000.0)
+        @test emitter2d.x ≈ 1.5
+        @test emitter2d.y ≈ 2.0
+        @test emitter2d.photons ≈ 1000.0
+        
+        emitter3d = Emitter3D(1.5, 2.0, 3.0, 1000.0)
+        @test emitter3d.x ≈ 1.5
+        @test emitter3d.y ≈ 2.0
+        @test emitter3d.z ≈ 3.0
+        @test emitter3d.photons ≈ 1000.0
+        
+        # Test basic PSF evaluation
+        psf_gauss = Gaussian2D(0.15)
+        @test psf_gauss(0.0, 0.0) > psf_gauss(0.1, 0.1)
+    end
+
     # Test basic PSF types
     @testset "2D PSF Constructors" begin
         # Test Airy PSF constructor

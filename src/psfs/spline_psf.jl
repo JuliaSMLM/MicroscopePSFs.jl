@@ -10,17 +10,25 @@ A point spread function (PSF) represented as a B-spline interpolation.
 - `x_range`: Range of x-coordinates used for uniform grid interpolation
 - `y_range`: Range of y-coordinates used for uniform grid interpolation  
 - `z_range`: Range of z-coordinates for 3D PSFs, or `nothing` for 2D PSFs
+- `original_grid`: Original grid data used to create the interpolation
+- `interp_order`: Interpolation order used (0=constant, 1=linear, 3=cubic)
 
 # Notes
 - Coordinates and ranges are in physical units (typically microns)
 - PSF values are preserved from the original PSF that was sampled
-- Internally uses cubic B-spline interpolation (order=3) by default
+- Interpolation order determines the smoothness of the interpolation:
+  * 0: Constant (nearest neighbor)
+  * 1: Linear
+  * 3: Cubic B-spline (default, most accurate)
+- The original grid is stored to ensure exact reproduction when saving/loading
 """
 struct SplinePSF{T<:AbstractFloat, IT<:AbstractInterpolation} <: AbstractPSF
     spline::IT
     x_range::StepRangeLen{T}
     y_range::StepRangeLen{T}
     z_range::Union{StepRangeLen{T}, Nothing}
+    original_grid::Array{T}
+    interp_order::Int
 end
 
 # --- Helper functions for PSF sampling ---
@@ -85,6 +93,15 @@ Construct a 3D SplinePSF from a PSF stack and coordinate ranges.
 
 # Returns
 - `SplinePSF`: A 3D spline interpolation of the PSF
+
+# Examples
+```julia
+# Create a 3D spline from sampled intensity values
+x_range = y_range = range(-2.0, 2.0, length=41)  # 41×41 lateral samples with 0.1μm spacing
+z_range = range(-1.0, 1.0, length=21)            # 21 axial samples with 0.1μm spacing
+psf_values = zeros(Float64, 41, 41, 21)          # Fill with your PSF values
+spline_psf = SplinePSF(psf_values, x_range, y_range, z_range)
+```
 """
 function SplinePSF(psf_stack::AbstractArray{<:Real,3}, 
                   x_range::AbstractRange,
@@ -96,13 +113,16 @@ function SplinePSF(psf_stack::AbstractArray{<:Real,3},
     y_range_f64 = convert(StepRangeLen{Float64}, y_range)
     z_range_f64 = convert(StepRangeLen{Float64}, z_range)
     
+    # Create a copy of the grid data to ensure we own the memory
+    grid_copy = convert(Array{Float64}, copy(psf_stack))
+    
     # Create the BSpline interpolant with the specified order
     if order == 3  # Cubic interpolation (most common case)
-        itp = interpolate(psf_stack, BSpline(Cubic(Line(OnGrid()))))
+        itp = interpolate(grid_copy, BSpline(Cubic(Line(OnGrid()))))
     elseif order == 1  # Linear interpolation
-        itp = interpolate(psf_stack, BSpline(Linear()))
+        itp = interpolate(grid_copy, BSpline(Linear()))
     elseif order == 0  # Constant interpolation
-        itp = interpolate(psf_stack, BSpline(Constant()))
+        itp = interpolate(grid_copy, BSpline(Constant()))
     else
         throw(ArgumentError("Interpolation order $order not supported. Use 0 (constant), 1 (linear), or 3 (cubic)"))
     end
@@ -111,7 +131,7 @@ function SplinePSF(psf_stack::AbstractArray{<:Real,3},
     # The scale function expects individual ranges, not a tuple
     scaled_itp = scale(itp, y_range_f64, x_range_f64, z_range_f64)
     
-    return SplinePSF{Float64, typeof(scaled_itp)}(scaled_itp, x_range_f64, y_range_f64, z_range_f64)
+    return SplinePSF{Float64, typeof(scaled_itp)}(scaled_itp, x_range_f64, y_range_f64, z_range_f64, grid_copy, order)
 end
 
 # --- Core constructors for 2D PSFs ---
@@ -132,6 +152,15 @@ Construct a 2D SplinePSF from a PSF stack and coordinate ranges.
 
 # Returns
 - `SplinePSF`: A 2D spline interpolation of the PSF
+
+# Examples
+```julia
+# Create a 2D spline from an Airy PSF sampled on a grid
+x_range = y_range = range(-2.0, 2.0, length=101)  # 101×101 grid with 40nm spacing
+airy = Airy2D(1.4, 0.532)  # NA=1.4, λ=532nm
+psf_values = [airy(x, y) for y in y_range, x in x_range]
+spline_psf = SplinePSF(psf_values, x_range, y_range)
+```
 """
 function SplinePSF(psf_stack::AbstractArray{<:Real,2}, 
                   x_range::AbstractRange,
@@ -141,13 +170,16 @@ function SplinePSF(psf_stack::AbstractArray{<:Real,2},
     x_range_f64 = convert(StepRangeLen{Float64}, x_range)
     y_range_f64 = convert(StepRangeLen{Float64}, y_range)
     
+    # Create a copy of the grid data to ensure we own the memory
+    grid_copy = convert(Array{Float64}, copy(psf_stack))
+    
     # Create the BSpline interpolant with the specified order
     if order == 3  # Cubic interpolation (most common case)
-        itp = interpolate(psf_stack, BSpline(Cubic(Line(OnGrid()))))
+        itp = interpolate(grid_copy, BSpline(Cubic(Line(OnGrid()))))
     elseif order == 1  # Linear interpolation
-        itp = interpolate(psf_stack, BSpline(Linear()))
+        itp = interpolate(grid_copy, BSpline(Linear()))
     elseif order == 0  # Constant interpolation
-        itp = interpolate(psf_stack, BSpline(Constant()))
+        itp = interpolate(grid_copy, BSpline(Constant()))
     else
         throw(ArgumentError("Interpolation order $order not supported. Use 0 (constant), 1 (linear), or 3 (cubic)"))
     end
@@ -156,7 +188,7 @@ function SplinePSF(psf_stack::AbstractArray{<:Real,2},
     # The scale function expects individual ranges, not a tuple
     scaled_itp = scale(itp, y_range_f64, x_range_f64)
     
-    return SplinePSF{Float64, typeof(scaled_itp)}(scaled_itp, x_range_f64, y_range_f64, nothing)
+    return SplinePSF{Float64, typeof(scaled_itp)}(scaled_itp, x_range_f64, y_range_f64, nothing, grid_copy, order)
 end
 
 # --- Constructors for building from existing PSF types ---
@@ -309,6 +341,12 @@ Evaluate the 3D spline PSF at position (x, y, z).
 # Notes
 - Returns 0 if the position is outside the PSF boundary
 - Preserves the normalization of the original PSF data
+
+# Example
+```julia
+# Evaluate a 3D SplinePSF at a specific point
+intensity = spline_psf(0.1, 0.2, 0.3)
+```
 """
 function (psf::SplinePSF)(x::Real, y::Real, z::Real)
     # Check that this is a 3D PSF
@@ -345,6 +383,12 @@ Evaluate the spline PSF at position (x, y).
 - For 3D PSFs, evaluates at z = 0 if in range, otherwise returns 0
 - Returns 0 if the position is outside the PSF boundary
 - Preserves the normalization of the original PSF data
+
+# Example
+```julia
+# Evaluate a SplinePSF at a specific point
+intensity = spline_psf(0.1, 0.2)
+```
 """
 function (psf::SplinePSF)(x::Real, y::Real)
     # Check bounds in x and y
@@ -500,116 +544,6 @@ function integrate_pixels_amplitude(
     end
 end
 
-# --- I/O methods ---
-
-"""
-    save_spline_psf(filename::String, psf::SplinePSF)
-
-Save a SplinePSF to an HDF5 file.
-
-# Arguments
-- `filename`: Path where the PSF will be saved
-- `psf`: SplinePSF to save
-
-# Notes
-- Saves the coordinates and PSF values to reconstruct the spline later
-- File can be loaded with load_spline_psf
-"""
-function save_spline_psf(filename::String, psf::SplinePSF)
-    h5open(filename, "w") do file
-        # Save range information
-        file["x_start"] = first(psf.x_range)
-        file["x_step"] = step(psf.x_range)
-        file["x_length"] = length(psf.x_range)
-        
-        file["y_start"] = first(psf.y_range)
-        file["y_step"] = step(psf.y_range)
-        file["y_length"] = length(psf.y_range)
-        
-        # Check if 3D
-        if psf.z_range !== nothing
-            file["z_start"] = first(psf.z_range)
-            file["z_step"] = step(psf.z_range)
-            file["z_length"] = length(psf.z_range)
-            file["dimensions"] = "3D"
-            
-            # Sample the PSF on the grid
-            psf_values = Array{Float64}(undef, length(psf.y_range), length(psf.x_range), length(psf.z_range))
-            for (iz, z) in enumerate(psf.z_range)
-                for (ix, x) in enumerate(psf.x_range)
-                    for (iy, y) in enumerate(psf.y_range)
-                        psf_values[iy, ix, iz] = psf(x, y, z)
-                    end
-                end
-            end
-        else
-            # 2D case
-            file["dimensions"] = "2D"
-            
-            # Sample the PSF on the grid
-            psf_values = Array{Float64}(undef, length(psf.y_range), length(psf.x_range))
-            for (ix, x) in enumerate(psf.x_range)
-                for (iy, y) in enumerate(psf.y_range)
-                    psf_values[iy, ix] = psf(x, y)
-                end
-            end
-        end
-        
-        file["psf_values"] = psf_values
-        attrs = file["psf_values"]
-        attrs["type"] = "SplinePSF"
-        attrs["version"] = "2.0"  # Updated version
-    end
-end
-
-"""
-    load_spline_psf(filename::String)
-
-Load a SplinePSF from an HDF5 file.
-
-# Arguments
-- `filename`: Path to the saved PSF file
-
-# Returns
-- SplinePSF reconstructed from the file data
-
-# Notes
-- Handles files created with save_spline_psf
-"""
-function load_spline_psf(filename::String)
-    h5open(filename, "r") do file
-        # Read range information
-        x_start = read(file["x_start"])
-        x_step = read(file["x_step"])
-        x_length = read(file["x_length"])
-        
-        y_start = read(file["y_start"])
-        y_step = read(file["y_step"])
-        y_length = read(file["y_length"])
-        
-        # Create ranges from saved parameters
-        x_range = range(x_start, step=x_step, length=x_length)
-        y_range = range(y_start, step=y_step, length=y_length)
-        
-        # Read PSF values
-        psf_values = read(file["psf_values"])
-        
-        # Check if it's a 3D PSF
-        dimensions = read(file["dimensions"])
-        if dimensions == "3D"
-            z_start = read(file["z_start"])
-            z_step = read(file["z_step"])
-            z_length = read(file["z_length"])
-            z_range = range(z_start, step=z_step, length=z_length)
-            
-            return SplinePSF(psf_values, x_range, y_range, z_range)
-        else
-            # 2D PSF
-            return SplinePSF(psf_values, x_range, y_range)
-        end
-    end
-end
-
 # --- Pretty printing ---
 
 """
@@ -624,11 +558,16 @@ function Base.show(io::IO, psf::SplinePSF)
     x_size = last(psf.x_range) - first(psf.x_range)
     y_size = last(psf.y_range) - first(psf.y_range)
     
+    order_name = psf.interp_order == 0 ? "constant" : 
+                 psf.interp_order == 1 ? "linear" : 
+                 psf.interp_order == 3 ? "cubic" : 
+                 "order $(psf.interp_order)"
+    
     if psf.z_range !== nothing
         nz = length(psf.z_range)
         z_size = last(psf.z_range) - first(psf.z_range)
-        print(io, "SplinePSF($(ny)×$(nx)×$(nz) grid, $(round(x_size, digits=2))×$(round(y_size, digits=2))×$(round(z_size, digits=2))μm)")
+        print(io, "SplinePSF($(ny)×$(nx)×$(nz) grid, $(round(x_size, digits=2))×$(round(y_size, digits=2))×$(round(z_size, digits=2))μm, $(order_name))")
     else
-        print(io, "SplinePSF($(ny)×$(nx) grid, $(round(x_size, digits=2))×$(round(y_size, digits=2))μm)")
+        print(io, "SplinePSF($(ny)×$(nx) grid, $(round(x_size, digits=2))×$(round(y_size, digits=2))μm, $(order_name))")
     end
 end

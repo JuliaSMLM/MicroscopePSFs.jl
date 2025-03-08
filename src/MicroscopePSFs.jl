@@ -44,8 +44,7 @@ export scale!, merge!, rms, trim!, significant_terms
 # Rest of exports unchanged...
 export AbstractPSF
 export integrate_pixels, amplitude, integrate_pixels_amplitude
-export save_psf, load_psf
-export cache_field, load_cached_field
+export save_psf, load_psf 
 
 # Pupil Function types
 export PupilFunction, VectorPupilFunction
@@ -54,7 +53,7 @@ export PupilFunction, VectorPupilFunction
 export Gaussian2D, Airy2D
 export Scalar3DPSF
 export Vector3DPSF
-export SplinePSF, save_spline_psf, load_spline_psf
+export SplinePSF
 
 # Re-export from SMLMData
 export AbstractCamera, IdealCamera
