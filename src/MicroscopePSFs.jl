@@ -83,4 +83,7 @@ include("psfs/scalar3d.jl")
 include("psfs/vector3d.jl")
 include("psfs/spline_psf.jl")
 
+# I/O functions
+include("io/io.jl")
+
 end

@@ -27,13 +27,8 @@ using HDF5
     #     include("aberration_tests.jl")
     # end
     
-    # # Normalization tests
-    # @testset "Normalization" begin
-    #     include("normalization_tests.jl")
-    # end
-    
-    # # I/O functionality tests
-    # @testset "I/O Functions" begin
-    #     include("io_tests.jl")
-    # end
+    # I/O functionality tests
+    @testset "I/O Functions" begin
+        include("io_tests.jl")
+    end
 end
