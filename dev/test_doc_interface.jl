@@ -86,7 +86,7 @@ y = range(-1, 1, length=100)
 
 # Create different PSF models - using only 2D PSFs
 psfs = [
-    Gaussian2D(0.15),
+    Gaussian2D(0.22 * 0.532/1.4),
     Airy2D(1.4, 0.532)
     # Scalar3DPSF only supports 3D interface with (x,y,z) and isn't included here
     # Vector3DPSF only supports 3D interface and also isn't included here

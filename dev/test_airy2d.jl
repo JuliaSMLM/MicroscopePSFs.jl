@@ -1,5 +1,8 @@
 # dev/test_airy2d.jl
 
+using Pkg
+Pkg.activate("dev")
+
 using Revise
 using MicroscopePSFs
 using CairoMakie

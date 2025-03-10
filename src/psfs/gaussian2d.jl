@@ -23,11 +23,12 @@ end
 """
     Gaussian2D(psf::Airy2D)
 
-Convert an Airy2D PSF to an approximate Gaussian2D PSF by matching the intensity width.
-Uses the empirical relationship that σ ≈ 0.42λ/NA.
+Convert an Airy2D PSF to an approximate Gaussian2D PSF by matching the FWHM.
+
+Uses the relationship that σ ≈ 0.22 * λ/NA
 """
 function Gaussian2D(psf::Airy2D)
-    σ = 0.42 * psf.λ / psf.nₐ
+    σ = 0.22 * psf.λ / psf.nₐ
     return Gaussian2D(σ)
 end
 
