@@ -22,10 +22,10 @@ using HDF5
         include("spline_psf_tests.jl")
     end
     
-    # # Aberration and Zernike tests
-    # @testset "Aberrations" begin
-    #     include("aberration_tests.jl")
-    # end
+    # Aberration and Zernike tests
+    @testset "Aberrations" begin
+        include("aberration_tests.jl")
+    end
     
     # I/O functionality tests
     @testset "I/O Functions" begin

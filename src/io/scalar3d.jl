@@ -28,11 +28,11 @@ function _save_psf_impl(file::HDF5.File, psf::Scalar3DPSF)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{Scalar3DPSF{T}}) where T
+    _load_psf_impl(file::HDF5.File, ::Type{Scalar3DPSF}) 
 
 Load a Scalar3DPSF from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{Scalar3DPSF{T}}) where T
+function _load_psf_impl(file::HDF5.File, ::Type{Scalar3DPSF}) 
     # Load parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda", "n"])

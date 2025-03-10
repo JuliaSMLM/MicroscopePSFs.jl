@@ -53,11 +53,11 @@ function _save_psf_impl(file::HDF5.File, psf::Vector3DPSF)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF{T}}) where T
+    _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF}) 
 
 Load a Vector3DPSF from an HDF5 file, reconstructing all components.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF{T}}) where T
+function _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF}) 
     # Load optical parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda", "n_medium",
@@ -107,7 +107,7 @@ function _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF{T}}) where T
     end
     
     # Create the Vector3DPSF
-    return Vector3DPSF{T}(
+    return Vector3DPSF(
         nₐ, λ, n_medium, n_coverslip, n_immersion,
         dipole, focal_z, vpupil, base_pupil, zernike_coeffs
     )

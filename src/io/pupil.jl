@@ -30,11 +30,11 @@ function _save_psf_impl(file::HDF5.File, pupil::PupilFunction)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{PupilFunction{T}}) where T
+    _load_psf_impl(file::HDF5.File, ::Type{PupilFunction})
 
 Load a PupilFunction from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{PupilFunction{T}}) where T
+function _load_psf_impl(file::HDF5.File, ::Type{PupilFunction})
     # Load parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda", "n"])
@@ -83,11 +83,11 @@ function _save_psf_impl(file::HDF5.File, pupil::VectorPupilFunction)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{VectorPupilFunction{T}}) where T
+    _load_psf_impl(file::HDF5.File, ::Type{VectorPupilFunction})
 
 Load a VectorPupilFunction from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{VectorPupilFunction{T}}) where T
+function _load_psf_impl(file::HDF5.File, ::Type{VectorPupilFunction})
     # Load parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda", "n_medium", 

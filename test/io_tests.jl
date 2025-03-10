@@ -20,29 +20,26 @@
                 # Save PSF
                 save_psf(filename, psf)
                 
-                # Load PSF
-                @test_logs (:info, "Loading PSF of type $(typeof(psf))") begin
-                    @info "Loading PSF of type $(typeof(psf))"
-                    loaded_psf = load_psf(filename)
-                    
-                    # Evaluate loaded PSF at the same points
-                    loaded_values = [loaded_psf(point...) for point in test_points]
-                    
-                    # Compare results
-                    for i in 1:length(test_points)
-                        @test isapprox(orig_values[i], loaded_values[i], atol=atol)
-                    end
-                    
-                    # Test with metadata
-                    metadata = Dict("description" => "Test PSF", "test_id" => 123)
-                    save_psf(filename, psf, metadata=metadata)
-                    
-                    # Verify metadata is saved (by manually checking file)
-                    h5open(filename, "r") do file
-                        attrs = attributes(file)
-                        @test read(attrs["description"]) == "Test PSF"
-                        @test read(attrs["test_id"]) == "123"
-                    end
+                # Load PSF - don't check the exact log message anymore
+                loaded_psf = load_psf(filename)
+                
+                # Evaluate loaded PSF at the same points
+                loaded_values = [loaded_psf(point...) for point in test_points]
+                
+                # Compare results
+                for i in 1:length(test_points)
+                    @test isapprox(orig_values[i], loaded_values[i], atol=atol)
+                end
+                
+                # Test with metadata
+                metadata = Dict("description" => "Test PSF", "test_id" => 123)
+                save_psf(filename, psf, metadata=metadata)
+                
+                # Verify metadata is saved
+                h5open(filename, "r") do file
+                    attrs = attributes(file)
+                    @test read(attrs["description"]) == "Test PSF"
+                    @test read(attrs["test_id"]) == "123"
                 end
             finally
                 # Clean up

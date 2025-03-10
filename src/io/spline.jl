@@ -37,8 +37,37 @@ function _save_psf_impl(file::HDF5.File, psf::SplinePSF)
     data["original_grid"] = psf.original_grid
 end
 
-# Note: The loading of SplinePSF is handled by the generic _load_psf_impl in io.jl
-# We don't need a specific loading function here since:
-# 1. The SplinePSF constructor takes the original grid and ranges directly
-# 2. The generic implementation in io.jl handles the type dispatch based on the base type
-# 3. This approach avoids any dependency on implementation details like OffsetArrays
+"""
+    _load_psf_impl(file::HDF5.File, ::Type{SplinePSF})
+
+Load a SplinePSF from an HDF5 file, reconstructing it using the standard constructor.
+"""
+function _load_psf_impl(file::HDF5.File, ::Type{SplinePSF})
+    # Load parameters
+    params = file["parameters"]
+    _io_check_required_fields(params, ["interp_order", "dimensions"])
+    
+    interp_order = read(params["interp_order"])
+    dimensions = read(params["dimensions"])
+    
+    # Load coordinate ranges
+    x_range = _io_load_range(params, "x_range")
+    y_range = _io_load_range(params, "y_range")
+    
+    # Load the original grid data
+    data = file["data"]
+    _io_check_required_fields(data, ["original_grid"])
+    grid = read(data["original_grid"])
+    
+    # Create the appropriate SplinePSF based on dimensionality
+    if dimensions == "3D"
+        # Load z_range for 3D PSF
+        z_range = _io_load_range(params, "z_range")
+        
+        # Create 3D SplinePSF using the standard constructor
+        return SplinePSF(grid, x_range, y_range, z_range; order=interp_order)
+    else
+        # Create 2D SplinePSF
+        return SplinePSF(grid, x_range, y_range; order=interp_order)
+    end
+end

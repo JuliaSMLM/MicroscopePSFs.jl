@@ -35,11 +35,11 @@ function _save_psf_impl(file::HDF5.File, zc::ZernikeCoefficients)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{ZernikeCoefficients{T}}) where T
+    _load_psf_impl(file::HDF5.File, ::Type{ZernikeCoefficients}) 
 
 Load ZernikeCoefficients from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{ZernikeCoefficients{T}}) where T
+function _load_psf_impl(file::HDF5.File, ::Type{ZernikeCoefficients}) 
     # Load magnitude and phase arrays
     data = file["data"]
     _io_check_required_fields(data, ["magnitude", "phase"])

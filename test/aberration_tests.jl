@@ -1,6 +1,4 @@
 # test/aberration_tests.jl
-using Test
-using MicroscopePSFs
 
 @testset "Aberrations" begin
     @testset "Zernike Coefficients" begin

@@ -18,11 +18,11 @@ function _save_psf_impl(file::HDF5.File, psf::Gaussian2D)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{Gaussian2D{T}}) where T
+    _load_psf_impl(file::HDF5.File, ::Type{Gaussian2D})
 
 Load a Gaussian2D PSF from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{Gaussian2D{T}}) where T
+function _load_psf_impl(file::HDF5.File, ::Type{Gaussian2D})
     params = file["parameters"]
     _io_check_required_fields(params, ["sigma"])
     
@@ -45,11 +45,11 @@ function _save_psf_impl(file::HDF5.File, psf::Airy2D)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{Airy2D{T}}) where T
+    _load_psf_impl(file::HDF5.File, ::Type{Airy2D})
 
 Load an Airy2D PSF from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{Airy2D{T}}) where T
+function _load_psf_impl(file::HDF5.File, ::Type{Airy2D})
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda"])
     
