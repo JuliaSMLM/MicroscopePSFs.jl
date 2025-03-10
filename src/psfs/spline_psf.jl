@@ -546,11 +546,7 @@ end
 
 # --- Pretty printing ---
 
-"""
-    Base.show(io::IO, psf::SplinePSF)
 
-Custom display method for SplinePSF instances.
-"""
 function Base.show(io::IO, psf::SplinePSF)
     nx = length(psf.x_range)
     ny = length(psf.y_range)

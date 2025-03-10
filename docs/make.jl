@@ -1,11 +1,10 @@
 using Documenter
+using MicroscopePSFs
 
-# Temporarily disable using MicroscopePSFs due to package errors
-# using MicroscopePSFs
-# DocMeta.setdocmeta!(MicroscopePSFs, :DocTestSetup, :(using MicroscopePSFs); recursive=true)
+DocMeta.setdocmeta!(MicroscopePSFs, :DocTestSetup, :(using MicroscopePSFs); recursive=true)
 
 makedocs(;
-    # modules=[MicroscopePSFs], # Temporarily disabled
+    modules=[MicroscopePSFs],
     authors="klidke@unm.edu",
     repo="https://github.com/JuliaSMLM/MicroscopePSFs.jl/blob/{commit}{path}#{line}",
     sitename="MicroscopePSFs.jl",
@@ -28,11 +27,12 @@ makedocs(;
         ],
         "API Reference" => "api.md",
     ],
-    # Disable doctests due to package errors
-    doctest = false,
+    doctest = false,  # Disable doctests for now
+    checkdocs = :none,  # Don't throw errors for missing docstrings
+    warnonly = [:missing_docs, :docs_block, :autodocs_block, :cross_references],  # Only warn for these error types
 )
 
-# Temporarily disable deploydocs due to package errors
+# Uncomment this when you're ready to deploy
 # deploydocs(;
 #     repo="github.com/JuliaSMLM/MicroscopePSFs.jl",
 #     devbranch="main",

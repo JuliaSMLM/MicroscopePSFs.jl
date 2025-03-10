@@ -1,135 +1,188 @@
 # PSF Types Overview
 
-MicroscopePSFs.jl provides several PSF (Point Spread Function) models with varying complexity and accuracy. This page provides an overview of the available models and guidance on selecting the appropriate model for your application.
+MicroscopePSFs.jl provides several PSF (Point Spread Function) models with varying complexity, accuracy, and computational requirements. This page gives an overview of the available models and guidance on selecting the appropriate PSF for your application.
 
-## Available PSF Types
+## PSF Model Comparison
 
-| PSF Type | Dimensions | Physics | Best For | Performance |
-|:---------|:-----------|:--------|:---------|:------------|
-| `Gaussian2D` | 2D | Simple approximation | Simple modeling, fitting | Fastest |
-| `Airy2D` | 2D | Diffraction-limited | Accurate in-focus PSF | Fast |
-| `Scalar3D` | 3D | Scalar diffraction | 3D PSF modeling | Moderate |
-| `Vector3D` | 3D | Full vectorial model | High-NA, polarization effects | Slowest |
-| `SplinePSF` | Any | Data-driven | Fast evaluation of other PSFs | Fast evaluation |
+| PSF Type | Parameters | 2D/3D | Aberrations | Polarization | Relative Speed |
+|:---------|:------------|:-------|:------------|:--------------|:---------------|
+| `Gaussian2D` | σ | 2D | No | No | Fastest |
+| `Airy2D` | NA, λ | 2D | No | No | Fast |
+| `Scalar3DPSF` | NA, λ, n | 3D | Yes | No | Moderate |
+| `Vector3DPSF` | NA, λ, dipole, n_medium, etc. | 3D | Yes | Yes | Slowest |
+| `SplinePSF` | any | 2D/3D | Via source PSF | Via source PSF | Fast evaluation |
 
-## Choosing a PSF Model
+## When to Use Each PSF Type
 
 ### Gaussian2D
 
-The simplest PSF model, approximating the microscope PSF as a 2D Gaussian function. This is a mathematical approximation rather than a physical model, but it's computationally efficient and often sufficient for simple applications.
-
-**Best for**: 
-- Rapid prototyping
-- Simple SMLM fitting
-- Cases where speed is prioritized over accuracy
+Best for:
+- Rapid prototyping and initial development
+- Simple fitting algorithms where computational speed is critical
+- Applications where physical accuracy is less important than performance
+- Educational purposes demonstrating basic PSF concepts
 
 ### Airy2D
 
-Models the in-focus PSF of a diffraction-limited system using the Airy disk formula. More accurate than a Gaussian for in-focus imaging, particularly at the edges of the PSF.
+Best for:
+- Diffraction-limited 2D imaging simulations
+- More accurate 2D fitting that accounts for diffraction rings
+- Cases where you need a physically accurate model but don't need 3D capabilities
+- Applications requiring a good balance between accuracy and speed
 
-**Best for**:
-- Diffraction-limited imaging simulations
-- More accurate 2D SMLM fitting
-- Educational purposes demonstrating diffraction
+### Scalar3DPSF
 
-### Scalar3D
+Best for:
+- 3D imaging simulations with moderate accuracy requirements
+- Modeling defocus, spherical aberration, and other aberrations
+- Applications with moderate NA objectives (typically NA < 1.2)
+- When you need 3D capabilities but polarization effects aren't critical
 
-A 3D PSF model based on scalar diffraction theory, accounting for defocus and spherical aberrations. Provides a good balance between accuracy and computational efficiency.
+### Vector3DPSF
 
-**Best for**:
-- 3D imaging simulations
-- Modeling defocus and spherical aberrations
-- Applications where vectorial effects are negligible
-
-### Vector3D
-
-The most comprehensive physical model, implementing full vectorial diffraction theory. Accounts for polarization effects, high-NA phenomena, and all types of aberrations.
-
-**Best for**:
-- High-NA objectives (>1.2)
-- Polarization-sensitive applications
-- Situations requiring high physical accuracy
-- Modeling complex aberrations
+Best for:
+- High-NA objectives (NA > 1.2)
+- Applications where polarization effects matter
+- Modeling complex dipole emission patterns
+- Research requiring the highest physical accuracy
+- Simulations with significant refractive index mismatches
+- When you need to account for all types of optical aberrations
 
 ### SplinePSF
 
-A computational acceleration technique that represents any PSF model using B-spline interpolation for faster evaluation. Create an accurate but slow model once, then use the spline version for repeated calculations.
-
-**Best for**:
+Best for:
 - Accelerating computationally intensive PSF models
-- Representing experimental PSF measurements
-- Performance-critical applications
+- Using experimental PSF measurements from calibration beads
+- Performance-critical applications like real-time fitting
+- Creating fast approximations of complex physical models
 
-## Computational Considerations
+## Standard Usage Pattern
 
-When selecting a PSF model, consider the trade-off between accuracy and computational cost:
+All PSF types follow the same core interface, making it easy to switch between models:
 
-- **Gaussian2D**: Extremely fast, closed-form expression
-- **Airy2D**: Fast, using Bessel functions
-- **Scalar3D**: Moderate speed, requiring numerical integration or pre-computation
-- **Vector3D**: Most computationally intensive, especially with aberrations
-- **SplinePSF**: Fast evaluation after initial computation/measurement
+```julia
+# Create a PSF (example with Airy2D)
+psf = Airy2D(1.4, 0.532)  # NA=1.4, λ=532nm
 
-For large-scale simulations or fitting applications, the simpler models may be preferable unless you specifically need the effects modeled by the more complex approaches.
+# Evaluate at specific position
+intensity = psf(0.1, 0.2)  # at x=0.1μm, y=0.2μm
 
-## PSF Model Comparison
+# Get complex field amplitude
+amp = amplitude(psf, 0.1, 0.2)
+
+# Create image grid
+x = y = range(-1, 1, length=101)  # μm
+img = [psf(xi, yi) for yi in y, xi in x]
+
+# Camera integration example
+pixel_size = 0.1  # μm
+camera = IdealCamera(1:20, 1:20, pixel_size)
+emitter = Emitter2D(1.0, 1.0, 1000.0)  # x, y, photons
+pixels = integrate_pixels(psf, camera, emitter)
+```
+
+## Visual Comparison
+
+Below is a comparison of the different PSF models using the same physical parameters:
 
 ```julia
 using MicroscopePSFs
 using CairoMakie
 
-# Define microscope parameters
-na = 1.4
-wavelength = 0.532  # μm
-n = 1.518
-
-# Create PSF models
-gaussian = Gaussian2D(sigma=wavelength/(2*na))
-airy = Airy2D(na=na, wavelength=wavelength)
-scalar = Scalar3DPSF(na=na, wavelength=wavelength, n=n)
-vector = Vector3DPSF(na=na, wavelength=wavelength, n=n)
-
-# Create position arrays
-x = range(-2, 2, length=200)  # μm
-y = 0.0
-
-# Generate PSF profiles
-profiles = [
-    [psf(xi, y) for xi in x] for psf in [gaussian, airy, scalar, vector]
-]
-
-# Create plot
-fig = Figure(size=(800, 400))
-ax = Axis(fig[1, 1], 
-    xlabel="Position (μm)", 
-    ylabel="Normalized Intensity",
-    title="PSF Model Comparison")
-
-lines = []
-colors = [:blue, :red, :green, :purple]
-labels = ["Gaussian2D", "Airy2D", "Scalar3D", "Vector3D"]
-
-for (i, profile) in enumerate(profiles)
-    lines!(ax, x, profile, color=colors[i], linewidth=2)
+function compare_psf_profiles()
+    # Common parameters
+    na = 1.4
+    wavelength = 0.532  # μm
+    n = 1.518
+    
+    # Create consistent PSF instances
+    gaussian = Gaussian2D(0.22 * wavelength / na)
+    airy = Airy2D(na, wavelength)
+    scalar = Scalar3DPSF(na, wavelength, n)
+    
+    # Dipole for vector PSF (z-oriented)
+    dipole_z = DipoleVector(0.0, 0.0, 1.0)
+    vector = Vector3DPSF(na, wavelength, dipole_z, n_medium=n)
+    
+    # Define positions for profile
+    x = range(-1, 1, length=200)  # μm
+    y = 0.0
+    z = 0.0
+    
+    # Calculate profiles
+    gaussian_profile = [gaussian(xi, y) for xi in x]
+    airy_profile = [airy(xi, y) for xi in x]
+    scalar_profile = [scalar(xi, y, z) for xi in x]
+    vector_profile = [vector(xi, y, z) for xi in x]
+    
+    # Create figure
+    fig = Figure(size=(900, 700))
+    
+    # 1D profiles
+    ax1 = Axis(fig[1, 1:2], 
+              xlabel="Position (μm)", 
+              ylabel="Normalized Intensity",
+              title="PSF Intensity Profiles (y=0)")
+    
+    lines!(ax1, x, gaussian_profile, label="Gaussian2D", linewidth=2, color=:blue)
+    lines!(ax1, x, airy_profile, label="Airy2D", linewidth=2, color=:red)
+    lines!(ax1, x, scalar_profile, label="Scalar3DPSF", linewidth=2, color=:green)
+    lines!(ax1, x, vector_profile, label="Vector3DPSF", linewidth=2, color=:purple)
+    
+    axislegend(ax1, position=:rt)
+    
+    # 2D images
+    x_grid = y_grid = range(-1, 1, length=101)  # μm
+    
+    # Calculate 2D images
+    gaussian_img = [gaussian(xi, yi) for yi in y_grid, xi in x_grid]
+    airy_img = [airy(xi, yi) for yi in y_grid, xi in x_grid]
+    scalar_img = [scalar(xi, yi, 0.0) for yi in y_grid, xi in x_grid]
+    vector_img = [vector(xi, yi, 0.0) for yi in y_grid, xi in x_grid]
+    
+    # Plot 2D images
+    psf_images = [gaussian_img, airy_img, scalar_img, vector_img]
+    titles = ["Gaussian2D", "Airy2D", "Scalar3DPSF", "Vector3DPSF"]
+    
+    for (i, (img, title)) in enumerate(zip(psf_images, titles))
+        ax = Axis(fig[2, i], aspect=DataAspect(), 
+                 title=title,
+                 xlabel="x (μm)", 
+                 ylabel=i==1 ? "y (μm)" : "")
+        
+        hm = heatmap!(ax, x_grid, y_grid, img, colormap=:viridis)
+        Colorbar(fig[2, i+4], hm, label="Intensity")
+    end
+    
+    return fig
 end
 
-Legend(fig[1, 2], 
-    [LineElement(color=c) for c in colors],
-    labels,
-    "PSF Models")
-
-# Create PSF images for comparison
-x_img = y_img = range(-1, 1, length=101)
-imgs = [[psf(xi, yi) for yi in y_img, xi in x_img] for psf in [gaussian, airy, scalar, vector]]
-
-# Display PSF images
-for (i, img) in enumerate(imgs)
-    ax_img = Axis(fig[2, i], aspect=DataAspect(),
-                 title=labels[i],
-                 xlabel="x (μm)",
-                 ylabel="y (μm)")
-    heatmap!(ax_img, x_img, y_img, img, colormap=:viridis)
-end
-
-fig
+fig = compare_psf_profiles()
+save("psf_comparison.png", fig)
 ```
+
+## PSF Conversion
+
+The PSF types provide methods to convert between models where appropriate:
+
+```julia
+# Convert Airy2D to Gaussian2D approximation
+airy = Airy2D(1.4, 0.532)
+gaussian = Gaussian2D(airy)  # Automatically uses appropriate σ
+
+# Convert Gaussian2D to equivalent Airy2D
+gaussian = Gaussian2D(0.15)
+airy = Airy2D(gaussian, λ=0.532)  # Need to specify wavelength
+```
+
+## Computational Considerations
+
+When selecting a PSF model, consider the trade-off between accuracy and computational cost:
+
+- **Gaussian2D**: Closed-form expression, extremely fast
+- **Airy2D**: Uses Bessel functions, fast but more expensive than Gaussian
+- **Scalar3DPSF**: Requires numerical integration or pre-computation, moderate speed
+- **Vector3DPSF**: Most computationally intensive, especially with aberrations
+- **SplinePSF**: Fast evaluation but requires initial computation or measurement
+
+For performance-critical applications, consider using `SplinePSF` to pre-compute a more complex PSF model for faster repeated evaluations.

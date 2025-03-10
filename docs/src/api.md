@@ -1,63 +1,124 @@
 # API Reference
 
-This page provides a comprehensive reference of the types and functions exported by MicroscopePSFs.jl.
+This page provides a comprehensive reference of the types and functions in MicroscopePSFs.jl.
 
-## PSF Types
+## Public API
 
-### 2D PSF Models
+These types and functions form the core public API of MicroscopePSFs.jl.
 
-* `Gaussian2D` - Gaussian approximation PSF
-* `Airy2D` - Airy disk PSF for diffraction-limited systems
+### PSF Types
 
-### 3D PSF Models
-
-* `Scalar3DPSF` - 3D PSF using scalar diffraction theory
-* `Vector3DPSF` - 3D PSF using vectorial diffraction theory
-
-### Data-driven PSF
-
-* `SplinePSF` - B-spline representation of arbitrary PSFs
-
-## Core Interface Functions
-
-* `amplitude` - Calculate complex field amplitude
-* `integrate_pixels` - Integrate PSF over camera pixels
-* `integrate_pixels_amplitude` - Integrate complex amplitude over pixels
-
-## Pupil Functions
-
-* `PupilFunction` - Complex pupil function representation
-* `VectorPupilFunction` - Vector pupil for polarization effects
-
-## Zernike Aberrations
-
-* `ZernikeCoefficients` - Representation of optical aberrations
-* `add_defocus!` - Add defocus aberration
-* `add_astigmatism!` - Add astigmatism aberration
-* `add_coma!` - Add coma aberration
-* `add_spherical!` - Add spherical aberration
-
-## Emitters
-
-* `DipoleVector` - 3D vector representing dipole orientation
-* `DipoleEmitter3D` - 3D emitter with dipole orientation
-
-Note: To create dipole vectors with specific orientations, use the `DipoleVector` constructor:
-
-```julia
-# X-oriented dipole
-dipole_x = DipoleVector(1.0, 0.0, 0.0)
-
-# Y-oriented dipole
-dipole_y = DipoleVector(0.0, 1.0, 0.0)
-
-# Z-oriented dipole
-dipole_z = DipoleVector(0.0, 0.0, 1.0)
+```@docs
+AbstractPSF
 ```
 
-## I/O Functions
+#### 2D PSF Models
 
-* `save_psf` - Save PSF to a file
-* `load_psf` - Load PSF from a file
-* `save_spline_psf` - Save SplinePSF to a file
-* `load_spline_psf` - Load SplinePSF from a file
+```@docs
+Gaussian2D
+Airy2D
+```
+
+#### 3D PSF Models
+
+```@docs
+Scalar3DPSF
+Vector3DPSF
+```
+
+#### Data-driven PSF
+
+```@docs
+SplinePSF
+```
+
+### Core Interface Functions
+
+```@docs
+amplitude
+integrate_pixels
+integrate_pixels_amplitude
+```
+
+### Pupil Functions
+
+```@docs
+PupilFunction
+VectorPupilFunction
+```
+
+### Zernike Module
+
+```@docs
+ZernikeCoefficients
+ZernikeIndexing
+OSA
+Noll
+```
+
+### Aberration Functions
+
+```@docs
+add_aberration!
+add_defocus!
+add_astigmatism!
+add_coma!
+add_spherical!
+reset!
+scale!
+merge!
+rms
+trim!
+significant_terms
+```
+
+### Zernike Polynomial Functions
+
+```@docs
+zernikepolynomial
+radialpolynomial
+max_radial_order
+evaluate_pupil
+```
+
+### Index Conversion
+
+```@docs
+nl2osa
+osa2nl
+nl2noll
+noll2nl
+osa2noll
+noll2osa
+convert_index
+```
+
+### Emitters
+
+```@docs
+DipoleVector
+DipoleEmitter3D
+```
+
+### I/O Functions
+
+```@docs
+save_psf
+load_psf
+```
+
+## Complete API (All Documented Functions)
+
+This section lists additional internal functions and types that are documented but not part of the public API.
+
+```@autodocs
+Modules = [MicroscopePSFs]
+Public = false
+```
+
+### Zernike Module Internal API
+
+```@autodocs
+Modules = [MicroscopePSFs.Zernike]
+Public = false
+```

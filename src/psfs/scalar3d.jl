@@ -143,19 +143,6 @@ function integrate_pixels(psf::Scalar3DPSF,
     return result .* emitter.photons
 end
 
-"""
-    Base.show(io::IO, psf::Scalar3DPSF)
-
-Display a concise representation of the Scalar3DPSF.
-
-# Arguments
-- `io`: The I/O stream to write to
-- `psf`: The Scalar3DPSF to display
-
-# Notes
-- Shows the basic physical parameters (NA, wavelength, refractive index)
-- Indicates if the PSF has stored Zernike coefficients
-"""
 function Base.show(io::IO, psf::Scalar3DPSF)
     print(io, "Scalar3DPSF(NA=$(psf.nₐ), λ=$(psf.λ)μm, n=$(psf.n))")
     if !isnothing(psf.zernike_coeffs)
