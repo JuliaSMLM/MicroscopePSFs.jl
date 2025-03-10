@@ -7,6 +7,11 @@ using HDF5
 
 @testset "MicroscopePSFs" verbose=true begin
     
+    # Basic PSFs Test: Gaussian2D and Airy2D
+    @testset "Basic PSFs" begin
+        include("basic_psfs_tests.jl")
+    end
+    
     # Scalar3D PSF tests
     @testset "Scalar3D PSF" begin
         include("scalar3d_tests.jl")
