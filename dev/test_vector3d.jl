@@ -33,7 +33,7 @@ dipoles = [
 
 # Create PSF with astigmatism
 zc = ZernikeCoefficients(15)
-zc.phase[6] = 1.0  # Add vertical astigmatism for visualization
+zc.phase[6] = 0.0  # Add vertical astigmatism for visualization
 
 # Create Vector3DPSF with the first dipole orientation (x-oriented)
 psf = Vector3DPSF(
@@ -46,7 +46,7 @@ psf = Vector3DPSF(
 )
 
 # Check normalization over camera
-emitter_center = Emitter3D(nx/2 * pixel_size, ny/2 * pixel_size, 0.0, 1.0)
+emitter_center = Emitter3D(nx/2 * pixel_size, ny/2 * pixel_size, 0.0, 0.0)
 psf_normalized = integrate_pixels(psf, camera, emitter_center)
 println("PSF normalization: ", sum(psf_normalized))
 
@@ -158,41 +158,13 @@ ax_ey.yreversed = true
 hm_ey = heatmap!(ax_ey, x_cam, y_cam, abs.(field_components[:,:,2])', colormap=:viridis)
 Colorbar(fig[5, 4], hm_ey)
 
-# Add polarization plot
-ax_pol = Axis(fig[5, 5], width=225, height=225)
-setup_axis!(ax_pol, "Polarization state")
-ax_pol.yreversed = true
 
-# Subsample the field for visualization
-subsample = 2
-x_sub = x_cam[1:subsample:end]
-y_sub = y_cam[1:subsample:end]
-ex_sub = field_components[1:subsample:end, 1:subsample:end, 1]
-ey_sub = field_components[1:subsample:end, 1:subsample:end, 2]
-
-# Create polarization ellipses
-for j in 1:length(y_sub)
-    for i in 1:length(x_sub)
-        ex_val = abs(ex_sub[j, i])
-        ey_val = abs(ey_sub[j, i])
-        
-        # Scale for visibility
-        scale_factor = 0.04 * subsample
-        
-        # Draw polarization line
-        lines!(ax_pol, 
-               [x_sub[i] - ex_val * scale_factor, x_sub[i] + ex_val * scale_factor],
-               [y_sub[j] - ey_val * scale_factor, y_sub[j] + ey_val * scale_factor],
-               color=:white, linewidth=1)
-    end
-end
 
 # Add labels and title
 Label(fig[1, 0], "Pupil\nComponents", rotation=π/2)
 Label(fig[2, 0], "Dipole\nOrientation", rotation=π/2)
 Label(fig[3, 0], "PSF\nFocus", rotation=π/2)
 Label(fig[4, 0], "Camera\nPixels", rotation=π/2)
-Label(fig[5, 0], "Field\nComponents", rotation=π/2)
 
 title_text = @sprintf("Vector3D PSF with Astigmatism\n(NA=%.1f, λ=%.3f μm, n₁=%.2f, n₂=%.2f, n₃=%.2f)", 
                       na, λ, n_medium, n_coverslip, n_immersion)

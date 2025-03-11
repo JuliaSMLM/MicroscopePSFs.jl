@@ -10,13 +10,13 @@ using SMLMData
 # Microscope parameters
 λ = 0.532  # Green light wavelength in microns
 na = 1.4   # Numerical aperture
-n_medium = 1.33   # Sample medium refractive index (water)
+n_medium = 1.52   # Sample medium refractive index (water)
 n_coverslip = 1.52  # Coverslip refractive index (glass)
 n_immersion = 1.52  # Immersion medium refractive index (oil)
 focal_z = 1.0  # Nominal focal plane position
 
 # Create dipole orientation (x-oriented)
-dipole = DipoleVector(1.0, 0.0, 0.0)
+dipole = DipoleVector(1.0, 1.0, 0.0)
 
 # Create Zernike coefficients with astigmatism
 zc = ZernikeCoefficients(15)
@@ -37,7 +37,7 @@ scalar_psf = Scalar3DPSF(na, λ, n_medium; coeffs=zc)
 
 # Evaluation coordinates
 x = y = range(-1, 1, 100)  # PSF field coordinates
-z_planes = -1.0:0.5:1.0  # z positions in microns
+z_planes = collect(-1.0:0.5:1.0)  # z positions in microns
 
 # Create figure with a nice layout
 fig = Figure(
@@ -65,6 +65,7 @@ for (i, (ax, z)) in enumerate(zip(scalar_axes, z_planes))
     setup_axis!(ax, @sprintf("z = %.1f μm", z))
     
     # Calculate scalar PSF intensity
+    println("Calculating scalar PSF at z = $z")
     scalar_intensity = [scalar_psf(xi, yi, z) for yi in y, xi in x]
     hm = heatmap!(ax, x, y, scalar_intensity, colormap=:viridis)
     

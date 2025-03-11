@@ -41,22 +41,23 @@ function Scalar3DPSF(nₐ::Real, λ::Real, n::Real;
     pupil::Union{Nothing,PupilFunction}=nothing,
     pupil_data::Union{Nothing,AbstractMatrix}=nothing,
     coeffs::Union{Nothing,ZernikeCoefficients}=nothing)
-    # Convert inputs to PupilFunction
+    
+    # Add this check to enforce n ≥ NA
+    n >= nₐ || throw(ArgumentError("Refractive index (n=$n) must be ≥ numerical aperture (NA=$nₐ). " * 
+                                  "This is a physical constraint since NA = n·sin(θ). " *
+                                  "Consider using Vector3DPSF for proper handling of index mismatch."))
+    
+    # Rest of the constructor remains the same
     pupil_func = if !isnothing(pupil)
-        # Direct PupilFunction input
         pupil
     elseif !isnothing(pupil_data)
-        # Create PupilFunction from matrix
         PupilFunction(nₐ, λ, n, pupil_data)
     else
-        # Default to Zernike representation
         zernike_coeffs = isnothing(coeffs) ? ZernikeCoefficients(1) : coeffs
         PupilFunction(nₐ, λ, n, zernike_coeffs)
     end
 
     normalize!(pupil_func)
-    
-    # Store the Zernike coefficients if they were used
     stored_coeffs = !isnothing(coeffs) ? coeffs : nothing
     
     return Scalar3DPSF(nₐ, λ, n, pupil_func, stored_coeffs)

@@ -21,15 +21,16 @@ Calculate z-components of wave vectors in all three media.
 # Returns
 - Tuple of (kz_medium, kz_coverslip, kz_immersion): z-components of wave vectors in each medium
 """
-function calculate_wave_vectors(kr2::Real, λ::Real, 
-                               n_medium::Real, n_coverslip::Real, n_immersion::Real)
-    k₀ = 2π/λ
+function calculate_wave_vectors(kr2::Real, λ::Real,
+    n_medium::Real, n_coverslip::Real, n_immersion::Real)
     
-    # Wave vector z-components in all media (can be complex for evanescent waves)
-    kz_medium = k₀ * sqrt(complex(n_medium^2 - kr2*λ^2/(4π^2)))
-    kz_coverslip = k₀ * sqrt(complex(n_coverslip^2 - kr2*λ^2/(4π^2)))
-    kz_immersion = k₀ * sqrt(complex(n_immersion^2 - kr2*λ^2/(4π^2)))
-    
+    k₀ = 1 / λ  
+
+    # Adjust formulas to maintain the same physical values
+    kz_medium = k₀ * sqrt(complex(n_medium^2 - kr2 * λ^2))
+    kz_coverslip = k₀ * sqrt(complex(n_coverslip^2 - kr2 * λ^2))
+    kz_immersion = k₀ * sqrt(complex(n_immersion^2 - kr2 * λ^2))
+
     return kz_medium, kz_coverslip, kz_immersion
 end
 
@@ -50,13 +51,13 @@ Calculate Fresnel transmission coefficients for a single interface.
 """
 function calculate_interface_fresnel(kr2::Real, λ::Real, n1::Real, n2::Real)
     # Calculate cosines of angles in both media
-    cosθ1 = sqrt(complex(1 - kr2*λ^2/(4π^2*n1^2)))
-    cosθ2 = sqrt(complex(1 - kr2*λ^2/(4π^2*n2^2)))
-    
+    cosθ1 = sqrt(complex(1 - kr2 * λ^2 / (4π^2 * n1^2)))
+    cosθ2 = sqrt(complex(1 - kr2 * λ^2 / (4π^2 * n2^2)))
+
     # Calculate transmission coefficients
-    Tp = 2*n1*cosθ1 / (n1*cosθ2 + n2*cosθ1)
-    Ts = 2*n1*cosθ1 / (n1*cosθ1 + n2*cosθ2)
-    
+    Tp = 2 * n1 * cosθ1 / (n1 * cosθ2 + n2 * cosθ1)
+    Ts = 2 * n1 * cosθ1 / (n1 * cosθ1 + n2 * cosθ2)
+
     return Tp, Ts
 end
 
@@ -76,16 +77,16 @@ Calculate combined Fresnel transmission coefficients across all interfaces.
 # Returns
 - Tuple of (Tp, Ts): Combined p and s polarization transmission coefficients
 """
-function calculate_fresnel_coefficients(kr2::Real, λ::Real, 
-                                      n_medium::Real, n_coverslip::Real, n_immersion::Real)
+function calculate_fresnel_coefficients(kr2::Real, λ::Real,
+    n_medium::Real, n_coverslip::Real, n_immersion::Real)
     # Calculate interface-specific coefficients
     Tp_mc, Ts_mc = calculate_interface_fresnel(kr2, λ, n_medium, n_coverslip)
     Tp_ci, Ts_ci = calculate_interface_fresnel(kr2, λ, n_coverslip, n_immersion)
-    
+
     # Calculate combined transmission coefficients
     Tp = Tp_mc * Tp_ci
     Ts = Ts_mc * Ts_ci
-    
+
     return Tp, Ts
 end
 
@@ -108,13 +109,13 @@ Calculate total axial phase from defocus.
 - Defocus phase
 
 """
-function calculate_axial_phase(z::Real, focal_z::Real, kz_medium::Complex, 
-                             kz_coverslip::Complex, kz_immersion::Complex,
-                             coverslip_thickness::Real=0.17)
+function calculate_axial_phase(z::Real, focal_z::Real, kz_medium::Complex,
+    kz_coverslip::Complex, kz_immersion::Complex,
+    coverslip_thickness::Real=0.17)
     # Emitter position relative to coverslip interface
-    z_i = z - focal_z 
+    z_i = z + focal_z
 
-    return kz_medium * z_i - kz_immersion * focal_z 
+    return kz_medium * z_i - kz_immersion * focal_z
 end
 
 """
@@ -135,17 +136,17 @@ Calculate vectorial field components for a dipole orientation.
 - Tuple (Ex, Ey) of complex field components
 """
 function calculate_dipole_field_components(ϕ::Complex, sinθ::Complex, cosθ::Complex,
-                                         dipole::DipoleVector, Tp::Complex, Ts::Complex)
+    dipole::DipoleVector, Tp::Complex, Ts::Complex)
     # Compute the vectorial field components based on the dipole orientation
     # For a dipole, the field has both transverse and longitudinal components
-    Eθ = (Tp * (dipole.px*cos(ϕ) + dipole.py*sin(ϕ)) * cosθ - 
+    Eθ = (Tp * (dipole.px * cos(ϕ) + dipole.py * sin(ϕ)) * cosθ -
           Tp * dipole.pz * sinθ)
-    Eϕ = Ts * (-dipole.px*sin(ϕ) + dipole.py*cos(ϕ))
-    
+    Eϕ = Ts * (-dipole.px * sin(ϕ) + dipole.py * cos(ϕ))
+
     # Convert to Cartesian coordinates
     Ex = Eθ * cos(ϕ) - Eϕ * sin(ϕ)
     Ey = Eθ * sin(ϕ) + Eϕ * cos(ϕ)
-    
+
     return Ex, Ey
 end
 
@@ -164,15 +165,15 @@ Calculate apodization factor for energy conservation.
 # Returns
 - Apodization factor for energy conservation
 """
-function calculate_apodization(kr2::Real, λ::Real, 
-                             n_medium::Real, n_immersion::Real)
+function calculate_apodization(kr2::Real, λ::Real,
+    n_medium::Real, n_immersion::Real)
     # Calculate cosines of angles
-    cosθ_medium = sqrt(complex(1 - kr2*λ^2/(4π^2*n_medium^2)))
-    cosθ_immersion = sqrt(complex(1 - kr2*λ^2/(4π^2*n_immersion^2)))
-    
+    cosθ_medium = sqrt(complex(1 - kr2 * λ^2 / (4π^2 * n_medium^2)))
+    cosθ_immersion = sqrt(complex(1 - kr2 * λ^2 / (4π^2 * n_immersion^2)))
+
     # Calculate apodization factor
     # This accounts for the change in solid angle with refraction
-    apod = sqrt(cosθ_immersion)/cosθ_medium
-    
+    apod = sqrt(cosθ_immersion) / cosθ_medium
+
     return apod
 end

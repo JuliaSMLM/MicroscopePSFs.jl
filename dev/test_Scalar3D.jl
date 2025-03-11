@@ -30,7 +30,7 @@ cam_size = nx * pixel_size
 
 # Create PSF with astigmatism
 zc = ZernikeCoefficients(15)
-zc.phase[6] = 1.0  # Add phase shift for visualization
+zc.phase[6] = 0.0  # Add phase shift for visualization
 psf = Scalar3DPSF(na, λ, n, coeffs=zc)
 
 # Check normalization over camera
