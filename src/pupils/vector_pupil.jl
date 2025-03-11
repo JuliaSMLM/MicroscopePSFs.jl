@@ -132,10 +132,6 @@ function fill_vector_pupils!(vpupil::VectorPupilFunction,
         
         # Calculate angles and convert to ComplexF64 to handle evanescent waves
         ϕ = ComplexF64(atan(y, x))
-        
-        # Get wave vectors in each medium
-        kz_medium, kz_coverslip, kz_immersion = calculate_wave_vectors(
-            kr2, vpupil.λ, vpupil.n_medium, vpupil.n_coverslip, vpupil.n_immersion)
             
         # Calculate angles in medium for field components
         sinθ = sqrt(complex(kr2*vpupil.λ^2/(4π^2*vpupil.n_medium^2)))
@@ -181,6 +177,3 @@ function Base.show(io::IO, p::VectorPupilFunction)
           "n_medium=$(p.n_medium), n_coverslip=$(p.n_coverslip), ",
           "n_immersion=$(p.n_immersion), $(sz)x$(sz))")
 end
-
-# Export updated function name
-export fill_dipole_pupils!

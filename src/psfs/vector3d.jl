@@ -84,8 +84,6 @@ Compute complex vector amplitude at given position.
 - Includes both UAF and SAF contributions automatically
 """
 function amplitude(psf::Vector3DPSF{T}, x::Real, y::Real, z::Real) where {T}
-    # Get the relative defocus (emitter z relative to nominal focal plane)
-    defocus = z - psf.focal_z
     
     # Initialize result vector [Ex, Ey]
     result = zeros(Complex{promote_type(T, typeof(x), typeof(y), typeof(z))}, 2)
@@ -113,7 +111,7 @@ function amplitude(psf::Vector3DPSF{T}, x::Real, y::Real, z::Real) where {T}
         
         # Calculate total phase with position dependence
         lateral_phase = kx * x + ky * y
-        axial_phase = calculate_axial_phase(defocus, kz_medium, kz_coverslip, kz_immersion)
+        axial_phase = calculate_axial_phase(z, psf.focal_z, kz_medium, kz_coverslip, kz_immersion)
         total_phase = 2π * (lateral_phase + axial_phase)
         
         # Apply phase to pre-calculated pupil field

@@ -14,7 +14,7 @@ na = 1.4   # Numerical aperture
 n_medium = 1.33   # Sample medium refractive index (water)
 n_coverslip = 1.52  # Coverslip refractive index (glass)
 n_immersion = 1.52  # Immersion medium refractive index (oil)
-focal_z = 0.0  # Nominal focal plane position
+focal_z = 1.0  # Nominal focal plane position
 
 # Camera setup
 pixel_size = 0.1  # 100 nm pixels

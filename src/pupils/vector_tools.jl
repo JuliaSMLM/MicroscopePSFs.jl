@@ -83,7 +83,6 @@ function calculate_fresnel_coefficients(kr2::Real, λ::Real,
     Tp_ci, Ts_ci = calculate_interface_fresnel(kr2, λ, n_coverslip, n_immersion)
     
     # Calculate combined transmission coefficients
-    # This is an approximation - in a complete model we would account for multiple reflections
     Tp = Tp_mc * Tp_ci
     Ts = Ts_mc * Ts_ci
     
@@ -91,36 +90,31 @@ function calculate_fresnel_coefficients(kr2::Real, λ::Real,
 end
 
 """
-    calculate_axial_phase(z::Real, kz_medium::Complex, 
-                        kz_coverslip::Complex, kz_immersion::Complex,
-                        coverslip_thickness::Real=0.17)
+    calculate_axial_phase(z::Real, focal_z::Real, kz_medium::Complex, 
+                         kz_coverslip::Complex, kz_immersion::Complex,
+                         coverslip_thickness::Real=0.17)
 
-Calculate total axial phase for defocus through multiple media.
+Calculate total axial phase from defocus.
 
 # Arguments
-- `z`: Defocus distance in microns (emitter position relative to focal plane)
+- `z`: Emitter position relative to the focal plane, `focal_z``
+- `focal_z`: Focal plane position in microns relative to the coverslip
 - `kz_medium`: z-component of wave vector in sample medium
 - `kz_coverslip`: z-component of wave vector in coverslip
 - `kz_immersion`: z-component of wave vector in immersion medium
 - `coverslip_thickness`: Thickness of coverslip in mm (default: 0.17mm)
 
 # Returns
-- Total phase contribution (without 2π factor)
+- Defocus phase
+
 """
-function calculate_axial_phase(z::Real, kz_medium::Complex, 
+function calculate_axial_phase(z::Real, focal_z::Real, kz_medium::Complex, 
                              kz_coverslip::Complex, kz_immersion::Complex,
                              coverslip_thickness::Real=0.17)
-    # Convert coverslip thickness to microns
-    coverslip_thickness_μm = coverslip_thickness * 1000
-    
-    # Simple case: defocus entirely in medium
-    if z <= 0
-        return z * kz_medium
-    end
-    
-    # More complex case: defocus involves multiple media
-    # This is a simplified model - a complete model would be more involved
-    return z * kz_immersion
+    # Emitter position relative to coverslip interface
+    z_i = z - focal_z 
+
+    return kz_medium * z_i - kz_immersion * focal_z 
 end
 
 """
