@@ -89,14 +89,15 @@ sampling density. Physical coordinates are relative to camera with (0,0) at top-
 # Returns
 - `Matrix{T}`: Integrated intensities where T matches emitter.photons type
 - Array is indexed as [y,x] with [1,1] at top-left pixel
-- Values are normalized to sum to 1
+- Values represent actual photon counts in each pixel based on emitter's photon value
 
 # Examples
 ```julia
 camera = IdealCamera(0:0.1:2.0, 0:0.1:2.0)  # 20x20 camera, 100nm pixels
-emitter = Emitter2D(1.0, 1.0, 1000.0)       # Emitter at (1μm, 1μm)
+emitter = Emitter2D(1.0, 1.0, 1000.0)       # Emitter at (1μm, 1μm) with 1000 photons
 psf = Gaussian2D(0.15)                       # σ = 150nm
 pixels = integrate_pixels(psf, camera, emitter)
+# Sum of pixels will be ≤ 1000, depending on how much of the PSF is captured by the camera
 ```
 
 See also: [`integrate_pixels_amplitude`](@ref), [`AbstractPSF`](@ref)
@@ -109,7 +110,10 @@ function integrate_pixels(
 )
     T = typeof(emitter.photons)
     result = _integrate_pixels_generic(psf, camera, emitter, (p,x,y) -> p(x,y), T; sampling=sampling)
-    return result ./ sum(result)
+    
+    # Multiply by photon count instead of normalizing to sum=1
+    # This preserves the physical meaning of the integration
+    return result .* emitter.photons
 end
 
 """

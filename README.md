@@ -5,85 +5,169 @@
 [![Build Status](https://github.com/JuliaSMLM/MicroscopePSFs.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaSMLM/MicroscopePSFs.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/JuliaSMLM/MicroscopePSFs.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSMLM/MicroscopePSFs.jl)
 
-*MicroscopePSFs* provides a Microscope Point Spread Function (PSF) calculator.  
-
-Current implementaions provide widefield PSFs assuming an incoherent point source.  
+A Julia package for working with microscope Point Spread Functions (PSFs). This package provides implementations of common PSF models and tools for integrating them with camera geometry for single-molecule localization microscopy applications.
 
 ## Features
 
-- 2D Gaussian PSF
-- 2D Airy PSF
-- 2D/3D Scalar PSF
-- Scalar PSF allows arbitrary Pupil Function modification
-- Phase and Magnitude Aberrations via Zernike expansion
-- Any PSF can be converted to an interpolated PSF for faster generation at new positions   
+- Multiple PSF implementations (Gaussian2D, Airy2D, with Scalar3D and Vector3D coming soon)
+- Integration with camera geometry via the SMLMData.jl package
+- Complex field amplitude calculations for coherent optics
+- Flexible pixel integration with adjustable sampling density
+- Zernike polynomial tools for wavefront modeling
 
-## Design
+## Installation
 
-The high-level interface is designed to facilitate generation of synthetic data as would be seen by an Array Detector (e.g. Camera).  The PSF is considered a probability distribution that is normalized across 2D sections.  Calculating the PSF at a location follows the convention from  [Distributions.jl](https://github.com/JuliaStats/Distributions.jl) where a distribution is created, and the PDF is calculated at a location.  
+```julia
+using Pkg
+Pkg.add("MicroscopePSFs")
+```
 
-### Unit Convention
-Pixel and source locations are in pixels for $x,y$ and in physical unit (typically micron) for $z$.  This was chosen as it is the most natural units for simulating and interpreting data because the camera is referenced in pixels and stage movements in the $z$ dimention are in micron.  
-
-## Examples
- 
-### Airy PSF 
+## Basic Usage
 
 ```julia
 using MicroscopePSFs
-PSF=MicroscopePSFs
 
-# Create an Airy PSF
-na=1.2
-λ=.6 
-pixelsize=.1
-p=PSF.Airy2D(na,λ,pixelsize)
+# Create a PSF model
+psf = Airy2D(1.4, 0.532)  # NA = 1.4, λ = 532nm
+# or
+psf = Gaussian2D(0.15)    # σ = 150nm
 
-# calculate the PSF at a point
-camera_pixel=(0,0)
-source_position=(0,0)
-PSF.pdf(p,camera_pixel,source_position)
+# Direct PSF evaluation at a point
+intensity = psf(0.5, 0.3)  # x = 0.5μm, y = 0.3μm
 
-# calculate the PSF in a region
-sz=16
-camera_pixels=[(x,y) for y=1:sz, x=1:sz]
-source_position=(sz/2,sz/2)
-im=PSF.pdf(p,camera_pixels,source_position)
+# Get complex field amplitude
+amp = amplitude(psf, 0.5, 0.3)
 ```
 
-### 3D Scalar PSF with Astigmatism
+## Coordinate Systems and Units
+
+### Physical Units
+All physical dimensions are in micrometers (μm):
+- Positions (x, y, z)
+- Wavelength (λ)
+- PSF parameters (e.g., Gaussian σ)
+
+### Coordinate Order
+The package follows these coordinate ordering conventions:
+
+1. Function arguments: Always (x, y, z)
+```julia
+intensity = psf(x, y)
+amp = amplitude(psf, x, y)
+```
+
+2. Array dimensions: Always [y, x, z]
+```julia
+pixels = integrate_pixels(psf, camera, emitter)
+# pixels has shape [ny, nx]
+```
+
+3. Field names: Use descriptive names (x, y, z)
+```julia
+emitter = Emitter2D(x=1.0, y=1.0, photons=1000)
+```
+
+### Camera Integration
+
+The package integrates with camera geometry defined by the SMLMData.jl package. Pixel coordinates follow the standard image convention with (0,0) at the top-left:
 
 ```julia
-using MicroscopePSFs
-PSF=MicroscopePSFs
+# Create camera with 100 nm pixels
+pixel_size = 0.1  # μm
+nx, ny = 32, 32
+x_edges = range(0, nx * pixel_size, nx + 1)
+y_edges = range(0, ny * pixel_size, ny + 1)
+camera = IdealCamera(x_edges, y_edges)
 
-# Zernike Magnitude and Phase Coefficients 
-z_mag=[1.0]
-z_phase=zeros(10)
-z_phase[6]=1 # astigmatism
-z=PSF.ZernikeCoefficients(z_mag,z_phase)
+# Create emitter at (1 μm, 1 μm)
+emitter = Emitter2D(1.0, 1.0, 1000.0)  # x, y, photons
 
-# Create a scalar PSF
-na=1.2
-n=1.3
-λ=.6 
-pixelsize=.1
+# Integrate PSF over pixels
+pixels = integrate_pixels(psf, camera, emitter, sampling=2)
+# Returns [ny, nx] array of normalized intensities
 
-p=PSF.Scalar3D(na,λ,n,pixelsize;z=z)
-
-# calculate the PSF in a region
-sz=32
-camera_pixels=[(x,y,z) for y=-sz/2:(sz/2-1), x=-sz/2:(sz/2-1), z=-1:.5:1] # Note z in microns.  
-source_position=(0.0,0.0,0)
-im=PSF.pdf(p,camera_pixels,source_position)
+# Get complex field amplitudes
+amplitudes = integrate_pixels_amplitude(psf, camera, emitter, sampling=2)
+# Returns [ny, nx] array of complex amplitudes
 ```
 
-## Future Development
+The `sampling` parameter controls subpixel sampling density for numerical integration. Higher values give more accurate results at the cost of computation time.
 
-*MicroscopePSFs* should be considered under development and the interface may change as we build the JuliaSMLM ecosystem.  Comments and Feature requests are welcome via an issue.  
+## PSF Models
 
-### Future Features
-- GPU calculations
-- Vector PSFs
-- Super-critical angle PSFs
-- Integration across finite pixels sizes using sub-sampling.  
+### Gaussian2D
+Represents an isotropic 2D Gaussian PSF:
+
+```julia
+psf = Gaussian2D(0.15)  # σ = 150 nm
+```
+
+### Airy2D
+Models a circular aperture under scalar, paraxial approximation:
+
+```julia
+psf = Airy2D(1.4, 0.532)  # NA = 1.4, λ = 532nm
+
+# Convert between Gaussian and Airy
+psf_gauss = Gaussian2D(psf)      # Approximate Airy as Gaussian
+psf_airy = Airy2D(psf_gauss)    # Convert back (uses default λ)
+psf_airy = Airy2D(psf_gauss, λ=0.488)  # Specify wavelength
+```
+
+### Scalar3D
+Implements a scalar diffraction model for 3D PSFs:
+
+```julia
+# Create a 3D PSF with NA=1.4, λ=532nm, and refractive index n=1.518 (oil)
+psf = Scalar3D(1.4, 0.532, 1.518)
+
+# Evaluate PSF at a 3D position
+intensity = psf(x, y, z)  # All coordinates in μm
+
+# Get complex field amplitude in 3D
+amp = amplitude(psf, x, y, z)
+
+# Integrate over pixels at a specific z-plane
+pixels = integrate_pixels(psf, camera, emitter3D)
+```
+
+The Scalar3D model accounts for defocus and spherical aberration effects, making it suitable for 3D imaging applications. It uses a physically accurate scalar diffraction model based on the Debye-Wolf formalism.
+
+## Advanced Features
+
+### Pixel Integration
+The `integrate_pixels` function supports different sampling densities for accuracy vs. speed tradeoffs:
+
+```julia
+# Basic integration using pixel centers
+pixels = integrate_pixels(psf, camera, emitter, sampling=1)
+
+# More accurate integration with 4x4 subsampling
+pixels = integrate_pixels(psf, camera, emitter, sampling=4)
+```
+
+### Complex Amplitudes
+For coherent calculations, use the `amplitude` function and `integrate_pixels_amplitude`:
+
+```julia
+# Get complex field at a point
+amp = amplitude(psf, x, y)
+
+# Integrate complex amplitude over pixels
+amps = integrate_pixels_amplitude(psf, camera, emitter)
+intensities = abs2.(amps)  # Convert to intensity if needed
+```
+
+## Coming Soon
+
+- Vector3D PSF model for high-NA systems with polarization effects
+- GPU acceleration support for faster computation
+- Additional aberration models and analysis tools
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues and pull requests on our GitHub repository.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

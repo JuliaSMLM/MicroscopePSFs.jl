@@ -1,3 +1,5 @@
+# src/psfs/airy2d.jl 
+
 """
     (psf::Airy2D)(x, y)
 
@@ -21,18 +23,16 @@ end
 
 
 """
-    Airy2D(psf::Gaussian2D; λ=0.532)
+    Airy2D(psf::Gaussian2D, λ)
 
 Convert a Gaussian2D PSF to an approximate Airy2D PSF.
-Uses the inverse of the Gaussian conversion relationship.
-Optional wavelength parameter defaults to 532 nm (green light).
 
-Note: Since Gaussian2D doesn't contain wavelength information,
-you may want to specify the wavelength explicitly for more accurate conversion.
+Uses the inverse of the Gaussian conversion relationship.
+
 """
 function Airy2D(psf::Gaussian2D; λ::Real=0.532)
     # Invert the relationship σ = 0.42λ/NA
-    nₐ = 0.42 * λ / psf.σ
+    nₐ = 0.22 * λ / psf.σ
     return Airy2D(nₐ, λ)
 end
 
