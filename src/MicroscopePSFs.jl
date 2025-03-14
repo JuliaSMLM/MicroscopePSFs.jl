@@ -2,13 +2,10 @@
 
 module MicroscopePSFs
 
-using FFTW
 using LinearAlgebra
 using SpecialFunctions
-using Zygote
 using SMLMData
 using HDF5
-using JSON3
 using Interpolations
 using Dates 
 

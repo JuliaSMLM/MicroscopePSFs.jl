@@ -2,7 +2,6 @@ using MicroscopePSFs
 using Test
 using LinearAlgebra
 using SpecialFunctions
-using Zygote
 using HDF5
 
 @testset "MicroscopePSFs" verbose=true begin

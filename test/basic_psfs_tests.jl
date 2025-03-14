@@ -145,14 +145,14 @@
         airy_from_gaussian = Airy2D(gaussian)
         
         # Check that the conversion preserved approximate width
-        # Using the relationship σ ≈ 0.42 * λ / NA
-        @test airy_from_gaussian.nₐ ≈ 0.42 * airy_from_gaussian.λ / gaussian.σ rtol=0.01
+        # Using the relationship σ ≈ 0.22 * λ / NA
+        @test airy_from_gaussian.nₐ ≈ 0.22 * airy_from_gaussian.λ / gaussian.σ rtol=0.01
         
         # Test Airy to Gaussian conversion
         airy = Airy2D(1.4, 0.532)
         gaussian_from_airy = Gaussian2D(airy)
         
         # Check that conversion preserved approximate width
-        @test gaussian_from_airy.σ ≈ 0.42 * airy.λ / airy.nₐ rtol=0.01
+        @test gaussian_from_airy.σ ≈ 0.22 * airy.λ / airy.nₐ rtol=0.01
     end
 end

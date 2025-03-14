@@ -14,7 +14,6 @@ Provides tools for:
 module Zernike
 
 using LinearAlgebra
-using FFTW
 using SpecialFunctions  # For Bessel functions
 
 # Type exports
