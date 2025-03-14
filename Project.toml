@@ -1,7 +1,7 @@
 name = "MicroscopePSFs"
 uuid = "de9ac726-48a4-48ab-84b0-1c03c7c18929"
 authors = ["klidke@unm.edu"]
-version = "0.4.0"
+version = "0.5.0"
 
 [deps]
 BSplineKit = "093aae92-e908-43d7-9660-e50ee39d5a0a"
