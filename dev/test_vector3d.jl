@@ -14,7 +14,7 @@ na = 1.4   # Numerical aperture
 n_medium = 1.33   # Sample medium refractive index (water)
 n_coverslip = 1.52  # Coverslip refractive index (glass)
 n_immersion = 1.52  # Immersion medium refractive index (oil)
-focal_z = 1.0  # Nominal focal plane position
+z_stage = 1.0  # Distance the sample stage was moved away from the nominal focal plane at the coverslip
 
 # Camera setup
 pixel_size = 0.1  # 100 nm pixels
@@ -42,7 +42,7 @@ psf = Vector3DPSF(
     n_medium=n_medium, 
     n_coverslip=n_coverslip, 
     n_immersion=n_immersion,
-    focal_z=focal_z
+    z_stage=z_stage
 )
 
 # Check normalization over camera
@@ -104,7 +104,7 @@ for (i, dipole) in enumerate(dipoles)
         n_medium=n_medium, 
         n_coverslip=n_coverslip, 
         n_immersion=n_immersion,
-        focal_z=focal_z
+        z_stage=z_stage
     )
     
     # Compute intensity
@@ -183,7 +183,7 @@ println("NA = $na, λ = $λ μm")
 println("Medium index = $n_medium")
 println("Coverslip index = $n_coverslip")
 println("Immersion index = $n_immersion")
-println("Focal plane = $focal_z μm")
+println("Z stage position = $z_stage μm")
 println("Astigmatism: 1 wave at 0 degrees")
 println("Field size: $(cam_size) × $(cam_size) μm")
 println("Pixel size: $(pixel_size) μm")

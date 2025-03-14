@@ -7,7 +7,7 @@
                 n_medium::Real=1.33,
                 n_coverslip::Real=1.52,
                 n_immersion::Real=1.52,
-                focal_z::Real=0.0,
+                z_stage::Real=0.0,
                 grid_size::Integer=128)
 
 Create a vector PSF using either a pupil-based or Zernike-based approach.
@@ -23,7 +23,7 @@ Create a vector PSF using either a pupil-based or Zernike-based approach.
 - `n_medium`: Sample medium refractive index (default: 1.33)
 - `n_coverslip`: Cover slip refractive index (default: 1.52)
 - `n_immersion`: Immersion medium refractive index (default: 1.52)
-- `focal_z`: Focal plane position in microns (default: 0.0)
+- `z_stage`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm) (default: 0.0)
 - `grid_size`: Size of pupil grid (default: 128)
 
 # Returns
@@ -35,10 +35,10 @@ function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     n_medium::Real=1.33,
     n_coverslip::Real=1.52,
     n_immersion::Real=1.52,
-    focal_z::Real=0.0,
+    z_stage::Real=0.0,
     grid_size::Integer=128)
     
-    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium), typeof(focal_z))
+    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium), typeof(z_stage))
     
     # Store the base pupil and/or convert Zernike coeffs to pupil if provided
     stored_base_pupil = base_pupil
@@ -61,7 +61,7 @@ function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     
     return Vector3DPSF{T}(
         T(nₐ), T(λ), T(n_medium), T(n_coverslip),
-        T(n_immersion), dipole, T(focal_z), vector_pupils,
+        T(n_immersion), dipole, T(z_stage), vector_pupils,
         stored_base_pupil, stored_zernike
     )
 end
@@ -74,13 +74,14 @@ Compute complex vector amplitude at given position.
 # Arguments
 - `psf`: Vector PSF instance
 - `x, y`: Lateral position in microns relative to PSF center
-- `z`: Axial position in microns relative to focal plane
+- `z`: Axial position in microns representing depth above the coverslip
 
 # Returns
 - Vector [Ex, Ey] of complex field amplitudes
 
 # Notes
-- z coordinate is relative to current focal plane position (psf.focal_z)
+- z coordinate represents the depth above the coverslip
+- z_stage in the PSF indicates the distance the stage was moved away from the nominal focal plane
 - Includes both UAF and SAF contributions automatically
 """
 function amplitude(psf::Vector3DPSF{T}, x::Real, y::Real, z::Real) where {T}
@@ -111,7 +112,7 @@ function amplitude(psf::Vector3DPSF{T}, x::Real, y::Real, z::Real) where {T}
         
         # Calculate total phase with position dependence
         lateral_phase = kx * x + ky * y
-        axial_phase = calculate_axial_phase(z, psf.focal_z, kz_medium, kz_coverslip, kz_immersion)
+        axial_phase = calculate_axial_phase(z, psf.z_stage, kz_medium, kz_coverslip, kz_immersion)
         total_phase = 2π * (lateral_phase + axial_phase)
         
         # Apply phase to pre-calculated pupil field
@@ -132,7 +133,7 @@ Compute PSF intensity at given position by summing squared field amplitudes.
 
 # Arguments
 - `x, y`: Lateral position in microns relative to PSF center
-- `z`: Axial position in microns relative to focal plane
+- `z`: Axial position in microns representing depth above the coverslip
 
 # Returns
 - Total intensity |Ex|² + |Ey|²
@@ -198,7 +199,7 @@ Integrate Vector3DPSF over camera pixels.
 # Arguments
 - `psf`: Vector3DPSF instance with fixed dipole orientation
 - `camera`: Camera geometry
-- `emitter`: Emitter with position information
+- `emitter`: Emitter with position information (emitter.z represents depth above the coverslip)
 - `sampling`: Subpixel sampling density for integration accuracy
 
 # Returns
@@ -208,6 +209,7 @@ Integrate Vector3DPSF over camera pixels.
 # Notes
 - Dipole orientation comes from the PSF itself, not the emitter
 - For varying dipole orientations, create multiple PSFs
+- The emitter's z position must represent depth above the coverslip
 """
 function integrate_pixels(
     psf::Vector3DPSF,
@@ -217,7 +219,7 @@ function integrate_pixels(
 )
     # Check if emitter has required z-coordinate
     if !hasfield(typeof(emitter), :z)
-        throw(ArgumentError("Vector3DPSF requires an emitter with a z-coordinate"))
+        throw(ArgumentError("Vector3DPSF requires an emitter with a z-coordinate (depth above the coverslip)"))
     end
     
     # Use the generic integration method
@@ -242,7 +244,7 @@ Integrate Vector3DPSF complex amplitude over camera pixels.
 # Arguments
 - `psf`: Vector3DPSF instance with fixed dipole orientation
 - `camera`: Camera geometry
-- `emitter`: Emitter with position information
+- `emitter`: Emitter with position information (emitter.z represents depth above the coverslip)
 - `sampling`: Subpixel sampling density for integration accuracy
 
 # Returns
@@ -252,6 +254,7 @@ Integrate Vector3DPSF complex amplitude over camera pixels.
 # Notes
 - For coherent calculations in vectorial microscopy
 - Preserves relative phase information between field components
+- The emitter's z position must represent depth above the coverslip
 """
 function integrate_pixels_amplitude(
     psf::Vector3DPSF,
@@ -261,7 +264,7 @@ function integrate_pixels_amplitude(
 )
     # Check if emitter has required z-coordinate
     if !hasfield(typeof(emitter), :z)
-        throw(ArgumentError("Vector3DPSF requires an emitter with a z-coordinate"))
+        throw(ArgumentError("Vector3DPSF requires an emitter with a z-coordinate (depth above the coverslip)"))
     end
     
     # Integration for complex field components

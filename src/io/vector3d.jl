@@ -20,7 +20,7 @@ function _save_psf_impl(file::HDF5.File, psf::Vector3DPSF)
     params["n_medium"] = psf.n_medium
     params["n_coverslip"] = psf.n_coverslip
     params["n_immersion"] = psf.n_immersion
-    params["focal_z"] = psf.focal_z
+    params["z_stage"] = psf.z_stage
     
     # Save Zernike coefficients if available
     if !isnothing(psf.zernike_coeffs)
@@ -61,14 +61,14 @@ function _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF})
     # Load optical parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda", "n_medium",
-                                    "n_coverslip", "n_immersion", "focal_z"])
+                                    "n_coverslip", "n_immersion", "z_stage"])
     
     nₐ = read(params["na"])
     λ = read(params["lambda"])
     n_medium = read(params["n_medium"])
     n_coverslip = read(params["n_coverslip"])
     n_immersion = read(params["n_immersion"])
-    focal_z = read(params["focal_z"])
+    z_stage = read(params["z_stage"])
     
     # Load dipole orientation
     dipole_group = file["dipole"]
@@ -109,6 +109,6 @@ function _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF})
     # Create the Vector3DPSF
     return Vector3DPSF(
         nₐ, λ, n_medium, n_coverslip, n_immersion,
-        dipole, focal_z, vpupil, base_pupil, zernike_coeffs
+        dipole, z_stage, vpupil, base_pupil, zernike_coeffs
     )
 end

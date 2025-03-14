@@ -112,7 +112,7 @@ Allows direct manipulation of pupil function for custom aberrations.
 - `n_coverslip::T`: Cover slip refractive index
 - `n_immersion::T`: Immersion medium refractive index
 - `dipole::DipoleVector{T}`: Dipole orientation
-- `focal_z::T`: Focal plane position (z) in microns relative to nominal focus
+- `z_stage::T`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm)
 - `vector_pupils::VectorPupilFunction{T}`: Pre-calculated pupil functions containing vector field components (Ex,Ey),
   dipole orientation effects, base aberrations, apodization, and all position-independent factors
 - `base_pupil::Union{Nothing, PupilFunction{T}}`: Base pupil function representing system aberrations
@@ -125,7 +125,7 @@ struct Vector3DPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
     n_coverslip::T
     n_immersion::T
     dipole::DipoleVector{T}
-    focal_z::T
+    z_stage::T
     vector_pupils::VectorPupilFunction{T}
     base_pupil::Union{Nothing, PupilFunction{T}}
     zernike_coeffs::Union{Nothing, ZernikeCoefficients{T}}

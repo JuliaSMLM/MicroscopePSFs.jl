@@ -12,8 +12,8 @@ $$PSF(x - x_i, y - y_i, z_i, z_s) = \sum_{m=x,y} \sum_{n=p_x, p_y, p_z} |F[h(k_x
 
 Where:
 
--  $(x_i, y_i, z_i)$ is the emitter position relative to the focal plane 
--  $z_s$ is the focal plane relative to the coverslip (nominal focal plane) 
+-  $(x_i, y_i, z_i)$ is the emitter position where $z_i$ represents the depth above the coverslip
+-  $z_s$ is the distance the sample stage was moved away from the nominal focal plane at the coverslip 
 -  $F$ denotes the Fourier transform operation 
 -  $h(k_x, k_y)$ is the complex pupil function incorporating aberrations 
 -  $w_{m,n}$ represents the electric field components at the pupil plane from a fixed dipole and incorporates Fresnel coefficients 
@@ -91,7 +91,7 @@ Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
             n_medium::Real=1.33,
             n_coverslip::Real=1.52,
             n_immersion::Real=1.52,
-            focal_z::Real=0.0, 
+            z_stage::Real=0.0, 
             grid_size::Integer=128)
 ```
 
@@ -108,7 +108,7 @@ Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
 - `n_medium`: Refractive index of the sample medium (default: 1.33, water)
 - `n_immersion`: Refractive index of the immersion medium (default: 1.52, oil)
 - `n_coverslip`: Refractive index of the coverslip (default: 1.52, glass)
-- `focal_z`: Focal plane position in microns (default: 0.0)
+- `z_stage`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm) (default: 0.0)
 - `grid_size`: Size of grid for pupil function (default: 128)
 
 ### Type Parameters
@@ -152,7 +152,7 @@ psf_aberrated = Vector3DPSF(
 # Evaluate PSF at a specific 3D position
 x = 0.1  # μm
 y = 0.2  # μm
-z = 0.5  # μm (distance from focal plane)
+z = 0.5  # μm (depth above the coverslip)
 intensity = psf(x, y, z)
 
 # Get complex vector field amplitude (returns [Ex, Ey])
@@ -211,13 +211,14 @@ pixel_size = 0.1  # μm
 camera = IdealCamera(1:20, 1:20, pixel_size)
 
 # Create 3D emitter at position (1μm, 1μm, 0.5μm) with 1000 photons
-emitter = Emitter3D(1.0, 1.0, 0.5, 1000.0)  # x, y, z, photons
+# Note: z=0.5μm represents the depth above the coverslip
+emitter = Emitter3D(1.0, 1.0, 0.5, 1000.0)  # x, y, z (depth above coverslip), photons
 
 # Integrate PSF over pixels with 2×2 subsampling
 pixels = integrate_pixels(psf, camera, emitter, sampling=2)
 
 # For dipole emitters, you can use the DipoleEmitter3D type
-dipole_emitter = DipoleEmitter3D(1.0, 1.0, 0.5, 1000.0, 0.0, 0.0, 1.0)  # x, y, z, photons, dx, dy, dz
+dipole_emitter = DipoleEmitter3D(1.0, 1.0, 0.5, 1000.0, 0.0, 0.0, 1.0)  # x, y, z (depth above coverslip), photons, dx, dy, dz
 
 # Visualize the camera image
 using CairoMakie
@@ -334,8 +335,8 @@ fig
 A notable feature of the Vector3DPSF model is its ability to accurately capture Supercritical Angle Fluorescence (SAF), which occurs when light emitted by fluorophores near the coverslip is collected at angles exceeding the critical angle:
 
 ```julia
-# Compare SAF effect at different distances from the coverslip
-z_positions = [0.0, 0.1, 0.3, 0.5, 1.0]  # μm from coverslip
+# Compare SAF effect at different depths above the coverslip
+z_positions = [0.0, 0.1, 0.3, 0.5, 1.0]  # μm above coverslip
 x = y = range(-1, 1, length=51)  # μm
 
 fig = Figure(size=(1200, 300))
@@ -349,17 +350,17 @@ psf = Vector3DPSF(
 
 for (i, z) in enumerate(z_positions)
     ax = Axis(fig[1, i], aspect=DataAspect(),
-             title="z = $(z)μm from coverslip",
+             title="z = $(z)μm above coverslip",
              xlabel="x (μm)", 
              ylabel=i==1 ? "y (μm)" : "")
              
-    # Emitter at z from coverslip, focus at z
-    img = [psf(xi, yi, 0.0) for yi in y, xi in x]
+    # Evaluate PSF with emitter at specific depth above coverslip
+    img = [psf(xi, yi, z) for yi in y, xi in x]
     hm = heatmap!(ax, x, y, img, colormap=:viridis)
     
     # Add radial profile
     r = range(0, 1, length=50)
-    intensity = [psf(ri, 0.0, 0.0) for ri in r]
+    intensity = [psf(ri, 0.0, z) for ri in r]
     lines!(ax, r, intensity .* 1.5, color=:red, linewidth=2)
 end
 

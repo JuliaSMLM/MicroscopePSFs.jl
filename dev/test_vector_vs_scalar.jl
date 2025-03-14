@@ -13,7 +13,7 @@ na = 1.4   # Numerical aperture
 n_medium = 1.52   # Sample medium refractive index (water)
 n_coverslip = 1.52  # Coverslip refractive index (glass)
 n_immersion = 1.52  # Immersion medium refractive index (oil)
-focal_z = 1.0  # Nominal focal plane position
+z_stage = 1.0  # Distance the sample stage was moved away from the nominal focal plane at the coverslip
 
 # Create dipole orientation (x-oriented)
 dipole = DipoleVector(1.0, 1.0, 0.0)
@@ -29,7 +29,7 @@ vector_psf = Vector3DPSF(
     n_medium=n_medium, 
     n_coverslip=n_coverslip, 
     n_immersion=n_immersion,
-    focal_z=focal_z
+    z_stage=z_stage
 )
 
 # Create Scalar3DPSF with the same aberration
@@ -165,7 +165,7 @@ println("NA = $na, λ = $λ μm")
 println("Medium index = $n_medium")
 println("Coverslip index = $n_coverslip")
 println("Immersion index = $n_immersion")
-println("Focal plane = $focal_z μm")
+println("Z stage position = $z_stage μm")
 println("Astigmatism: 1 wave at 0 degrees")
 println("Dipole orientation: ($(dipole.px), $(dipole.py), $(dipole.pz))")
 println("Defocus range: $(z_planes[1]) to $(z_planes[end]) μm")

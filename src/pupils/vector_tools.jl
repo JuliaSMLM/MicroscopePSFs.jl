@@ -91,15 +91,15 @@ function calculate_fresnel_coefficients(kr2::Real, λ::Real,
 end
 
 """
-    calculate_axial_phase(z::Real, focal_z::Real, kz_medium::Complex, 
+    calculate_axial_phase(z::Real, z_stage::Real, kz_medium::Complex, 
                          kz_coverslip::Complex, kz_immersion::Complex,
                          coverslip_thickness::Real=0.17)
 
 Calculate total axial phase from defocus.
 
 # Arguments
-- `z`: Emitter position relative to the focal plane, `focal_z``
-- `focal_z`: Focal plane position in microns relative to the coverslip
+- `z`: Emitter position relative to the coverslip (depth above the coverslip in μm)
+- `z_stage`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm)
 - `kz_medium`: z-component of wave vector in sample medium
 - `kz_coverslip`: z-component of wave vector in coverslip
 - `kz_immersion`: z-component of wave vector in immersion medium
@@ -109,13 +109,12 @@ Calculate total axial phase from defocus.
 - Defocus phase
 
 """
-function calculate_axial_phase(z::Real, focal_z::Real, kz_medium::Complex,
+function calculate_axial_phase(z::Real, z_stage::Real, kz_medium::Complex,
     kz_coverslip::Complex, kz_immersion::Complex,
     coverslip_thickness::Real=0.17)
     # Emitter position relative to coverslip interface
-    z_i = z + focal_z
 
-    return kz_medium * z_i - kz_immersion * focal_z
+    return kz_medium * z - kz_immersion * z_stage
 end
 
 """
