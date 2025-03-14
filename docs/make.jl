@@ -33,7 +33,7 @@ makedocs(;
 )
 
 # Uncomment this when you're ready to deploy
-# deploydocs(;
-#     repo="github.com/JuliaSMLM/MicroscopePSFs.jl",
-#     devbranch="main",
-# )
+deploydocs(;
+    repo="github.com/JuliaSMLM/MicroscopePSFs.jl",
+    devbranch="main",
+)
