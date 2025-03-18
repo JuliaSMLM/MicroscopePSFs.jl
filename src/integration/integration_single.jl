@@ -33,13 +33,23 @@ function integrate_pixels!(
     sampling::Integer=2
 ) where T <: Real
     
+    # Define a function that handles both 2D and 3D cases automatically
+    # This is important - we don't explicitly check if we need a 2D or 3D evaluation here
+    # Instead, we pass a function that will be determined based on the PSF and emitter traits
+    eval_func = if supports_3d(psf) && has_z_coordinate(emitter)
+        (p, x, y, z) -> p(x, y, z)
+    else
+        (p, x, y) -> p(x, y)
+    end
+    
     # Perform integration
     _integrate_pixels_generic!(
         result,
         psf,
-        camera,
+        camera.pixel_edges_x,
+        camera.pixel_edges_y,
         emitter,
-        (p, x, y) -> p(x, y),  # For 2D PSF
+        eval_func,  # Pass this flexible function
         sampling=sampling
     )
     
@@ -82,13 +92,15 @@ function integrate_pixels_amplitude!(
     sampling::Integer=2
 ) where T <: Real
     
-    # Perform integration
+    # Define a function that handles both 2D and 3D cases automatically
+    # Use the amplitude function which already has methods for both 2D and 3D
     _integrate_pixels_generic!(
         result,
         psf,
-        camera,
+        camera.pixel_edges_x,
+        camera.pixel_edges_y,
         emitter,
-        amplitude,  # Function that automatically handles 2D or 3D based on context
+        amplitude,  # The amplitude function already has appropriate methods
         sampling=sampling
     )
     

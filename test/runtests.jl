@@ -35,4 +35,9 @@ using HDF5
     @testset "I/O Functions" begin
         include("io_tests.jl")
     end
+
+    # Multi-emitter tests
+    @testset "Multi Emitter" begin
+        include("multi_emitter_tests.jl")
+    end
 end

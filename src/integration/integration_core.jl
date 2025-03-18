@@ -35,21 +35,22 @@ has_z_coordinate(emitter::E) where E <: AbstractEmitter = has_z_coordinate(typeo
 
 """
     _integrate_pixels_core!(
-        result::AbstractMatrix{T},
+        result::AbstractArray,
         pixel_edges_x::AbstractVector,
         pixel_edges_y::AbstractVector,
         func::Function,
         emitter_x::Real,
         emitter_y::Real;
         sampling::Integer=2
-    ) where T
+    )
 
 Internal function implementing the core pixel integration logic.
+Supports both scalar and vector/tensor return types from the function.
 
 # Arguments
 - `result`: Pre-allocated array where integration results will be stored
 - `pixel_edges_x`, `pixel_edges_y`: Arrays defining pixel edge coordinates
-- `func`: Function to evaluate at PSF coordinates
+- `func`: Function to evaluate at PSF coordinates - can return scalar, vector, or tensor
 - `emitter_x`, `emitter_y`: Emitter coordinates in same units as pixel edges
 - `sampling`: Subpixel sampling density (default: 2)
 
@@ -57,20 +58,29 @@ Internal function implementing the core pixel integration logic.
 - `result` array filled with integration values
 """
 function _integrate_pixels_core!(
-    result::AbstractMatrix{T},
+    result::AbstractArray,
     pixel_edges_x::AbstractVector,
     pixel_edges_y::AbstractVector,
     func::Function,
     emitter_x::Real,
     emitter_y::Real;
     sampling::Integer=2
-) where T
+)
     nx = length(pixel_edges_x) - 1
     ny = length(pixel_edges_y) - 1
     
-    # Validate dimensions
-    size(result) == (ny, nx) || 
-        throw(DimensionMismatch("Result array dimensions $(size(result)) do not match expected ($ny, $nx)"))
+    # Get basic result dimensions and validate
+    if result isa AbstractMatrix
+        # For 2D result (scalar return case)
+        size(result) == (ny, nx) || 
+            throw(DimensionMismatch("Result array dimensions $(size(result)) do not match expected ($ny, $nx)"))
+    elseif result isa AbstractArray{<:Any,3}
+        # For 3D result (vector return case)
+        size(result)[1:2] == (ny, nx) || 
+            throw(DimensionMismatch("First two dimensions of result $(size(result)[1:2]) do not match expected ($ny, $nx)"))
+    else
+        throw(ArgumentError("Unsupported result array type: $(typeof(result))"))
+    end
     
     # Always use multi-threading - has minimal overhead with single thread
     Threads.@threads for ix in 1:nx
@@ -83,11 +93,24 @@ function _integrate_pixels_core!(
             y_end = pixel_edges_y[iy + 1]
             dy = y_end - y_start
             
+            # Special case for single sampling point
             if sampling == 1
                 # Just use pixel centers
                 x = (x_start + x_end)/2
                 y = (y_start + y_end)/2
-                result[iy, ix] = func(x - emitter_x, y - emitter_y) * (dx * dy)
+                
+                # Calculate the function value once
+                func_val = func(x - emitter_x, y - emitter_y)
+                area = dx * dy
+                
+                # Handle different return types
+                if func_val isa Number
+                    # Scalar case
+                    result[iy, ix] = func_val * area
+                else
+                    # Vector or tensor case - use broadcasting to scale all elements
+                    result[iy, ix, :] .= func_val .* area
+                end
             else
                 # Integration with subpixel sampling
                 dx_sample = dx / sampling
@@ -98,13 +121,27 @@ function _integrate_pixels_core!(
                 xs = range(x_start + dx_sample/2, x_end - dx_sample/2, length=sampling)
                 ys = range(y_start + dy_sample/2, y_end - dy_sample/2, length=sampling)
                 
-                pixel_sum = zero(T)
-                for x in xs, y in ys
-                    x_psf = x - emitter_x
-                    y_psf = y - emitter_y
-                    pixel_sum += func(x_psf, y_psf)
+                # Get first value to determine return type and initialize sum properly
+                x_psf = xs[1] - emitter_x
+                y_psf = ys[1] - emitter_y
+                first_val = func(x_psf, y_psf)
+                
+                if first_val isa Number
+                    # Scalar case
+                    pixel_sum = zero(typeof(first_val))
+                    for x in xs, y in ys
+                        pixel_sum += func(x - emitter_x, y - emitter_y)
+                    end
+                    result[iy, ix] = pixel_sum * area_factor
+                else
+                    # Vector case - initialize sum with correct dimensions
+                    pixel_sum = zeros(eltype(first_val), length(first_val))
+                    for x in xs, y in ys
+                        pixel_sum .+= func(x - emitter_x, y - emitter_y)
+                    end
+                    # Store each component scaled by area
+                    result[iy, ix, :] .= pixel_sum .* area_factor
                 end
-                result[iy, ix] = pixel_sum * area_factor
             end
         end
     end
@@ -114,21 +151,23 @@ end
 
 """
     _integrate_pixels_generic!(
-        result::AbstractMatrix{T},
+        result::AbstractArray,
         psf::AbstractPSF,
-        camera::AbstractCamera,
+        pixel_edges_x::AbstractVector,
+        pixel_edges_y::AbstractVector,
         emitter::AbstractEmitter,
         f::Function;
         sampling::Integer=2
-    ) where T
+    )
 
 Generic wrapper for PSF integration that handles coordinate systems and validation.
 Automatically handles z-coordinates when both PSF and emitter support them.
+Supports functions that return either scalars or vectors/tensors.
 
 # Arguments
 - `result`: Pre-allocated array where results will be stored
 - `psf`: Point spread function to integrate
-- `camera`: AbstractCamera defining pixel edges
+- `pixel_edges_x`, `pixel_edges_y`: Arrays defining pixel edge coordinates
 - `emitter`: Emitter with position information
 - `f`: Function to evaluate (e.g., (p,x,y) -> p(x,y) for intensity)
 - `sampling`: Subpixel sampling density (default: 2)
@@ -137,13 +176,14 @@ Automatically handles z-coordinates when both PSF and emitter support them.
 - `result` array filled with integration values
 """
 function _integrate_pixels_generic!(
-    result::AbstractMatrix{T},
+    result::AbstractArray,
     psf::AbstractPSF,
-    camera::AbstractCamera,
+    pixel_edges_x::AbstractVector,
+    pixel_edges_y::AbstractVector,
     emitter::AbstractEmitter,
     f::Function;
     sampling::Integer=2
-) where T
+)
     # Determine if we should use z-coordinate based on PSF and emitter capabilities
     if supports_3d(psf) && has_z_coordinate(emitter)
         # For 3D PSF and emitter with z-coordinate
@@ -156,8 +196,8 @@ function _integrate_pixels_generic!(
     # Call core integration function
     return _integrate_pixels_core!(
         result,
-        camera.pixel_edges_x,
-        camera.pixel_edges_y,
+        pixel_edges_x,
+        pixel_edges_y,
         eval_func,
         emitter.x,
         emitter.y;
@@ -168,39 +208,55 @@ end
 """
     _integrate_pixels_generic(
         psf::AbstractPSF,
-        camera::AbstractCamera,
+        pixel_edges_x::AbstractVector,
+        pixel_edges_y::AbstractVector,
         emitter::AbstractEmitter,
-        f::Function,  # Function to integrate
-        ::Type{T};   # Return type
+        f::Function,
+        ::Type{T},
+        output_dims=();
         sampling::Integer=2
     ) where T
 
 Internal generic integration routine used by both intensity and amplitude integration.
 Creates a new result array and delegates to the in-place version.
+Supports both scalar and vector/tensor return types.
+
+# Arguments
+- `output_dims`: Additional dimensions for the result array beyond the basic [y,x] dimensions.
+  For vector returns (e.g., [Ex, Ey]), set output_dims=(2,) for a [y,x,2] result array.
 
 # Returns
-- Matrix{T} with dimensions [y,x] starting at [1,1] for top-left pixel
+- Array with dimensions [y,x] or [y,x,output_dims...] depending on the function's return type
 """
 function _integrate_pixels_generic(
     psf::AbstractPSF,
-    camera::AbstractCamera,
+    pixel_edges_x::AbstractVector,
+    pixel_edges_y::AbstractVector,
     emitter::AbstractEmitter,
     f::Function,
-    ::Type{T};
+    ::Type{T},
+    output_dims=();
     sampling::Integer=2
 ) where T
     # Get pixel dimensions
-    nx = length(camera.pixel_edges_x) - 1
-    ny = length(camera.pixel_edges_y) - 1
+    nx = length(pixel_edges_x) - 1
+    ny = length(pixel_edges_y) - 1
     
-    # Allocate result matrix
-    result = Matrix{T}(undef, ny, nx)
+    # Allocate result array with appropriate dimensions
+    if isempty(output_dims)
+        # Scalar case - 2D result
+        result = Array{T}(undef, ny, nx)
+    else
+        # Vector/tensor case - 3D or higher result
+        result = Array{T}(undef, ny, nx, output_dims...)
+    end
     
-    # Use new in-place function
+    # Use in-place function
     _integrate_pixels_generic!(
         result,
         psf,
-        camera,
+        pixel_edges_x,
+        pixel_edges_y,
         emitter,
         f,
         sampling=sampling

@@ -189,49 +189,53 @@ function update_pupils!(psf::Vector3DPSF)
 end
 
 
+# src/integration/integration_single.jl (additions)
+
 """
-    integrate_pixels(
+    integrate_pixels_amplitude!(
+        result::AbstractArray{Complex{T},3},
         psf::Vector3DPSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
         sampling::Integer=2
-    )
+    ) where T <: Real
 
-Integrate Vector3DPSF over camera pixels.
+Special version of amplitude integration for Vector3DPSF that preserves polarization components.
+Uses the flexible core integration function that handles vector returns.
 
 # Arguments
-- `psf`: Vector3DPSF instance with fixed dipole orientation
-- `camera`: Camera geometry
-- `emitter`: Emitter with position information (emitter.z represents depth above the coverslip)
-- `sampling`: Subpixel sampling density for integration accuracy
+- `result`: Pre-allocated 3D complex array where results will be stored, dimensions [y, x, pol]
+- `psf`: Vector3DPSF instance
+- `camera`: Camera geometry defining pixel edges
+- `emitter`: Emitter with position information
+- `sampling`: Subpixel sampling density (default: 2)
 
 # Returns
-- Array of integrated PSF intensities with dimensions [ny, nx]
-- Values represent actual photon counts based on emitter.photons
-
-# Notes
-- Dipole orientation comes from the PSF itself, not the emitter
-- For varying dipole orientations, create multiple PSFs
-- The emitter's z position must represent depth above the coverslip
+- The `result` array, filled with integrated complex amplitudes for each polarization
 """
-function integrate_pixels(
+function integrate_pixels_amplitude!(
+    result::AbstractArray{Complex{T},3},
     psf::Vector3DPSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
     sampling::Integer=2
-)
-    # Check if emitter has required z-coordinate and provide domain-specific error message
-    if !has_z_coordinate(emitter)
-        throw(ArgumentError("Vector3DPSF requires an emitter with a z-coordinate (depth above the coverslip)"))
-    end
-
-    # Use the standard integration function - it will automatically handle the z-coordinate
-    return invoke(
-        integrate_pixels,
-        Tuple{AbstractPSF,AbstractCamera,AbstractEmitter},
-        psf, camera, emitter;
+) where T <: Real
+    # Verify dimensions
+    ny, nx, npol = size(result)
+    npol == 2 || throw(DimensionMismatch("Third dimension of result array must be 2 for Ex and Ey"))
+    
+    # Use the core integration function directly - it now handles vector returns
+    _integrate_pixels_generic!(
+        result,
+        psf,
+        camera.pixel_edges_x,
+        camera.pixel_edges_y,
+        emitter,
+        amplitude,  # The amplitude function returns [Ex, Ey]
         sampling=sampling
     )
+    
+    return result
 end
 
 """
@@ -242,22 +246,17 @@ end
         sampling::Integer=2
     )
 
-Integrate Vector3DPSF complex amplitude over camera pixels.
+Specialized version of amplitude integration for Vector3DPSF that preserves polarization components.
 
 # Arguments
-- `psf`: Vector3DPSF instance with fixed dipole orientation
-- `camera`: Camera geometry
-- `emitter`: Emitter with position information (emitter.z represents depth above the coverslip)
-- `sampling`: Subpixel sampling density for integration accuracy
+- `psf`: Vector3DPSF instance
+- `camera`: Camera geometry defining pixel edges
+- `emitter`: Emitter with position information
+- `sampling`: Subpixel sampling density (default: 2)
 
 # Returns
-- Array of integrated complex field components with dimensions [ny, nx, 2]
-- First two dimensions are spatial, third dimension holds [Ex, Ey]
-
-# Notes
-- For coherent calculations in vectorial microscopy
-- Preserves relative phase information between field components
-- The emitter's z position must represent depth above the coverslip
+- 3D array of integrated complex amplitudes with dimensions [y, x, pol]
+  where pol index 1 = Ex and pol index 2 = Ey
 """
 function integrate_pixels_amplitude(
     psf::Vector3DPSF,
@@ -265,34 +264,72 @@ function integrate_pixels_amplitude(
     emitter::AbstractEmitter;
     sampling::Integer=2
 )
-    # Check if emitter has required z-coordinate and provide domain-specific error message
-    if !has_z_coordinate(emitter)
-        throw(ArgumentError("Vector3DPSF requires an emitter with a z-coordinate (depth above the coverslip)"))
-    end
-
-    # Use the standard integration function - it will automatically handle the z-coordinate
-    return invoke(
-        integrate_pixels_amplitude,
-        Tuple{AbstractPSF,AbstractCamera,AbstractEmitter},
-        psf, camera, emitter;
+    T = Complex{typeof(emitter.photons)}
+    
+    # Use the generic function with additional dimension specified
+    return _integrate_pixels_generic(
+        psf,
+        camera.pixel_edges_x,
+        camera.pixel_edges_y,
+        emitter,
+        amplitude,
+        T,
+        (2,);  # Additional dimension for the polarization components
         sampling=sampling
     )
 end
 
-# Display method
-function Base.show(io::IO, psf::Vector3DPSF)
-    print(io, "Vector3DPSF(NA=$(psf.nₐ), λ=$(psf.λ)μm, n_medium=$(psf.n_medium))")
-    has_bp = !isnothing(psf.base_pupil)
-    has_zc = !isnothing(psf.zernike_coeffs)
+# src/integration/integration_multi.jl (additions)
 
-    if has_bp || has_zc
-        print(io, " with ")
-        if has_bp
-            print(io, "base pupil")
-            has_zc && print(io, " and ")
-        end
-        if has_zc
-            print(io, "$(length(psf.zernike_coeffs)) Zernike terms")
-        end
+"""
+    integrate_pixels_amplitude(
+        psf::Vector3DPSF,
+        camera::AbstractCamera,
+        emitters::Vector{<:AbstractEmitter};
+        sampling::Integer=2
+    )
+
+Integrate PSF complex amplitude over camera pixels for multiple emitters.
+Special version for Vector3DPSF that preserves polarization components.
+
+# Arguments
+- `psf`: Vector3DPSF instance
+- `camera`: Camera geometry defining pixel edges
+- `emitters`: Vector of emitters with position information
+- `sampling`: Subpixel sampling density (default: 2)
+
+# Returns
+- 3D array of integrated complex amplitudes with dimensions [y, x, pol]
+  where pol index 1 = Ex and pol index 2 = Ey
+
+# Notes
+- Results are the coherent sum of individual emitter field contributions
+"""
+function integrate_pixels_amplitude(
+    psf::Vector3DPSF,
+    camera::AbstractCamera,
+    emitters::Vector{<:AbstractEmitter};
+    sampling::Integer=2
+)
+    isempty(emitters) && return zeros(Complex{Float64}, length(camera.pixel_edges_y)-1, length(camera.pixel_edges_x)-1, 2)
+    
+    # Determine result type from first emitter
+    T = Complex{typeof(emitters[1].photons)}
+    
+    # Allocate result array
+    ny = length(camera.pixel_edges_y) - 1
+    nx = length(camera.pixel_edges_x) - 1
+    result = zeros(T, ny, nx, 2)  # 3D array for polarization components
+    
+    # Temporary buffer for individual emitter contribution
+    buffer = similar(result)
+    
+    # Process each emitter
+    for emitter in emitters
+        fill!(buffer, zero(T))
+        integrate_pixels_amplitude!(buffer, psf, camera, emitter; sampling=sampling)
+        result .+= buffer
     end
+    
+    return result
 end
