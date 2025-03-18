@@ -1,6 +1,6 @@
 # test/vector3d_tests.jl
 
-@testset "Vector3D PSF" begin
+@testset "VectorPSF" begin
     # Setup common parameters
     na = 1.2
     λ = 0.6
@@ -11,7 +11,7 @@
     @testset "Constructor" begin
         # Test basic constructor
         dipole = DipoleVector(1.0, 0.0, 0.0)  # X-oriented
-        psf = Vector3DPSF(na, λ, dipole; 
+        psf = VectorPSF(na, λ, dipole; 
                           n_medium=n_medium, 
                           n_coverslip=n_coverslip, 
                           n_immersion=n_immersion)
@@ -29,7 +29,7 @@
         # Test constructor with aberrations
         zc = ZernikeCoefficients(10)
         add_defocus!(zc, 0.5)
-        psf_aberrated = Vector3DPSF(na, λ, dipole; 
+        psf_aberrated = VectorPSF(na, λ, dipole; 
                                    n_medium=n_medium, 
                                    base_zernike=zc)
         
@@ -43,9 +43,9 @@
         dipole_z = DipoleVector(0.0, 0.0, 1.0)  # Z-oriented
         
         # Create PSFs for each orientation
-        psf_x = Vector3DPSF(na, λ, dipole_x; n_medium=n_medium)
-        psf_y = Vector3DPSF(na, λ, dipole_y; n_medium=n_medium)
-        psf_z = Vector3DPSF(na, λ, dipole_z; n_medium=n_medium)
+        psf_x = VectorPSF(na, λ, dipole_x; n_medium=n_medium)
+        psf_y = VectorPSF(na, λ, dipole_y; n_medium=n_medium)
+        psf_z = VectorPSF(na, λ, dipole_z; n_medium=n_medium)
         
         # X-dipole symmetry tests
         # Should be symmetric with respect to y-axis
@@ -74,7 +74,7 @@
     @testset "Dipole Radiation Pattern" begin
         # Test that dipoles follow expected radiation pattern
         dipole_x = DipoleVector(1.0, 0.0, 0.0)
-        psf_x = Vector3DPSF(na, λ, dipole_x; n_medium=n_medium)
+        psf_x = VectorPSF(na, λ, dipole_x; n_medium=n_medium)
         
         # For our implementation, test that intensity decreases with distance
         # from the center for the in-plane dipole
@@ -83,7 +83,7 @@
         
         # Z-dipole should have donut pattern in xy-plane (maximum at some radius, minimum at center)
         dipole_z = DipoleVector(0.0, 0.0, 1.0)
-        psf_z = Vector3DPSF(na, λ, dipole_z; n_medium=n_medium)
+        psf_z = VectorPSF(na, λ, dipole_z; n_medium=n_medium)
         
         # Center should be a minimum
         @test psf_z(0.0, 0.0, 0.0) < psf_z(0.3, 0.0, 0.0)
@@ -92,7 +92,7 @@
     @testset "Amplitude Function" begin
         # Test that amplitude function returns expected components
         dipole = DipoleVector(1.0, 0.0, 0.0)
-        psf = Vector3DPSF(na, λ, dipole; n_medium=n_medium)
+        psf = VectorPSF(na, λ, dipole; n_medium=n_medium)
         
         # Amplitude should return a vector of [Ex, Ey]
         amp = amplitude(psf, 0.3, 0.4, 0.0)
@@ -111,7 +111,7 @@
     @testset "Pixel Integration" begin
         # Test integration over camera pixels
         dipole = DipoleVector(1.0, 0.0, 0.0)
-        psf = Vector3DPSF(na, λ, dipole; n_medium=n_medium)
+        psf = VectorPSF(na, λ, dipole; n_medium=n_medium)
         
         # Create camera and emitter
         camera = IdealCamera(collect(0:0.1:2.0), collect(0:0.1:2.0))

@@ -1,18 +1,18 @@
 # src/io/vector3d.jl
 
 """
-I/O implementations for Vector3DPSF type.
+I/O implementations for VectorPSF type.
 Manages saving and loading of the complex vector pupil fields
 along with dipole orientation and refractive indices.
 """
 
 """
-    _save_psf_impl(file::HDF5.File, psf::Vector3DPSF)
+    _save_psf_impl(file::HDF5.File, psf::VectorPSF)
 
-Save a Vector3DPSF to an HDF5 file, including all optical parameters,
+Save a VectorPSF to an HDF5 file, including all optical parameters,
 dipole orientation, and vector pupil fields.
 """
-function _save_psf_impl(file::HDF5.File, psf::Vector3DPSF)
+function _save_psf_impl(file::HDF5.File, psf::VectorPSF)
     # Save optical parameters
     params = create_group(file, "parameters")
     params["na"] = psf.nₐ
@@ -53,11 +53,11 @@ function _save_psf_impl(file::HDF5.File, psf::Vector3DPSF)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF}) 
+    _load_psf_impl(file::HDF5.File, ::Type{VectorPSF}) 
 
-Load a Vector3DPSF from an HDF5 file, reconstructing all components.
+Load a VectorPSF from an HDF5 file, reconstructing all components.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF}) 
+function _load_psf_impl(file::HDF5.File, ::Type{VectorPSF}) 
     # Load optical parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda", "n_medium",
@@ -106,8 +106,8 @@ function _load_psf_impl(file::HDF5.File, ::Type{Vector3DPSF})
         base_pupil = PupilFunction(nₐ, λ, n_medium, bp_field)
     end
     
-    # Create the Vector3DPSF
-    return Vector3DPSF(
+    # Create the VectorPSF
+    return VectorPSF(
         nₐ, λ, n_medium, n_coverslip, n_immersion,
         dipole, z_stage, vpupil, base_pupil, zernike_coeffs
     )

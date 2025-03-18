@@ -6,7 +6,7 @@ using Revise
 using MicroscopePSFs
 using CairoMakie
 using Printf
-using SMLMData
+
 
 # Microscope parameters
 λ = 0.532  # Green light wavelength in microns
@@ -31,7 +31,7 @@ cam_size = nx * pixel_size
 # Create PSF with astigmatism
 zc = ZernikeCoefficients(15)
 zc.phase[6] = 0.0  # Add phase shift for visualization
-psf = Scalar3DPSF(na, λ, n, coeffs=zc)
+psf = ScalarPSF(na, λ, n, coeffs=zc)
 
 # Check normalization over camera
 psf_normalized = integrate_pixels(psf, camera, Emitter3D(nx/2 * pixel_size, ny/2 * pixel_size, 0.0, 1.0))
@@ -114,7 +114,7 @@ Label(fig[1, 0], "Pupil", rotation=π/2)
 Label(fig[2, 0], "PSF\nField", rotation=π/2)
 Label(fig[3, 0], "Camera\nPixels", rotation=π/2)
 
-Label(fig[0, :], "Scalar3D PSF with Astigmatism\n(NA=$na, λ=$λ μm, n=$n)", 
+Label(fig[0, :], "ScalarPSF with Astigmatism\n(NA=$na, λ=$λ μm, n=$n)", 
       fontsize=20, padding=(0,0,20,0))
 
 # Adjust layout
@@ -122,7 +122,11 @@ rowgap!(fig.layout, 40)
 colgap!(fig.layout, 40)
 
 # Save figure
-save("dev/scalar3d_test.png", fig)
+# Ensure test_output directory exists
+if !isdir("dev/test_output")
+    mkdir("dev/test_output")
+end
+save("dev/test_output/scalar3d_test.png", fig)
 
 # Print parameters
 println("\nPSF parameters:")

@@ -49,16 +49,16 @@ The `integrate_pixels` function is the primary way to generate physically realis
 Each PSF type has its own constructor with parameters specific to that model. For example:
 
 ```julia
-# Create a Gaussian2D PSF with sigma=150nm
-psf_gaussian = Gaussian2D(0.15)
+# Create a GaussianPSF with sigma=150nm
+psf_gaussian = GaussianPSF(0.15)
 
-# Create an Airy2D PSF with NA=1.4 and wavelength=532nm
-psf_airy = Airy2D(1.4, 0.532)
+# Create an AiryPSF with NA=1.4 and wavelength=532nm
+psf_airy = AiryPSF(1.4, 0.532)
 
-# Create a Vector3D PSF with more parameters
+# Create a VectorPSF with more parameters
 # Note: Create a dipole vector for the orientation (z-axis in this case)
 dipole_z = DipoleVector(0.0, 0.0, 1.0)  # Dipole along z-axis
-psf_vector = Vector3DPSF(
+psf_vector = VectorPSF(
     1.4,                # Numerical aperture
     0.68,               # Wavelength in microns
     dipole_z,           # Dipole orientation (along optical axis)
@@ -85,9 +85,9 @@ function analyze_psf_width(psf::AbstractPSF)
 end
 
 # Works with any PSF model that implements the 2D interface
-# Note: Vector3DPSF and Scalar3DPSF only support 3D evaluation with (x,y,z)
-results_gaussian = analyze_psf_width(Gaussian2D(0.15))
-results_airy = analyze_psf_width(Airy2D(1.4, 0.532))
+# Note: VectorPSF and ScalarPSF only support 3D evaluation with (x,y,z)
+results_gaussian = analyze_psf_width(GaussianPSF(0.15))
+results_airy = analyze_psf_width(AiryPSF(1.4, 0.532))
 ```
 
 ## Example: Visualizing Different PSF Models
@@ -101,15 +101,15 @@ x = range(-1, 1, length=100)
 y = range(-1, 1, length=100)
 
 # Create different PSF models - using only 2D PSFs
-# Note: Vector3DPSF requires a dipole orientation
+# Note: VectorPSF requires a dipole orientation
 dipole_z = DipoleVector(0.0, 0.0, 1.0)  # Dipole along z-axis (for reference)
 psfs = [
-    Gaussian2D(0.15),
-    Airy2D(1.4, 0.532)
-    # Scalar3DPSF only supports 3D interface with (x,y,z) and isn't included here
-    # Vector3DPSF only supports 3D interface and isn't included here
+    GaussianPSF(0.15),
+    AiryPSF(1.4, 0.532)
+    # ScalarPSF only supports 3D interface with (x,y,z) and isn't included here
+    # VectorPSF only supports 3D interface and isn't included here
 ]
-titles = ["Gaussian2D", "Airy2D"]
+titles = ["GaussianPSF", "AiryPSF"]
 
 # Compute PSF intensity values
 intensity_values = [[psf(xi, yi) for yi in y, xi in x] for psf in psfs]

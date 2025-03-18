@@ -23,9 +23,9 @@ dipole_labels = ["x-dipole", "y-dipole", "z-dipole"]
 # Grid size for pupil visualization
 grid_size = 128
 
-# Create Vector3DPSF for each dipole orientation
+# Create VectorPSF for each dipole orientation
 psfs = [
-    Vector3DPSF(na, λ, dipole; 
+    VectorPSF(na, λ, dipole; 
                 n_medium=n_medium, 
                 n_coverslip=n_coverslip, 
                 n_immersion=n_immersion,
@@ -86,7 +86,11 @@ title_text = @sprintf("Pupil Functions for Different Dipole Orientations (NA=%.1
 Label(fig[0, 1:4], title_text, fontsize=16, font=:bold)
 
 # Save figure
-save("dipole_pupils.png", fig, px_per_unit=2)
+# Ensure test_output directory exists
+if !isdir("dev/test_output")
+    mkdir("dev/test_output")
+end
+save("dev/test_output/dipole_pupils.png", fig, px_per_unit=2)
 
 # Display information
 println("Pupil Parameters:")

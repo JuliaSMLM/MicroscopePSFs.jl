@@ -5,13 +5,12 @@ using MicroscopePSFs
 using CairoMakie
 using LinearAlgebra
 using Statistics
-using Zygote
 using BenchmarkTools
 
 #= PART 1: BASIC USAGE OF SPLINEPSF =#
 
-# Create a Scalar3D PSF
-scalar_psf = Scalar3DPSF(1.4, 0.532, 1.518)
+# Create a ScalarPSF
+scalar_psf = ScalarPSF(1.4, 0.532, 1.518)
 
 # Sample to create a SplinePSF
 x_range = y_range = range(-2.0, 2.0, step=0.05)  # 41×41 lateral grid, 4μm range
@@ -22,7 +21,7 @@ println("Type of y_range: ", typeof(y_range))
 println("Type of z_range: ", typeof(z_range))
 
 # Update the SplinePSF creation to use the positional constructor
-println("Creating SplinePSF from Scalar3DPSF...")
+println("Creating SplinePSF from ScalarPSF...")
 spline_psf = SplinePSF(scalar_psf, x_range, y_range, z_range)
 
 println("Original PSF type: $(typeof(scalar_psf))")
@@ -37,10 +36,10 @@ camera = IdealCamera(1:nx, 1:ny, pixel_size)
 cam_size = nx * pixel_size
 
 # Check normalization over camera
-pixels_spline = integrate_pixels(psf, camera, Emitter3D(nx / 2 * pixel_size, ny / 2 * pixel_size, 0.0, 1.0))
+pixels_spline = integrate_pixels(spline_psf, camera, Emitter3D(nx / 2 * pixel_size, ny / 2 * pixel_size, 0.0, 1.0))
 pixels_scalar = integrate_pixels(scalar_psf, camera, Emitter3D(nx / 2 * pixel_size, ny / 2 * pixel_size, 0.0, 1.0))
 println("SplinePSF normalization: ", sum(pixels_spline))
-println("Scalar3DPSF normalization: ", sum(pixels_spline))
+println("ScalarPSF normalization: ", sum(pixels_scalar))
 
 
 # Create grids for visualization

@@ -1,43 +1,43 @@
 # src/io/basic_psfs.jl
 
 """
-I/O implementations for basic PSF types (Gaussian2D and Airy2D).
+I/O implementations for basic PSF types (GaussianPSF and AiryPSF).
 These are simpler PSFs with minimal parameters.
 """
 
-# ---- Gaussian2D ----
+# ---- GaussianPSF ----
 
 """
-    _save_psf_impl(file::HDF5.File, psf::Gaussian2D)
+    _save_psf_impl(file::HDF5.File, psf::GaussianPSF)
 
-Save a Gaussian2D PSF to an HDF5 file.
+Save a GaussianPSF to an HDF5 file.
 """
-function _save_psf_impl(file::HDF5.File, psf::Gaussian2D)
+function _save_psf_impl(file::HDF5.File, psf::GaussianPSF)
     params = create_group(file, "parameters")
     params["sigma"] = psf.σ
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{Gaussian2D})
+    _load_psf_impl(file::HDF5.File, ::Type{GaussianPSF})
 
-Load a Gaussian2D PSF from an HDF5 file.
+Load a GaussianPSF from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{Gaussian2D})
+function _load_psf_impl(file::HDF5.File, ::Type{GaussianPSF})
     params = file["parameters"]
     _io_check_required_fields(params, ["sigma"])
     
     σ = read(params["sigma"])
-    return Gaussian2D(σ)
+    return GaussianPSF(σ)
 end
 
-# ---- Airy2D ----
+# ---- AiryPSF ----
 
 """
-    _save_psf_impl(file::HDF5.File, psf::Airy2D)
+    _save_psf_impl(file::HDF5.File, psf::AiryPSF)
 
-Save an Airy2D PSF to an HDF5 file.
+Save an AiryPSF to an HDF5 file.
 """
-function _save_psf_impl(file::HDF5.File, psf::Airy2D)
+function _save_psf_impl(file::HDF5.File, psf::AiryPSF)
     params = create_group(file, "parameters")
     params["na"] = psf.nₐ
     params["lambda"] = psf.λ
@@ -45,15 +45,15 @@ function _save_psf_impl(file::HDF5.File, psf::Airy2D)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{Airy2D})
+    _load_psf_impl(file::HDF5.File, ::Type{AiryPSF})
 
-Load an Airy2D PSF from an HDF5 file.
+Load an AiryPSF from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{Airy2D})
+function _load_psf_impl(file::HDF5.File, ::Type{AiryPSF})
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda"])
     
     nₐ = read(params["na"])
     λ = read(params["lambda"])
-    return Airy2D(nₐ, λ)
+    return AiryPSF(nₐ, λ)
 end

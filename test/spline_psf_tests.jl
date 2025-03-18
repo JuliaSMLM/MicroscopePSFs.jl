@@ -5,7 +5,7 @@
         # Create an Airy PSF (standard diffraction-limited PSF)
         na = 1.4
         wavelength = 0.532  # 532 nm
-        airy_psf = Airy2D(na, wavelength)
+        airy_psf = AiryPSF(na, wavelength)
         
         # Create a spline representation with 0.05μm sampling
         x_range = y_range = -1.0:0.01:1.0
@@ -43,7 +43,7 @@
         na = 1.2
         wavelength = 0.532
         n_medium = 1.33
-        scalar_psf = Scalar3DPSF(na, wavelength, n_medium)
+        scalar_psf = ScalarPSF(na, wavelength, n_medium)
         
         # Create a spline representation with 0.05μm xy sampling and 0.1μm z sampling
         x_range = y_range = -1.0:0.05:1.0
@@ -105,7 +105,7 @@
         # Create a 2D Airy PSF
         na = 1.4
         wavelength = 0.532
-        airy_psf = Airy2D(na, wavelength)
+        airy_psf = AiryPSF(na, wavelength)
         
         # Create spline representation with 0.05μm sampling
         x_range = y_range = -1.0:0.05:1.0

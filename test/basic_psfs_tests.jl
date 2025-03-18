@@ -1,10 +1,10 @@
 # test/basic_psfs_tests.jl
 
 @testset "Basic PSFs" begin
-    @testset "Gaussian2D PSF" begin
+    @testset "GaussianPSF" begin
         # Test constructor
         σ = 0.15  # 150 nm
-        psf = Gaussian2D(σ)
+        psf = GaussianPSF(σ)
         @test psf.σ ≈ σ
         
         # Test center maximum
@@ -67,11 +67,11 @@
         @test abs(max_idx[2] - center_index_x) <= 1
     end
     
-    @testset "Airy2D PSF" begin
+    @testset "AiryPSF" begin
         # Test constructor
         na = 1.4
         λ = 0.532  # 532 nm
-        psf = Airy2D(na, λ)
+        psf = AiryPSF(na, λ)
         @test psf.nₐ ≈ na
         @test psf.λ ≈ λ
         @test psf.ν ≈ 2π * na / λ
@@ -141,16 +141,16 @@
     
     @testset "PSF Conversions" begin
         # Test Gaussian to Airy conversion
-        gaussian = Gaussian2D(0.15)
-        airy_from_gaussian = Airy2D(gaussian)
+        gaussian = GaussianPSF(0.15)
+        airy_from_gaussian = AiryPSF(gaussian)
         
         # Check that the conversion preserved approximate width
         # Using the relationship σ ≈ 0.22 * λ / NA
         @test airy_from_gaussian.nₐ ≈ 0.22 * airy_from_gaussian.λ / gaussian.σ rtol=0.01
         
         # Test Airy to Gaussian conversion
-        airy = Airy2D(1.4, 0.532)
-        gaussian_from_airy = Gaussian2D(airy)
+        airy = AiryPSF(1.4, 0.532)
+        gaussian_from_airy = GaussianPSF(airy)
         
         # Check that conversion preserved approximate width
         @test gaussian_from_airy.σ ≈ 0.22 * airy.λ / airy.nₐ rtol=0.01

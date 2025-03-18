@@ -127,7 +127,7 @@ Construct a 2D SplinePSF from a PSF stack and coordinate ranges.
 ```julia
 # Create a 2D spline from an Airy PSF sampled on a grid
 x_range = y_range = range(-2.0, 2.0, length=101)  # 101×101 grid with 40nm spacing
-airy = Airy2D(1.4, 0.532)  # NA=1.4, λ=532nm
+airy = AiryPSF(1.4, 0.532)  # NA=1.4, λ=532nm
 psf_values = [airy(x, y) for y in y_range, x in x_range]
 spline_psf = SplinePSF(psf_values, x_range, y_range)
 ```
@@ -184,8 +184,8 @@ Create a 3D SplinePSF by sampling an existing PSF on a regular grid.
 
 # Example
 ```julia
-# Create a spline from a Scalar3DPSF with 1µm spacing over 4µm range
-scalar_psf = Scalar3DPSF(1.4, 0.532, 1.518)  # NA=1.4, λ=532nm, n=1.518
+# Create a spline from a ScalarPSF with 1µm spacing over 4µm range
+scalar_psf = ScalarPSF(1.4, 0.532, 1.518)  # NA=1.4, λ=532nm, n=1.518
 x_range = y_range = range(-2.0, 2.0, length=41)
 z_range = range(-1.0, 1.0, length=21)
 spline_psf = SplinePSF(scalar_psf, x_range, y_range, z_range)
@@ -260,7 +260,7 @@ Create a SplinePSF with automatically calculated sampling ranges.
 # Example
 ```julia
 # Create a spline PSF with default sampling parameters
-scalar_psf = Scalar3DPSF(1.4, 0.532, 1.518)
+scalar_psf = ScalarPSF(1.4, 0.532, 1.518)
 spline_psf = SplinePSF(scalar_psf)  # Uses default ranges and step sizes
 ```
 """

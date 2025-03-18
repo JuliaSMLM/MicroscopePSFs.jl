@@ -71,11 +71,11 @@ The package uses the following type hierarchy structure:
 
 ```
 AbstractPSF
-├── Gaussian2D
-├── Airy2D
-├── Scalar3DPSF
-├── Vector3DPSF
+├── GaussianPSF
+├── AiryPSF
+├── ScalarPSF
+├── VectorPSF
 └── SplinePSF
 ```
 
-The `Gaussian2D` and `Airy2D` types are 2D PSF models, while `Scalar3DPSF` and `Vector3DPSF` are 3D PSF models. Each implements the appropriate methods for PSF evaluation in their respective dimensions.
+The `GaussianPSF` and `AiryPSF` types are 2D PSF models, while `ScalarPSF` and `VectorPSF` are 3D PSF models. Each implements the appropriate methods for PSF evaluation in their respective dimensions.

@@ -1,6 +1,6 @@
-# Airy2D
+# AiryPSF
 
-The `Airy2D` PSF model represents the diffraction-limited point spread function for a circular aperture under the paraxial approximation. Unlike the simpler Gaussian approximation, this model accurately captures the characteristic diffraction rings that appear in real microscope images.
+The `AiryPSF` model represents the diffraction-limited point spread function for a circular aperture under the paraxial approximation. Unlike the simpler Gaussian approximation, this model accurately captures the characteristic diffraction rings that appear in real microscope images.
 
 ## Mathematical Model
 
@@ -26,7 +26,7 @@ I(r) = |A(r)|^2
 ## Constructor and Parameters
 
 ```julia
-Airy2D(na::Real, wavelength::Real)
+AiryPSF(na::Real, wavelength::Real)
 ```
 
 - `na`: Numerical aperture of the objective
@@ -35,10 +35,10 @@ Airy2D(na::Real, wavelength::Real)
 ### Alternative Constructor
 
 ```julia
-Airy2D(psf::Gaussian2D; λ::Real=0.532)
+AiryPSF(psf::GaussianPSF; λ::Real=0.532)
 ```
 
-Creates an `Airy2D` PSF that approximates the provided `Gaussian2D` PSF, using the specified wavelength.
+Creates an `AiryPSF` that approximates the provided `GaussianPSF`, using the specified wavelength.
 
 ## Key Features
 
@@ -62,11 +62,11 @@ Creating and using an Airy PSF:
 
 ```julia
 # Create an Airy PSF for a high-NA objective with green light
-psf = Airy2D(1.4, 0.532)  # NA=1.4, wavelength=532nm
+psf = AiryPSF(1.4, 0.532)  # NA=1.4, wavelength=532nm
 
-# Create from a Gaussian2D PSF
-gaussian_psf = Gaussian2D(0.15)
-airy_equivalent = Airy2D(gaussian_psf, λ=0.532)
+# Create from a GaussianPSF
+gaussian_psf = GaussianPSF(0.15)
+airy_equivalent = AiryPSF(gaussian_psf, λ=0.532)
 ```
 
 ## Limitations

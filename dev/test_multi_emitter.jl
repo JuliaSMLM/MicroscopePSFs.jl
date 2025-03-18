@@ -20,7 +20,7 @@ ny = 40           # Height
 camera = IdealCamera(nx, ny, pixel_size)
 
 # Create a PSF
-psf = Scalar3DPSF(na, λ, n)
+psf = ScalarPSF(na, λ, n)
 
 # Create multiple emitters in a grid pattern with slight variations
 emitters = AbstractEmitter[]
@@ -88,7 +88,11 @@ scatter!(ax2, [single_emitter.x], [single_emitter.y], color=:red, marker=:circle
 Colorbar(fig[1, 4], hm2)
 
 # Save figure
-save("multi_emitter_demo.png", fig)
+# Ensure test_output directory exists
+if !isdir("dev/test_output")
+    mkdir("dev/test_output")
+end
+save("dev/test_output/multi_emitter_demo.png", fig)
 
 println("Total photons in multi-emitter image: $(sum(multi_image))")
 println("Total photons in single emitter image: $(sum(single_image))")

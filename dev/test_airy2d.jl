@@ -21,11 +21,11 @@ sampling = 10
 x_edges = range(0, nx * pixel_size, nx + 1) |> collect
 y_edges = range(0, ny * pixel_size, ny + 1) |> collect
 camera = IdealCamera(x_edges, y_edges)
-psf = Airy2D(na, λ)
+psf = AiryPSF(na, λ)
 
 # Convert to Gaussian for comparison
-# psf = Gaussian2D(psf)
-# psf = Airy2D(psf)
+# psf = GaussianPSF(psf)
+# psf = AiryPSF(psf)
 
 # Centered PSF sampling coordinates (for PSF evaluation)
 x = range(-1, 1, length=100)
@@ -128,7 +128,7 @@ scatter!(ax6, [emitter_center.x], [emitter_center.y],
 Colorbar(fig[3, 4], hm6)
 
 # Add descriptive title
-Label(fig[0, :], "Airy2D PSF Tests (NA = $na, λ = $λ μm, pixel size = $(pixel_size*1000) nm)")
+Label(fig[0, :], "AiryPSF Tests (NA = $na, λ = $λ μm, pixel size = $(pixel_size*1000) nm)")
 
 # Print validation info
 println("\nValidation:")
@@ -149,16 +149,20 @@ println("Off-center: (", emitter_off.x, ", ", emitter_off.y, ")")
 println("\nAiry PSF parameters:")
 
 # Check if Airy not Gaussian
-if isa(psf, Airy2D)
-    println("Airy2D PSF with NA = ", psf.nₐ, ", λ = ", psf.λ, " μm")
+if isa(psf, AiryPSF)
+    println("AiryPSF with NA = ", psf.nₐ, ", λ = ", psf.λ, " μm")
     println("First zero at r = ", π / psf.ν, " μm")
     println("Optical parameter ν = ", psf.ν)
-elseif isa(psf, Gaussian2D)
-    println("Converted to Gaussian2D with σ = ", psf.σ, " μm")
+elseif isa(psf, GaussianPSF)
+    println("Converted to GaussianPSF with σ = ", psf.σ, " μm")
 end
 
 # Save figure
-save("dev/airy2d_test.png", fig)
+# Ensure test_output directory exists
+if !isdir("dev/test_output")
+    mkdir("dev/test_output")
+end
+save("dev/test_output/airy2d_test.png", fig)
 
 # Return figure handle
 fig

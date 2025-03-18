@@ -35,8 +35,8 @@ dipoles = [
 zc = ZernikeCoefficients(15)
 zc.phase[6] = 0.0  # Add vertical astigmatism for visualization
 
-# Create Vector3DPSF with the first dipole orientation (x-oriented)
-psf = Vector3DPSF(
+# Create VectorPSF with the first dipole orientation (x-oriented)
+psf = VectorPSF(
     na, λ, dipoles[1]; 
     base_zernike=zc,
     n_medium=n_medium, 
@@ -98,7 +98,7 @@ for (i, dipole) in enumerate(dipoles)
     setup_axis!(ax, "Dipole: $(round.(typeof(dipole.px).([dipole.px, dipole.py, dipole.pz]), digits=1))")
     
     # Create PSF with this dipole orientation
-    @time dipole_psf = Vector3DPSF(
+    @time dipole_psf = VectorPSF(
         na, λ, dipole; 
         base_zernike=zc,
         n_medium=n_medium, 
@@ -166,7 +166,7 @@ Label(fig[2, 0], "Dipole\nOrientation", rotation=π/2)
 Label(fig[3, 0], "PSF\nFocus", rotation=π/2)
 Label(fig[4, 0], "Camera\nPixels", rotation=π/2)
 
-title_text = @sprintf("Vector3D PSF with Astigmatism\n(NA=%.1f, λ=%.3f μm, n₁=%.2f, n₂=%.2f, n₃=%.2f)", 
+title_text = @sprintf("VectorPSF with Astigmatism\n(NA=%.1f, λ=%.3f μm, n₁=%.2f, n₂=%.2f, n₃=%.2f)", 
                       na, λ, n_medium, n_coverslip, n_immersion)
 Label(fig[0, :], title_text, fontsize=20, padding=(0,0,20,0))
 
@@ -175,7 +175,11 @@ rowgap!(fig.layout, 40)
 colgap!(fig.layout, 40)
 
 # Save figure
-save("dev/vector3d_test.png", fig)
+# Ensure test_output directory exists
+if !isdir("dev/test_output")
+    mkdir("dev/test_output")
+end
+save("dev/test_output/vector3d_test.png", fig)
 
 # Print parameters
 println("\nPSF parameters:")

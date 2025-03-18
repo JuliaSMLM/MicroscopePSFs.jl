@@ -22,8 +22,8 @@
     # Create a 3D emitter for 3D PSF tests
     emitter_3d = Emitter3D(2.0, 2.0, 0.0, 1000.0)
     
-    @testset "Gaussian2D Support Region" begin
-        psf = Gaussian2D(0.15)  # σ = 150 nm
+    @testset "GaussianPSF Support Region" begin
+        psf = GaussianPSF(0.15)  # σ = 150 nm
         
         # Test 1: Default - full image
         result_full = integrate_pixels(psf, camera, emitters[1])
@@ -57,7 +57,7 @@
     end
     
     @testset "Multiple Emitters Support Region" begin
-        psf = Airy2D(na, λ)
+        psf = AiryPSF(na, λ)
         
         # Test 1: Full image with multiple emitters
         result_full = integrate_pixels(psf, camera, emitters)
@@ -86,8 +86,8 @@
         @test result_support[mid_y, mid_x] == 0.0
     end
     
-    @testset "Scalar3D PSF Support Region" begin
-        psf = Scalar3DPSF(na, λ, n_medium)
+    @testset "ScalarPSF Support Region" begin
+        psf = ScalarPSF(na, λ, n_medium)
         
         # Test with 3D emitter
         result_full = integrate_pixels(psf, camera, emitter_3d)
@@ -107,7 +107,7 @@
     end
     
     @testset "Support Region with Complex Amplitude" begin
-        psf = Scalar3DPSF(na, λ, n_medium)
+        psf = ScalarPSF(na, λ, n_medium)
         
         # Test with amplitude instead of intensity
         amp_full = integrate_pixels_amplitude(psf, camera, emitter_3d)
@@ -129,8 +129,8 @@
     end
     
     @testset "SplinePSF Support Region" begin
-        # Create a SplinePSF from a Gaussian2D
-        gauss = Gaussian2D(0.15)
+        # Create a SplinePSF from a GaussianPSF
+        gauss = GaussianPSF(0.15)
         x_range = y_range = range(-1.0, 1.0, length=41)
         spline_psf = SplinePSF(gauss, x_range, y_range)
         
@@ -152,7 +152,7 @@
     end
     
     @testset "Subsampling Parameter" begin
-        psf = Gaussian2D(0.15)
+        psf = GaussianPSF(0.15)
         
         # Test different sampling rates
         result_s1 = integrate_pixels(psf, camera, emitters[1], support=0.5, sampling=1)

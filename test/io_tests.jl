@@ -48,21 +48,21 @@
         end
     end
     
-    @testset "Gaussian2D I/O" begin
-        psf = Gaussian2D(0.15)  # σ = 150nm
+    @testset "GaussianPSF I/O" begin
+        psf = GaussianPSF(0.15)  # σ = 150nm
         test_points = [(0.0, 0.0), (0.1, 0.2), (-0.15, 0.15)]
         test_save_load(psf, test_points)
     end
     
-    @testset "Airy2D I/O" begin
-        psf = Airy2D(1.4, 0.532)  # NA=1.4, λ=532nm
+    @testset "AiryPSF I/O" begin
+        psf = AiryPSF(1.4, 0.532)  # NA=1.4, λ=532nm
         test_points = [(0.0, 0.0), (0.1, 0.2), (-0.15, 0.15)]
         test_save_load(psf, test_points)
     end
     
-    @testset "Scalar3DPSF I/O" begin
+    @testset "ScalarPSF I/O" begin
         # Test unaberrated PSF
-        psf = Scalar3DPSF(1.4, 0.532, 1.518)
+        psf = ScalarPSF(1.4, 0.532, 1.518)
         test_points = [(0.0, 0.0, 0.0), (0.1, 0.2, 0.3), (-0.15, 0.15, -0.2)]
         test_save_load(psf, test_points)
         
@@ -70,15 +70,15 @@
         zc = ZernikeCoefficients(15)
         add_astigmatism!(zc, 0.5)
         add_defocus!(zc, 0.3)
-        psf_with_aberrations = Scalar3DPSF(1.4, 0.532, 1.518; coeffs=zc)
+        psf_with_aberrations = ScalarPSF(1.4, 0.532, 1.518; coeffs=zc)
         test_save_load(psf_with_aberrations, test_points)
     end
     
     @testset "SplinePSF I/O" begin
         # Test 2D SplinePSF
         @testset "2D SplinePSF" begin
-            # Create a simple 2D SplinePSF from a Gaussian2D
-            gauss = Gaussian2D(0.15)
+            # Create a simple 2D SplinePSF from a GaussianPSF
+            gauss = GaussianPSF(0.15)
             x_range = y_range = range(-1.0, 1.0, length=41)  # 41x41 grid
             grid_2d = [gauss(x, y) for y in y_range, x in x_range]
             spline_2d = SplinePSF(grid_2d, x_range, y_range)
@@ -113,8 +113,8 @@
         
         # Test 3D SplinePSF with Scalar3DPSF
         @testset "3D SplinePSF" begin
-            # Create from Scalar3DPSF as requested
-            scalar_psf = Scalar3DPSF(1.4, 0.532, 1.518)
+            # Create from ScalarPSF as requested
+            scalar_psf = ScalarPSF(1.4, 0.532, 1.518)
             
             # Define sampling ranges
             x_range = y_range = range(-1.0, 1.0, length=21)  # 21x21 grid
@@ -128,7 +128,7 @@
             
             try
                 # Save the original 3D SplinePSF
-                @info "Saving 3D SplinePSF from Scalar3DPSF"
+                @info "Saving 3D SplinePSF from ScalarPSF"
                 save_psf(filename, spline_3d)
                 
                 # Evaluate at test points before loading
@@ -207,17 +207,17 @@
         end
     end
     
-    @testset "Vector3DPSF I/O" begin
+    @testset "VectorPSF I/O" begin
         try
             # Skip if dipole orientation and vector PSF is not fully implemented
             dipole = DipoleVector(0.0, 0.0, 1.0)  # z-oriented dipole
-            psf = Vector3DPSF(1.4, 0.532, dipole)
+            psf = VectorPSF(1.4, 0.532, dipole)
             
             test_points = [(0.0, 0.0, 0.0), (0.1, 0.2, 0.3), (-0.15, 0.15, -0.2)]
             test_save_load(psf, test_points, atol=1e-8)  # Use looser tolerance for complex fields
         catch e
-            # Skip this test if Vector3DPSF is not properly implemented
-            @warn "Skipping Vector3DPSF tests: $e"
+            # Skip this test if VectorPSF is not properly implemented
+            @warn "Skipping VectorPSF tests: $e"
         end
     end
 end

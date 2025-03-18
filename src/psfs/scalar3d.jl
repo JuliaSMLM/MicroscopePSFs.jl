@@ -1,7 +1,7 @@
 # src/psfs/scalar3d.jl
 
 """
-    Scalar3DPSF(nₐ::Real, λ::Real, n::Real;
+    ScalarPSF(nₐ::Real, λ::Real, n::Real;
                 pupil=nothing,
                 pupil_data::Union{Nothing,AbstractMatrix}=nothing,
                 coeffs=nothing)
@@ -19,7 +19,7 @@ Create a scalar 3D PSF with the specified optical parameters.
 - `coeffs`: Optional ZernikeCoefficients for aberrations
 
 # Returns
-- `Scalar3DPSF`: 3D PSF with scalar diffraction model
+- `ScalarPSF`: 3D PSF with scalar diffraction model
 
 # Notes
 - Exactly one of `pupil`, `pupil_data`, or `coeffs` should be provided
@@ -29,15 +29,15 @@ Create a scalar 3D PSF with the specified optical parameters.
 # Examples
 ```julia
 # Create an unaberrated PSF
-psf = Scalar3DPSF(1.4, 0.532, 1.518)
+psf = ScalarPSF(1.4, 0.532, 1.518)
 
 # Create PSF with Zernike aberrations
 zc = ZernikeCoefficients(15)
 add_astigmatism!(zc, 0.5)  # Add astigmatism
-psf = Scalar3DPSF(1.4, 0.532, 1.518; coeffs=zc)
+psf = ScalarPSF(1.4, 0.532, 1.518; coeffs=zc)
 ```
 """
-function Scalar3DPSF(nₐ::Real, λ::Real, n::Real;
+function ScalarPSF(nₐ::Real, λ::Real, n::Real;
     pupil::Union{Nothing,PupilFunction}=nothing,
     pupil_data::Union{Nothing,AbstractMatrix}=nothing,
     coeffs::Union{Nothing,ZernikeCoefficients}=nothing)
@@ -45,7 +45,7 @@ function Scalar3DPSF(nₐ::Real, λ::Real, n::Real;
     # Add this check to enforce n ≥ NA
     n >= nₐ || throw(ArgumentError("Refractive index (n=$n) must be ≥ numerical aperture (NA=$nₐ). " * 
                                   "This is a physical constraint since NA = n·sin(θ). " *
-                                  "Consider using Vector3DPSF for proper handling of index mismatch."))
+                                  "Consider using VectorPSF for proper handling of index mismatch."))
     
     # Rest of the constructor remains the same
     pupil_func = if !isnothing(pupil)
@@ -60,16 +60,16 @@ function Scalar3DPSF(nₐ::Real, λ::Real, n::Real;
     normalize!(pupil_func)
     stored_coeffs = !isnothing(coeffs) ? coeffs : nothing
     
-    return Scalar3DPSF(nₐ, λ, n, pupil_func, stored_coeffs)
+    return ScalarPSF(nₐ, λ, n, pupil_func, stored_coeffs)
 end
 
 """
-    amplitude(psf::Scalar3DPSF{T}, x::Real, y::Real, z::Real) where {T}
+    amplitude(psf::ScalarPSF{T}, x::Real, y::Real, z::Real) where {T}
 
 Calculate complex amplitude at a 3D position using scalar diffraction theory.
 
 # Arguments
-- `psf`: Scalar3DPSF instance
+- `psf`: ScalarPSF instance
 - `x, y, z`: Position in microns relative to PSF center
 
 # Returns
@@ -79,13 +79,13 @@ Calculate complex amplitude at a 3D position using scalar diffraction theory.
 - Uses Fourier optics to propagate from pupil to image space
 - Accounts for defocus and aberrations encoded in the pupil function
 """
-function amplitude(psf::Scalar3DPSF{T}, x::Real, y::Real, z::Real) where {T}
+function amplitude(psf::ScalarPSF{T}, x::Real, y::Real, z::Real) where {T}
     # Use existing PupilFunction amplitude method
     return amplitude(psf.pupil, x, y, z)
 end
 
 """
-    (psf::Scalar3DPSF)(x::Real, y::Real, z::Real)
+    (psf::ScalarPSF)(x::Real, y::Real, z::Real)
 
 Evaluate PSF intensity at the given 3D position.
 
@@ -99,15 +99,15 @@ Evaluate PSF intensity at the given 3D position.
 - Calculated as |amplitude|² of the complex field
 - Follows standard operator syntax: `intensity = psf(x, y, z)`
 """
-function (psf::Scalar3DPSF)(x::Real, y::Real, z::Real)
+function (psf::ScalarPSF)(x::Real, y::Real, z::Real)
     return abs2(amplitude(psf, x, y, z))
 end
 
 # Note: The specialized integration function has been removed since
 # the generic function in integration.jl now automatically handles z-coordinates
 
-function Base.show(io::IO, psf::Scalar3DPSF)
-    print(io, "Scalar3DPSF(NA=$(psf.nₐ), λ=$(psf.λ)μm, n=$(psf.n))")
+function Base.show(io::IO, psf::ScalarPSF)
+    print(io, "ScalarPSF(NA=$(psf.nₐ), λ=$(psf.λ)μm, n=$(psf.n))")
     if !isnothing(psf.zernike_coeffs)
         print(io, " with $(length(psf.zernike_coeffs)) Zernike terms")
     end

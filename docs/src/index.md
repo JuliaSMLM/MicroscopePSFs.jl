@@ -8,7 +8,7 @@ MicroscopePSFs.jl provides a flexible and performant framework for calculating m
 
 ## Features
 
-- Multiple PSF models: Gaussian2D, Airy2D, Scalar3DPSF, Vector3DPSF, and Spline PSFs
+- Multiple PSF models: GaussianPSF, AiryPSF, ScalarPSF, VectorPSF, and SplinePSF
 - Common interface for all PSF types with function-call syntax `psf(x, y, z)`
 - Realistic camera pixel integration with `integrate_pixels(psf, camera, emitter)`
 - Support for optical aberrations via Zernike polynomials
@@ -29,8 +29,8 @@ Pkg.add("MicroscopePSFs")
 using MicroscopePSFs
 using CairoMakie
 
-# Create a Gaussian2D PSF
-psf = Gaussian2D(0.15)  # σ = 150nm
+# Create a GaussianPSF
+psf = GaussianPSF(0.15)  # σ = 150nm
 
 # Evaluate at a specific position
 intensity = psf(0.1, 0.2)  # Intensity at (x,y) = (0.1μm, 0.2μm)

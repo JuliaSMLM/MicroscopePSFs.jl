@@ -16,7 +16,7 @@ Input coordinates (x,y) are in physical units (microns) relative to PSF center.
 
 # Examples
 ```julia
-psf = Airy2D(1.4, 0.532)  # NA=1.4, λ=532nm
+psf = AiryPSF(1.4, 0.532)  # NA=1.4, λ=532nm
 intensity = psf(0.1, 0.2)  # Evaluate at (0.1μm, 0.2μm)
 ```
 """
@@ -49,7 +49,7 @@ Input coordinates (x,y) are in physical units (microns) relative to PSF center.
 
 # Examples
 ```julia
-psf = Airy2D(1.4, 0.532)
+psf = AiryPSF(1.4, 0.532)
 amp = amplitude(psf, 0.1, 0.2)
 intensity = abs2(amp)  # Convert to intensity
 ```
@@ -79,7 +79,7 @@ end
 # This is the main interface for simulating microscope images of point emitters.
 
 # # Arguments
-# - `psf`: Point spread function (e.g., Airy2D, Scalar3DPSF)
+# - `psf`: Point spread function (e.g., AiryPSF, ScalarPSF)
 # - `camera`: Camera geometry defining pixel edges in microns
 # - `emitter`: Emitter with position and intensity
 # - `sampling`: Subpixel sampling factor for integration accuracy (default: 2)
@@ -100,7 +100,7 @@ end
 # ```julia
 # # Setup microscope components
 # camera = IdealCamera(0:0.1:2.0, 0:0.1:2.0)  # 20x20 pixels, 100nm size
-# psf = Airy2D(1.4, 0.532)  # NA=1.4, λ=532nm
+# psf = AiryPSF(1.4, 0.532)  # NA=1.4, λ=532nm
 # emitter = Emitter2D(1.0, 1.0, 1000.0)  # At (1μm, 1μm) with 1000 photons
 
 # # Generate image

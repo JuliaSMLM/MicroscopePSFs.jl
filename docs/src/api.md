@@ -15,15 +15,15 @@ AbstractPSF
 #### 2D PSF Models
 
 ```@docs
-Gaussian2D
-Airy2D
+GaussianPSF
+AiryPSF
 ```
 
 #### 3D PSF Models
 
 ```@docs
-Scalar3DPSF
-Vector3DPSF
+ScalarPSF
+VectorPSF
 ```
 
 #### Data-driven PSF
