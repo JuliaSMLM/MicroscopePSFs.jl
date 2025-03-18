@@ -6,7 +6,7 @@ using Revise
 using MicroscopePSFs
 using CairoMakie
 using Printf
-using SMLMData
+
 
 # Microscope parameters
 λ = 0.532  # Green light wavelength in microns

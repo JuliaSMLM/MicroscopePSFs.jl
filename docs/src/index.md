@@ -25,7 +25,7 @@ Pkg.add("MicroscopePSFs")
 
 ## Quick Start
 
-```julia
+```jldoctest; output = false
 using MicroscopePSFs
 using CairoMakie
 
@@ -71,7 +71,11 @@ scatter!(ax2, [emitter.x], [emitter.y],
          color=:red, marker=:cross, markersize=15)
 
 fig
+
+# output
+Figure()
 ```
+
 
 ## Contents
 

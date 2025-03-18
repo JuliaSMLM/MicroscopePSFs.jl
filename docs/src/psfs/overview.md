@@ -85,7 +85,7 @@ pixels = integrate_pixels(psf, camera, emitter)
 
 Below is a comparison of the different PSF models using the same physical parameters:
 
-```julia
+```jldoctest; output = false 
 using MicroscopePSFs
 using CairoMakie
 
@@ -101,7 +101,7 @@ function compare_psf_profiles()
     scalar = Scalar3DPSF(na, wavelength, n)
     
     # Dipole for vector PSF (z-oriented)
-    dipole_z = DipoleVector(0.0, 0.0, 1.0)
+    dipole_z = DipoleVector(1.0, 0.0, 0.0)
     vector = Vector3DPSF(na, wavelength, dipole_z, n_medium=n)
     
     # Define positions for profile
@@ -151,14 +151,15 @@ function compare_psf_profiles()
                  ylabel=i==1 ? "y (μm)" : "")
         
         hm = heatmap!(ax, x_grid, y_grid, img, colormap=:viridis)
-        Colorbar(fig[2, i+4], hm, label="Intensity")
     end
     
     return fig
 end
 
 fig = compare_psf_profiles()
-save("psf_comparison.png", fig)
+
+# output
+Figure()
 ```
 
 ## PSF Conversion
