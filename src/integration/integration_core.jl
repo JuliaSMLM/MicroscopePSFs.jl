@@ -34,6 +34,62 @@ end
 has_z_coordinate(emitter::E) where E <: AbstractEmitter = has_z_coordinate(typeof(emitter))
 
 """
+    get_pixel_indices(
+        pixel_edges_x::AbstractVector,
+        pixel_edges_y::AbstractVector,
+        emitter::AbstractEmitter,
+        support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}
+    ) -> Tuple{UnitRange{Int},UnitRange{Int}}
+
+Get the pixel indices that overlap with the support region.
+
+# Arguments
+- `pixel_edges_x`, `pixel_edges_y`: Arrays defining pixel edge coordinates
+- `emitter`: Emitter with position information
+- `support`: Region of interest, either a radius or explicit bounds (x_min, x_max, y_min, y_max)
+
+# Returns
+- Tuple of (i_range, j_range) with pixel indices that cover the support region
+"""
+function get_pixel_indices(
+    pixel_edges_x::AbstractVector,
+    pixel_edges_y::AbstractVector,
+    emitter::AbstractEmitter,
+    support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}
+)
+    if support isa Real
+        # Convert radius to rectangular region
+        if isinf(support)
+            # Use full grid
+            return 1:length(pixel_edges_x)-1, 1:length(pixel_edges_y)-1
+        else
+            # Define region around emitter
+            x_min = emitter.x - support
+            x_max = emitter.x + support
+            y_min = emitter.y - support
+            y_max = emitter.y + support
+        end
+    else
+        # Explicit region provided as tuple
+        x_min, x_max, y_min, y_max = support
+    end
+    
+    # Find pixel indices that overlap with region
+    i_min = searchsortedlast(pixel_edges_x, x_min)
+    i_max = searchsortedfirst(pixel_edges_x, x_max)
+    j_min = searchsortedlast(pixel_edges_y, y_min)
+    j_max = searchsortedfirst(pixel_edges_y, y_max)
+    
+    # Ensure at least one pixel in each dimension
+    i_min = max(1, i_min)
+    i_max = min(length(pixel_edges_x)-1, max(i_min, i_max))
+    j_min = max(1, j_min)
+    j_max = min(length(pixel_edges_y)-1, max(j_min, j_max))
+    
+    return i_min:i_max, j_min:j_max
+end
+
+"""
     _integrate_pixels_core!(
         result::AbstractArray,
         pixel_edges_x::AbstractVector,
