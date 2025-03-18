@@ -429,6 +429,7 @@ end
         psf::SplinePSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
+        support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
         sampling::Integer=2
     )
 
@@ -438,6 +439,9 @@ Integrate PSF over camera pixels using interpolation.
 - `psf`: SplinePSF instance
 - `camera`: Camera geometry
 - `emitter`: Emitter with position information
+- `support`: Region to calculate (default: Inf = full image)
+  - If Real: radius in microns around emitter
+  - If Tuple: explicit (x_min, x_max, y_min, y_max) in microns
 - `sampling`: Subpixel sampling density for integration accuracy
 
 # Returns
@@ -451,6 +455,7 @@ function integrate_pixels(
     psf::SplinePSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
+    support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
     sampling::Integer=2
 )
     # Check for 3D PSF with non-3D emitter
@@ -463,6 +468,7 @@ function integrate_pixels(
         integrate_pixels, 
         Tuple{AbstractPSF, AbstractCamera, AbstractEmitter}, 
         psf, camera, emitter;
+        support=support,
         sampling=sampling
     )
 end
@@ -472,6 +478,7 @@ end
         psf::SplinePSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
+        support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
         sampling::Integer=2
     )
 
@@ -481,6 +488,9 @@ Integrate PSF amplitude (complex) over camera pixels.
 - `psf`: SplinePSF instance
 - `camera`: Camera geometry
 - `emitter`: Emitter with position information
+- `support`: Region to calculate (default: Inf = full image)
+  - If Real: radius in microns around emitter
+  - If Tuple: explicit (x_min, x_max, y_min, y_max) in microns
 - `sampling`: Subpixel sampling density for integration accuracy
 
 # Returns
@@ -493,6 +503,7 @@ function integrate_pixels_amplitude(
     psf::SplinePSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
+    support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
     sampling::Integer=2
 )
     # Check for 3D PSF with non-3D emitter
@@ -505,6 +516,7 @@ function integrate_pixels_amplitude(
         integrate_pixels_amplitude, 
         Tuple{AbstractPSF, AbstractCamera, AbstractEmitter}, 
         psf, camera, emitter;
+        support=support,
         sampling=sampling
     )
 end

@@ -30,14 +30,21 @@ using HDF5
     @testset "Aberrations" begin
         include("aberration_tests.jl")
     end
+
+     # Multi-emitter tests
+     @testset "Multi Emitter" begin
+        include("multi_emitter_tests.jl")
+    end
+
+    # Support region tests
+    @testset "Support Region" begin
+        include("support_region_tests.jl")
+    end
     
     # I/O functionality tests
     @testset "I/O Functions" begin
         include("io_tests.jl")
     end
 
-    # Multi-emitter tests
-    @testset "Multi Emitter" begin
-        include("multi_emitter_tests.jl")
-    end
+   
 end
