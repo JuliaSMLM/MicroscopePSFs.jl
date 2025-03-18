@@ -71,7 +71,10 @@ include("pupils/vector_pupil.jl")
 include("psfs/types.jl")
 include("interfaces.jl")
 include("utils.jl")
-include("integration.jl")
+
+include("integration/integration_core.jl")
+include("integration/integration_single.jl")
+include("integration/integration_multi.jl")
 
 # Individual PSF implementations
 include("psfs/gaussian2d.jl")

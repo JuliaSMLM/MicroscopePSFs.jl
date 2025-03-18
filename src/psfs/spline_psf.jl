@@ -1,35 +1,5 @@
 # src/psfs/spline_psf.jl
 
-"""
-    SplinePSF{T<:AbstractFloat, IT<:AbstractInterpolation} <: AbstractPSF
-
-A point spread function (PSF) represented as a B-spline interpolation.
-
-# Fields
-- `spline`: The B-spline interpolation object 
-- `x_range`: Range of x-coordinates used for uniform grid interpolation
-- `y_range`: Range of y-coordinates used for uniform grid interpolation  
-- `z_range`: Range of z-coordinates for 3D PSFs, or `nothing` for 2D PSFs
-- `original_grid`: Original grid data used to create the interpolation
-- `interp_order`: Interpolation order used (0=constant, 1=linear, 3=cubic)
-
-# Notes
-- Coordinates and ranges are in physical units (typically microns)
-- PSF values are preserved from the original PSF that was sampled
-- Interpolation order determines the smoothness of the interpolation:
-  * 0: Constant (nearest neighbor)
-  * 1: Linear
-  * 3: Cubic B-spline (default, most accurate)
-- The original grid is stored to ensure exact reproduction when saving/loading
-"""
-struct SplinePSF{T<:AbstractFloat, IT<:AbstractInterpolation} <: AbstractPSF
-    spline::IT
-    x_range::StepRangeLen{T}
-    y_range::StepRangeLen{T}
-    z_range::Union{StepRangeLen{T}, Nothing}
-    original_grid::Array{T}
-    interp_order::Int
-end
 
 # --- Helper functions for PSF sampling ---
 
@@ -452,11 +422,15 @@ end
 
 # --- Integration methods for pixel calculation ---
 
+
+
 """
-    integrate_pixels(psf::SplinePSF, 
-                    camera::AbstractCamera, 
-                    emitter::AbstractEmitter;
-                    sampling::Integer=2)
+    integrate_pixels(
+        psf::SplinePSF,
+        camera::AbstractCamera,
+        emitter::AbstractEmitter;
+        sampling::Integer=2
+    )
 
 Integrate PSF over camera pixels using interpolation.
 
@@ -469,6 +443,9 @@ Integrate PSF over camera pixels using interpolation.
 # Returns
 - Array of integrated PSF intensities with dimensions [ny, nx]
 - Values represent actual photon counts based on emitter's photon value
+
+# Notes
+- For 3D SplinePSFs (when z_range is defined), requires an emitter with a z-coordinate
 """
 function integrate_pixels(
     psf::SplinePSF,
@@ -476,35 +453,27 @@ function integrate_pixels(
     emitter::AbstractEmitter;
     sampling::Integer=2
 )
-    # For 3D PSFs using z from the emitter
-    if psf.z_range !== nothing
-        if !hasfield(typeof(emitter), :z)
-            throw(ArgumentError("3D SplinePSF requires an emitter with a z-coordinate"))
-        end
-        
-        result = _integrate_pixels_generic(
-            psf, camera, emitter, 
-            (p, x, y) -> p(x, y, emitter.z),
-            Float64; sampling=sampling
-        )
-    else
-        # For 2D PSFs
-        result = _integrate_pixels_generic(
-            psf, camera, emitter, 
-            (p, x, y) -> p(x, y),
-            Float64; sampling=sampling
-        )
+    # Check for 3D PSF with non-3D emitter
+    if supports_3d(psf) && !has_z_coordinate(emitter)
+        throw(ArgumentError("3D SplinePSF requires an emitter with a z-coordinate"))
     end
     
-    # Multiply by photon count to preserve physical meaning
-    return result .* emitter.photons
+    # Use the standard integration function - it will automatically handle the z-coordinate
+    return invoke(
+        integrate_pixels, 
+        Tuple{AbstractPSF, AbstractCamera, AbstractEmitter}, 
+        psf, camera, emitter;
+        sampling=sampling
+    )
 end
 
 """
-    integrate_pixels_amplitude(psf::SplinePSF,
-                             camera::AbstractCamera,
-                             emitter::AbstractEmitter;
-                             sampling::Integer=2)
+    integrate_pixels_amplitude(
+        psf::SplinePSF,
+        camera::AbstractCamera,
+        emitter::AbstractEmitter;
+        sampling::Integer=2
+    )
 
 Integrate PSF amplitude (complex) over camera pixels.
 
@@ -516,6 +485,9 @@ Integrate PSF amplitude (complex) over camera pixels.
 
 # Returns
 - Array of integrated PSF complex amplitudes with dimensions [ny, nx]
+
+# Notes
+- For 3D SplinePSFs (when z_range is defined), requires an emitter with a z-coordinate
 """
 function integrate_pixels_amplitude(
     psf::SplinePSF,
@@ -523,25 +495,18 @@ function integrate_pixels_amplitude(
     emitter::AbstractEmitter;
     sampling::Integer=2
 )
-    # For 3D PSFs using z from the emitter
-    if psf.z_range !== nothing
-        if !hasfield(typeof(emitter), :z)
-            throw(ArgumentError("3D SplinePSF requires an emitter with a z-coordinate"))
-        end
-        
-        return _integrate_pixels_generic(
-            psf, camera, emitter, 
-            (p, x, y) -> amplitude(p, x, y, emitter.z),
-            Complex{Float64}; sampling=sampling
-        )
-    else
-        # For 2D PSFs
-        return _integrate_pixels_generic(
-            psf, camera, emitter, 
-            (p, x, y) -> amplitude(p, x, y),
-            Complex{Float64}; sampling=sampling
-        )
+    # Check for 3D PSF with non-3D emitter
+    if supports_3d(psf) && !has_z_coordinate(emitter)
+        throw(ArgumentError("3D SplinePSF requires an emitter with a z-coordinate"))
     end
+    
+    # Use the standard integration function - it will automatically handle the z-coordinate
+    return invoke(
+        integrate_pixels_amplitude, 
+        Tuple{AbstractPSF, AbstractCamera, AbstractEmitter}, 
+        psf, camera, emitter;
+        sampling=sampling
+    )
 end
 
 # --- Pretty printing ---

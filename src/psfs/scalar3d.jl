@@ -103,46 +103,8 @@ function (psf::Scalar3DPSF)(x::Real, y::Real, z::Real)
     return abs2(amplitude(psf, x, y, z))
 end
 
-"""
-    integrate_pixels(psf::Scalar3DPSF,
-                    camera::AbstractCamera,
-                    emitter::AbstractEmitter;
-                    sampling::Integer=2)
-
-Integrate PSF intensity over camera pixels for a 3D emitter.
-
-# Arguments
-- `psf`: Scalar3DPSF instance
-- `camera`: Camera geometry defining pixel layout
-- `emitter`: Emitter with position information (must have z-coordinate)
-- `sampling`: Subpixel sampling density for integration accuracy (default: 2)
-
-# Returns
-- Array of integrated PSF intensities with dimensions [ny, nx]
-- Values represent actual photon counts based on emitter.photons
-
-# Notes
-- Uses the z-coordinate from the emitter for the focal plane
-- Higher sampling values give more accurate results but slower computation
-"""
-function integrate_pixels(psf::Scalar3DPSF,
-    camera::AbstractCamera,
-    emitter::AbstractEmitter;
-    sampling::Integer=2)
-    
-    # Check if emitter has required z-coordinate
-    if !hasfield(typeof(emitter), :z)
-        throw(ArgumentError("Scalar3DPSF requires an emitter with a z-coordinate"))
-    end
-    
-    result = _integrate_pixels_generic(psf, camera, emitter,
-        (p, x, y) -> p(x, y, emitter.z),
-        Float64;
-        sampling=sampling)
-    
-    # Multiply by photon count to preserve physical meaning
-    return result .* emitter.photons
-end
+# Note: The specialized integration function has been removed since
+# the generic function in integration.jl now automatically handles z-coordinates
 
 function Base.show(io::IO, psf::Scalar3DPSF)
     print(io, "Scalar3DPSF(NA=$(psf.nₐ), λ=$(psf.λ)μm, n=$(psf.n))")

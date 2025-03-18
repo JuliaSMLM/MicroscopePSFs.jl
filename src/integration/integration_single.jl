@@ -1,73 +1,96 @@
-# src/integration.jl
+# src/integration/integration_single.jl
 
 """
-    _integrate_pixels_generic(
+    integrate_pixels!(
+        result::AbstractMatrix{T},
         psf::AbstractPSF,
         camera::AbstractCamera,
-        emitter::AbstractEmitter,
-        f::Function,  # Function to integrate
-        ::Type{T};   # Return type
+        emitter::AbstractEmitter;
         sampling::Integer=2
-    ) where T
+    ) where T <: Real
 
-Internal generic integration routine used by both intensity and amplitude integration.
+Integrate PSF intensity over camera pixels, storing the result in a pre-allocated matrix.
+Automatically uses z-coordinate if both PSF and emitter support it.
+
+# Arguments
+- `result`: Pre-allocated array where results will be stored
+- `psf`: Point spread function to integrate
+- `camera`: Camera geometry defining pixel edges
+- `emitter`: Emitter with position information
+- `sampling`: Subpixel sampling density (default: 2)
 
 # Returns
-- Matrix{T} with dimensions [y,x] starting at [1,1] for top-left pixel
+- The `result` array, now filled with integrated intensities scaled by emitter.photons
+
+# Notes
+- Array is indexed as [y,x] with [1,1] at top-left pixel
 """
-function _integrate_pixels_generic(
+function integrate_pixels!(
+    result::AbstractMatrix{T},
     psf::AbstractPSF,
     camera::AbstractCamera,
-    emitter::AbstractEmitter,
-    f::Function,
-    ::Type{T};
+    emitter::AbstractEmitter;
     sampling::Integer=2
-) where T
-    # Get pixel dimensions
-    nx = length(camera.pixel_edges_x) - 1
-    ny = length(camera.pixel_edges_y) - 1
+) where T <: Real
     
-    # Calculate pixel dimensions and area factors
-    dx = camera.pixel_edges_x[2] - camera.pixel_edges_x[1]
-    dy = camera.pixel_edges_y[2] - camera.pixel_edges_y[1]
-    pixel_area = dx * dy
+    # Perform integration
+    _integrate_pixels_generic!(
+        result,
+        psf,
+        camera,
+        emitter,
+        (p, x, y) -> p(x, y),  # For 2D PSF
+        sampling=sampling
+    )
     
-    result = Matrix{T}(undef, ny, nx)
+    # Scale by photon count
+    result .*= emitter.photons
     
-    # For each pixel
-    Threads.@threads for ix in 1:nx
-        for iy in 1:ny
-            # Get physical coordinates of pixel edges
-            x_start = camera.pixel_edges_x[ix]
-            x_end = camera.pixel_edges_x[ix + 1]
-            y_start = camera.pixel_edges_y[iy]
-            y_end = camera.pixel_edges_y[iy + 1]
-            
-            if sampling == 1
-                # Just use pixel centers
-                x = (x_start + x_end)/2
-                y = (y_start + y_end)/2
-                result[iy, ix] = f(psf, x - emitter.x, y - emitter.y) * pixel_area
-            else
-                # Integration step size
-                dx_sample = dx / sampling
-                dy_sample = dy / sampling
-                area_factor = dx_sample * dy_sample
-                
-                # Subsampling points
-                xs = range(x_start + dx_sample/2, x_end - dx_sample/2, sampling)
-                ys = range(y_start + dy_sample/2, y_end - dy_sample/2, sampling)
-                
-                pixel_sum = zero(T)
-                for x in xs, y in ys
-                    x_psf = x - emitter.x
-                    y_psf = y - emitter.y
-                    pixel_sum += f(psf, x_psf, y_psf)
-                end
-                result[iy, ix] = pixel_sum * area_factor
-            end
-        end
-    end
+    return result
+end
+
+"""
+    integrate_pixels_amplitude!(
+        result::AbstractMatrix{Complex{T}},
+        psf::AbstractPSF,
+        camera::AbstractCamera,
+        emitter::AbstractEmitter;
+        sampling::Integer=2
+    ) where T <: Real
+
+Integrate PSF complex amplitude over camera pixels, storing the result in a pre-allocated matrix.
+Automatically uses z-coordinate if both PSF and emitter support it.
+
+# Arguments
+- `result`: Pre-allocated complex array where results will be stored
+- `psf`: Point spread function to integrate
+- `camera`: Camera geometry defining pixel edges
+- `emitter`: Emitter with position information
+- `sampling`: Subpixel sampling density (default: 2)
+
+# Returns
+- The `result` array, now filled with integrated complex amplitudes
+
+# Notes
+- Array is indexed as [y,x] with [1,1] at top-left pixel
+"""
+function integrate_pixels_amplitude!(
+    result::AbstractMatrix{Complex{T}},
+    psf::AbstractPSF,
+    camera::AbstractCamera,
+    emitter::AbstractEmitter;
+    sampling::Integer=2
+) where T <: Real
+    
+    # Perform integration
+    _integrate_pixels_generic!(
+        result,
+        psf,
+        camera,
+        emitter,
+        amplitude,  # Function that automatically handles 2D or 3D based on context
+        sampling=sampling
+    )
     
     return result
 end
@@ -79,6 +102,7 @@ Integrate PSF intensity over camera pixels.
 
 For each pixel in the camera, numerically integrates the PSF intensity using the specified 
 sampling density. Physical coordinates are relative to camera with (0,0) at top-left corner.
+Automatically handles z-coordinate if both PSF and emitter support it.
 
 # Arguments
 - `psf::AbstractPSF`: Point spread function to integrate
@@ -109,11 +133,24 @@ function integrate_pixels(
     sampling::Integer=2
 )
     T = typeof(emitter.photons)
-    result = _integrate_pixels_generic(psf, camera, emitter, (p,x,y) -> p(x,y), T; sampling=sampling)
     
-    # Multiply by photon count instead of normalizing to sum=1
-    # This preserves the physical meaning of the integration
-    return result .* emitter.photons
+    # Get pixel dimensions
+    nx = length(camera.pixel_edges_x) - 1
+    ny = length(camera.pixel_edges_y) - 1
+    
+    # Allocate result matrix
+    result = Matrix{T}(undef, ny, nx)
+    
+    # Use in-place function
+    integrate_pixels!(
+        result,
+        psf,
+        camera,
+        emitter,
+        sampling=sampling
+    )
+    
+    return result
 end
 
 """
@@ -124,6 +161,7 @@ Integrate PSF complex amplitude over camera pixels.
 For each pixel in the camera, numerically integrates the PSF amplitude using the specified
 sampling density. Unlike intensity integration, returns unnormalized complex amplitudes
 which can be used for coherent calculations.
+Automatically handles z-coordinate if both PSF and emitter support it.
 
 # Arguments
 - `psf::AbstractPSF`: Point spread function to integrate
@@ -159,5 +197,22 @@ function integrate_pixels_amplitude(
     sampling::Integer=2
 )
     T = Complex{typeof(emitter.photons)}
-    return _integrate_pixels_generic(psf, camera, emitter, amplitude, T; sampling=sampling)
+    
+    # Get pixel dimensions
+    nx = length(camera.pixel_edges_x) - 1
+    ny = length(camera.pixel_edges_y) - 1
+    
+    # Allocate result matrix
+    result = Matrix{T}(undef, ny, nx)
+    
+    # Use in-place function
+    integrate_pixels_amplitude!(
+        result,
+        psf,
+        camera,
+        emitter,
+        sampling=sampling
+    )
+    
+    return result
 end
