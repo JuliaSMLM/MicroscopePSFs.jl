@@ -1,6 +1,6 @@
 # test/scalar3d_tests.jl
 
-@testset "Scalar3D PSF" begin
+@testset "ScalarPSF" begin
     # Setup common parameters
     na = 1.2
     λ = 0.6
@@ -8,7 +8,7 @@
     
     @testset "Constructor" begin
         # Test basic constructor
-        psf = Scalar3DPSF(na, λ, n_medium)
+        psf = ScalarPSF(na, λ, n_medium)
         @test psf.nₐ ≈ na
         @test psf.λ ≈ λ
         @test psf.n ≈ n_medium
@@ -16,12 +16,12 @@
         # Test with Zernike coefficients
         zernike = ZernikeCoefficients(4)  # 4 terms
         zernike.mag[2] = 0.2
-        psf_zernike = Scalar3DPSF(na, λ, n_medium; coeffs=zernike)
+        psf_zernike = ScalarPSF(na, λ, n_medium; coeffs=zernike)
         @test psf_zernike.zernike_coeffs.mag[2] ≈ 0.2
     end
     
     @testset "Physical Correctness" begin
-        psf = Scalar3DPSF(na, λ, n_medium)
+        psf = ScalarPSF(na, λ, n_medium)
         
         # Test central maximum
         @test psf(0.0, 0.0, 0.0) > psf(0.1, 0.0, 0.0)
@@ -40,7 +40,7 @@
     end
     
     @testset "Integration" begin
-        psf = Scalar3DPSF(na, λ, n_medium)
+        psf = ScalarPSF(na, λ, n_medium)
         
         # Create camera and emitter
         camera = IdealCamera(collect(0:0.1:2.0), collect(0:0.1:2.0))
@@ -65,12 +65,12 @@
     
     @testset "Aberrations" begin
         # Create base PSF
-        psf = Scalar3DPSF(na, λ, n_medium)
+        psf = ScalarPSF(na, λ, n_medium)
         
         # Create aberrated PSF with vertical astigmatism
         zernike = ZernikeCoefficients(6)
         zernike.phase[6] = 0.2  # Astigmatism
-        psf_aberrated = Scalar3DPSF(na, λ, n_medium; coeffs=zernike)
+        psf_aberrated = ScalarPSF(na, λ, n_medium; coeffs=zernike)
         
         # Astigmatism breaks circular symmetry
         # Test at points on the x and y axes (should be different)

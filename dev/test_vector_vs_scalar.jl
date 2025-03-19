@@ -1,11 +1,11 @@
 # defocus_comparison.jl
 using Pkg
-Pkg.activate(".")
+Pkg.activate("dev")
 
 using MicroscopePSFs
 using CairoMakie
 using Printf
-using SMLMData
+
 
 # Microscope parameters
 λ = 0.532  # Green light wavelength in microns
@@ -22,8 +22,8 @@ dipole = DipoleVector(1.0, 1.0, 0.0)
 zc = ZernikeCoefficients(15)
 zc.phase[6] = 1.0  # Add vertical astigmatism
 
-# Create Vector3DPSF with x-oriented dipole
-vector_psf = Vector3DPSF(
+# Create VectorPSF with x-oriented dipole
+vector_psf = VectorPSF(
     na, λ, dipole; 
     base_zernike=zc,
     n_medium=n_medium, 
@@ -32,8 +32,8 @@ vector_psf = Vector3DPSF(
     z_stage=z_stage
 )
 
-# Create Scalar3DPSF with the same aberration
-scalar_psf = Scalar3DPSF(na, λ, n_medium; coeffs=zc)
+# Create ScalarPSF with the same aberration
+scalar_psf = ScalarPSF(na, λ, n_medium; coeffs=zc)
 
 # Evaluation coordinates
 x = y = range(-1, 1, 100)  # PSF field coordinates
@@ -157,6 +157,10 @@ colgap!(fig.layout, 30)
 colsize!(fig.layout, 2, Auto(0.4))
 
 # Save figure
+# Ensure the directory exists
+if !isdir("dev/test_output")
+    mkdir("dev/test_output")
+end
 save("dev/test_output/scalar_vector_psf_comparison.png", fig)
 
 # Display details

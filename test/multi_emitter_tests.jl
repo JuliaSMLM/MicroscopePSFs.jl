@@ -26,7 +26,7 @@
         Emitter3D(0.6, 0.3, 0.2, 1200.0)
     ]
     
-    # Create dipole emitters for Vector3DPSF
+    # Create dipole emitters for VectorPSF
     dipole_emitters = AbstractEmitter[
         DipoleEmitter3D(0.5, 0.4, 0.0, 1000.0, 1.0, 0.0, 0.0),  # x-oriented dipole
         DipoleEmitter3D(0.7, 0.6, 0.0, 800.0, 0.0, 1.0, 0.0),   # y-oriented dipole
@@ -35,10 +35,10 @@
     
     # Expected output dimensions
     expected_dims_2d = (ny, nx)  # [y, x] dimensions for camera
-    expected_dims_3d_vector = (ny, nx, 2)  # [y, x, pol] for Vector3DPSF
+    expected_dims_3d_vector = (ny, nx, 2)  # [y, x, pol] for VectorPSF
     
-    @testset "Gaussian2D" begin
-        psf = Gaussian2D(0.15)  # σ = 150 nm
+    @testset "GaussianPSF" begin
+        psf = GaussianPSF(0.15)  # σ = 150 nm
         
         # Test multi-emitter integration
         result = integrate_pixels(psf, camera, emitters)
@@ -51,8 +51,8 @@
         @test sum(result) <= sum(e.photons for e in emitters)  # Conservation of energy
     end
     
-    @testset "Airy2D" begin
-        psf = Airy2D(na, λ)
+    @testset "AiryPSF" begin
+        psf = AiryPSF(na, λ)
         
         # Test multi-emitter integration
         result = integrate_pixels(psf, camera, emitters)
@@ -65,8 +65,8 @@
         @test sum(result) <= sum(e.photons for e in emitters)
     end
     
-    @testset "Scalar3DPSF" begin
-        psf = Scalar3DPSF(na, λ, n_medium)
+    @testset "ScalarPSF" begin
+        psf = ScalarPSF(na, λ, n_medium)
         
         # Test multi-emitter integration
         result = integrate_pixels(psf, camera, emitters_3d)
@@ -85,8 +85,8 @@
     end
     
     @testset "SplinePSF 2D" begin
-        # Create a SplinePSF from a Gaussian2D
-        gauss = Gaussian2D(0.15)
+        # Create a SplinePSF from a GaussianPSF
+        gauss = GaussianPSF(0.15)
         x_range = y_range = range(-1.0, 1.0, length=21)
         spline_psf = SplinePSF(gauss, x_range, y_range)
         
@@ -102,8 +102,8 @@
     end
     
     @testset "SplinePSF 3D" begin
-        # Create a SplinePSF from a Scalar3DPSF
-        scalar_psf = Scalar3DPSF(na, λ, n_medium)
+        # Create a SplinePSF from a ScalarPSF
+        scalar_psf = ScalarPSF(na, λ, n_medium)
         x_range = y_range = range(-1.0, 1.0, length=21)
         z_range = range(-0.5, 0.5, length=5)
         spline_psf = SplinePSF(scalar_psf, x_range, y_range, z_range)
@@ -119,12 +119,12 @@
         @test sum(result) <= sum(e.photons for e in emitters_3d)
     end
     
-    @testset "Vector3DPSF" begin
-        # Only run this test if Vector3DPSF is fully implemented
+    @testset "VectorPSF" begin
+        # Only run this test if VectorPSF is fully implemented
         try
-            # Create a Vector3DPSF
+            # Create a VectorPSF
             dipole = DipoleVector(0.0, 0.0, 1.0)  # z-oriented dipole
-            psf = Vector3DPSF(na, λ, dipole, n_medium=n_medium)
+            psf = VectorPSF(na, λ, dipole, n_medium=n_medium)
             
             # Test multi-emitter integration
             result = integrate_pixels(psf, camera, dipole_emitters)
@@ -141,8 +141,8 @@
             @test size(amp_result) == expected_dims_3d_vector
             @test eltype(amp_result) <: Complex
         catch e
-            # Skip if Vector3DPSF not fully implemented
-            @info "Skipping Vector3DPSF tests: $e"
+            # Skip if VectorPSF not fully implemented
+            @info "Skipping VectorPSF tests: $e"
         end
     end
 end

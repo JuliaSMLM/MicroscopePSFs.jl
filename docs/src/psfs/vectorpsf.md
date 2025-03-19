@@ -1,10 +1,10 @@
-# Vector3DPSF
+# VectorPSF
 
-The `Vector3DPSF` model implements a comprehensive three-dimensional point spread function based on vectorial diffraction theory. It accounts for polarization effects, high-NA phenomena, dipole emission patterns, refractive index interfaces, and arbitrary aberrations, providing the highest level of physical accuracy among the PSF models.
+The `VectorPSF` model implements a comprehensive three-dimensional point spread function based on vectorial diffraction theory. It accounts for polarization effects, high-NA phenomena, dipole emission patterns, refractive index interfaces, and arbitrary aberrations, providing the highest level of physical accuracy among the PSF models.
 
 ## Mathematical Model
 
-The Vector3DPSF implements the full Richards-Wolf vector diffraction theory, accounting for the vectorial nature of light. The key formula for the electric field at the image plane is:
+The VectorPSF implements the full Richards-Wolf vector diffraction theory, accounting for the vectorial nature of light. The key formula for the electric field at the image plane is:
 
 $$PSF(x - x_i, y - y_i, z_i, z_s) = \sum_{m=x,y} \sum_{n=p_x, p_y, p_z} |F[h(k_x, k_y)w_{m,n}A(k_x, k_y)e^{\iota 2\pi(k_x x_i+k_y y_i+k_{z\mathrm{med}} z_i-k_{z\mathrm{imm}}z_s)}]|^2$$
 
@@ -20,14 +20,14 @@ Where:
 ## Constructor and Parameters
 
 ```julia
-Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
-            base_pupil::Union{Nothing, PupilFunction}=nothing,
-            base_zernike::Union{Nothing, ZernikeCoefficients}=nothing,
-            n_medium::Real=1.33,
-            n_coverslip::Real=1.52,
-            n_immersion::Real=1.52,
-            z_stage::Real=0.0, 
-            grid_size::Integer=128)
+VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
+         base_pupil::Union{Nothing, PupilFunction}=nothing,
+         base_zernike::Union{Nothing, ZernikeCoefficients}=nothing,
+         n_medium::Real=1.33,
+         n_coverslip::Real=1.52,
+         n_immersion::Real=1.52,
+         z_stage::Real=0.0, 
+         grid_size::Integer=128)
 ```
 
 ### Required Parameters
@@ -46,6 +46,27 @@ Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
 - `z_stage`: Distance the sample stage was moved (μm) (default: 0.0)
 - `grid_size`: Size of grid for pupil function (default: 128)
 
+## Dipole Orientation Options
+
+The VectorPSF supports both fixed and rotating dipole orientations:
+
+### Fixed Dipole
+
+```julia
+# Create a VectorPSF with specific dipole orientation
+dipole_xy = DipoleVector(0.707, 0.707, 0.0)  # 45° in XY plane
+psf = VectorPSF(1.4, 0.532, dipole_xy, n_medium=1.33)
+```
+
+### Rotating Dipole (Isotropic Emission)
+
+```julia
+# No dipole specification required - uses incoherent average of x, y, z dipoles
+psf = VectorPSF(1.4, 0.532, n_medium=1.33)
+```
+
+The rotating dipole model represents a freely rotating fluorophore by calculating the incoherent sum of three orthogonal dipole orientations.
+
 ## Key Features
 
 - **Polarization Effects**: Models the vectorial nature of light propagation
@@ -54,25 +75,13 @@ Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
 - **Refractive Index Interfaces**: Models light propagation across media interfaces
 - **Supercritical Angle Fluorescence**: Captures SAF effects for emitters near coverslip
 
-## Dipole Orientations
-
-The Vector3DPSF model allows simulating different dipole orientations:
-
-```julia
-# Create dipole vectors for different orientations
-dipole_x = DipoleVector(1.0, 0.0, 0.0)  # X-oriented dipole
-dipole_y = DipoleVector(0.0, 1.0, 0.0)  # Y-oriented dipole
-dipole_z = DipoleVector(0.0, 0.0, 1.0)  # Z-oriented dipole
-dipole_xy = DipoleVector(0.707, 0.707, 0.0)  # 45° in XY plane
-```
-
 ## Refractive Index Interfaces
 
-The Vector3DPSF accounts for refractive index mismatches:
+The VectorPSF accounts for refractive index mismatches:
 
 ```julia
 # Water sample with oil immersion objective
-psf = Vector3DPSF(
+psf = VectorPSF(
     1.4, 0.532, dipole_z,
     n_medium=1.33,   # Water sample
     n_immersion=1.52  # Oil immersion
@@ -81,13 +90,14 @@ psf = Vector3DPSF(
 
 ## Supercritical Angle Fluorescence
 
-A notable feature of the Vector3DPSF model is its ability to accurately capture Supercritical Angle Fluorescence (SAF), which occurs when light emitted by fluorophores near the coverslip is collected at angles exceeding the critical angle. SAF contribution decreases as the emitter moves away from the coverslip.
+A notable feature of the VectorPSF model is its ability to accurately capture Supercritical Angle Fluorescence (SAF), which occurs when light emitted by fluorophores near the coverslip is collected at angles exceeding the critical angle. SAF contribution decreases as the emitter moves away from the coverslip.
 
 ## Examples
 
 ```julia
-# Create a basic Vector3DPSF with Z-oriented dipole
-psf = Vector3DPSF(
+# Create a basic VectorPSF with Z-oriented dipole
+dipole_z = DipoleVector(0.0, 0.0, 1.0)
+psf = VectorPSF(
     1.4,                # Numerical aperture
     0.532,              # Wavelength in microns
     dipole_z,           # Z-oriented dipole
@@ -97,8 +107,8 @@ psf = Vector3DPSF(
 
 # Create a PSF with aberrations
 zc = ZernikeCoefficients(15)
-add_spherical!(zc, 0.5)  # Add 0.5 waves of spherical aberration
-psf_aberrated = Vector3DPSF(
+zc[11] = 0.5  # Add spherical aberration (normalized to rms = 1.0)
+psf_aberrated = VectorPSF(
     1.4, 0.532, dipole_z,
     n_medium=1.33,
     base_zernike=zc

@@ -1,10 +1,10 @@
-# Gaussian2D
+# GaussianPSF
 
-The `Gaussian2D` PSF model represents the microscope point spread function as an isotropic 2D Gaussian function. While this is a mathematical approximation rather than a physical model derived from diffraction theory, it provides excellent computational efficiency for rapid prototyping and performance-critical algorithms.
+The `GaussianPSF` model represents the microscope point spread function as an isotropic 2D Gaussian function. While this is a mathematical approximation rather than a physical model derived from diffraction theory, it provides excellent computational efficiency for rapid prototyping and performance-critical algorithms.
 
 ## Mathematical Model
 
-The Gaussian2D PSF is defined as:
+The GaussianPSF is defined as:
 
 ```math
 I(x, y) = \frac{1}{2\pi\sigma^2} \exp\left(-\frac{x^2 + y^2}{2\sigma^2}\right)
@@ -19,14 +19,14 @@ This function is normalized to integrate to 1 over the entire domain, ensuring e
 ## Constructor and Parameters
 
 ```julia
-Gaussian2D(σ::Real)
+GaussianPSF(σ::Real)
 ```
 
 - `σ`: Standard deviation in microns, representing the width of the PSF
 
 ### Alternative Constructor
 ```julia
-Gaussian2D(psf::Airy2D)  # Create from an Airy PSF
+GaussianPSF(psf::AiryPSF)  # Create from an Airy PSF
 ```
 
 ## Key Features
@@ -41,11 +41,11 @@ Creating a Gaussian PSF:
 
 ```julia
 # Create a PSF with 150nm standard deviation
-psf = Gaussian2D(0.15)
+psf = GaussianPSF(0.15)
 
 # Create a Gaussian approximation of an Airy disk
-airy_psf = Airy2D(1.4, 0.532)  # NA=1.4, wavelength=532nm
-gaussian_approximation = Gaussian2D(airy_psf)  # Automatically sets appropriate σ
+airy_psf = AiryPSF(1.4, 0.532)  # NA=1.4, wavelength=532nm
+gaussian_approximation = GaussianPSF(airy_psf)  # Automatically sets appropriate σ
 ```
 
 ## Relationship to Airy Function

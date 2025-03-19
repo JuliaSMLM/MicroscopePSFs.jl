@@ -19,7 +19,7 @@ ny = 12  # Different number of pixels in x and y
 x_edges = range(0, nx * pixel_size, nx + 1) |> collect
 y_edges = range(0, ny * pixel_size, ny + 1) |> collect
 camera = IdealCamera(x_edges, y_edges)
-psf = Gaussian2D(σ)
+psf = GaussianPSF(σ)
 
 # Centered PSF sampling coordinates (for PSF evaluation)
 x = range(-1, 1, length = 100)
@@ -123,7 +123,7 @@ scatter!(ax6, [emitter_center.x], [emitter_center.y],
 Colorbar(fig[3, 4], hm6)
 
 # Add coordinate system information
-Label(fig[0, :], "Gaussian2D PSF Tests (σ = $σ μm, pixel size = $(pixel_size * 1000) nm)")
+Label(fig[0, :], "GaussianPSF Tests (σ = $σ μm, pixel size = $(pixel_size * 1000) nm))")
 
 # Print validation info
 println("\nValidation:")
@@ -141,7 +141,11 @@ println("Centered: (", emitter_center.x, ", ", emitter_center.y, ")")
 println("Off-center: (", emitter_off.x, ", ", emitter_off.y, ")")
 
 # Save figure
-save("dev/gaussian2d_test.png", fig)
+# Ensure test_output directory exists
+if !isdir("dev/test_output")
+    mkdir("dev/test_output")
+end
+save("dev/test_output/gaussian2d_test.png", fig)
 
 # Return figure handle
 fig

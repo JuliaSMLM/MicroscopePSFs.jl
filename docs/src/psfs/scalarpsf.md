@@ -1,10 +1,10 @@
-# Scalar3DPSF
+# ScalarPSF
 
-The `Scalar3DPSF` model implements a three-dimensional point spread function based on scalar diffraction theory. This model accounts for defocus and optical aberrations using a complex pupil function approach, providing a good balance between physical accuracy and computational efficiency.
+The `ScalarPSF` model implements a three-dimensional point spread function based on scalar diffraction theory. This model accounts for defocus and optical aberrations using a complex pupil function approach, providing a good balance between physical accuracy and computational efficiency.
 
 ## Mathematical Model
 
-The Scalar3DPSF uses the Fourier optics approach to calculate the complex field distribution:
+The ScalarPSF uses the Fourier optics approach to calculate the complex field distribution:
 
 ```math
 U(\mathbf{r}) = \int_{pupil} P(\boldsymbol{\rho}) e^{i k \boldsymbol{\rho} \cdot \mathbf{r}} d\boldsymbol{\rho}
@@ -21,10 +21,10 @@ The pupil function can incorporate various aberrations, typically represented us
 ## Constructor and Parameters
 
 ```julia
-Scalar3DPSF(na::Real, wavelength::Real, n::Real; 
-            pupil::Union{Nothing, PupilFunction}=nothing,
-            pupil_data::Union{Nothing, AbstractMatrix}=nothing,
-            coeffs::Union{Nothing, ZernikeCoefficients}=nothing)
+ScalarPSF(na::Real, wavelength::Real, n::Real; 
+         pupil::Union{Nothing, PupilFunction}=nothing,
+         pupil_data::Union{Nothing, AbstractMatrix}=nothing,
+         coeffs::Union{Nothing, ZernikeCoefficients}=nothing)
 ```
 
 ### Required Parameters
@@ -50,7 +50,7 @@ You should provide exactly one of the optional parameters. If none are provided,
 
 ## Aberration Modeling
 
-A key feature of the Scalar3DPSF is its ability to incorporate optical aberrations:
+A key feature of the ScalarPSF is its ability to incorporate optical aberrations:
 
 ```julia
 # Create Zernike coefficients object
@@ -63,7 +63,7 @@ add_coma!(zc, 0.3)            # 0.3 waves of coma
 add_spherical!(zc, 0.2)       # 0.2 waves of spherical aberration
 
 # Create PSF with these aberrations
-psf = Scalar3DPSF(1.4, 0.532, 1.518, coeffs=zc)
+psf = ScalarPSF(1.4, 0.532, 1.518, coeffs=zc)
 ```
 
 ## Examples
@@ -72,16 +72,16 @@ Creating a Scalar3DPSF:
 
 ```julia
 # Create a basic unaberrated 3D PSF
-psf = Scalar3DPSF(1.4, 0.532, 1.518)  # NA=1.4, λ=532nm, n=1.518
+psf = ScalarPSF(1.4, 0.532, 1.518)  # NA=1.4, λ=532nm, n=1.518
 
 # Create a PSF with spherical aberration
 zc = ZernikeCoefficients(15)  # Up to 15th Zernike polynomial
 add_spherical!(zc, 0.5)       # Add 0.5 waves of spherical aberration
-psf_aberrated = Scalar3DPSF(1.4, 0.532, 1.518, coeffs=zc)
+psf_aberrated = ScalarPSF(1.4, 0.532, 1.518, coeffs=zc)
 
 # Create a PSF with a pre-computed pupil function
 pupil = PupilFunction(1.4, 0.532, 1.518, zernike_coeffs)
-psf_from_pupil = Scalar3DPSF(1.4, 0.532, 1.518, pupil=pupil)
+psf_from_pupil = ScalarPSF(1.4, 0.532, 1.518, pupil=pupil)
 ```
 
 ## Limitations

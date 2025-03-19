@@ -226,7 +226,7 @@ Automatically handles z-coordinate if both PSF and emitter support it.
 # Create pixel edges for a 20x20 camera with 100nm pixels
 pixel_edges_x = pixel_edges_y = 0:0.1:2.0
 emitter = Emitter2D(1.0, 1.0, 1000.0)  # Emitter at (1μm, 1μm) with 1000 photons
-psf = Gaussian2D(0.15)  # σ = 150nm
+psf = GaussianPSF(0.15)  # σ = 150nm
 
 # Calculate over full image
 pixels = integrate_pixels(psf, pixel_edges_x, pixel_edges_y, emitter)

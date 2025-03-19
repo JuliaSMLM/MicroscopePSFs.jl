@@ -19,12 +19,13 @@ makedocs(;
         "Conventions" => "conventions.md",
         "PSF Types" => [
             "Overview" => "psfs/overview.md",
-            "Gaussian2D" => "psfs/gaussian2d.md",
-            "Airy2D" => "psfs/airy2d.md",
-            "Scalar3D" => "psfs/scalar3d.md",
-            "Vector3D" => "psfs/vector3d.md",
-            "Spline PSF" => "psfs/spline_psf.md",
+            "GaussianPSF" => "psfs/gaussianpsf.md",
+            "AiryPSF" => "psfs/airypsf.md",
+            "ScalarPSF" => "psfs/scalarpsf.md",
+            "VectorPSF" => "psfs/vectorpsf.md",
+            "SplinePSF" => "psfs/splinepsf.md",
         ],
+        "Examples" => "examples.md",
         "API Reference" => "api.md",
     ],
     doctest = false,  # Disable doctests for now

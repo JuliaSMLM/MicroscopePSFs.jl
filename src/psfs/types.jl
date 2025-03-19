@@ -17,19 +17,19 @@ Parameterized by numeric type T.
 abstract type Abstract2DPSF{T<:AbstractFloat} <: AbstractPSF end
 
 """
-    Gaussian2D{T<:AbstractFloat} <: Abstract2DPSF{T}
+    GaussianPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
 
 Isotropic 2D Gaussian PSF.
 
 # Fields
 - `σ`: Standard deviation in physical units (typically microns)
 """
-struct Gaussian2D{T<:AbstractFloat} <: Abstract2DPSF{T}
+struct GaussianPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
     σ::T
 end
 
 """
-    Airy2D{T<:AbstractFloat} <: Abstract2DPSF{T}
+    AiryPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
 
 2D Airy pattern PSF using paraxial, scalar model.
 
@@ -45,12 +45,12 @@ where:
 - `λ`: Wavelength in microns
 - `ν`: Optical parameter = 2π*nₐ/λ
 """
-struct Airy2D{T<:AbstractFloat} <: Abstract2DPSF{T}
+struct AiryPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
     nₐ::T
     λ::T
     ν::T
 
-    function Airy2D(nₐ::Real, λ::Real)
+    function AiryPSF(nₐ::Real, λ::Real)
         T = promote_type(typeof(nₐ), typeof(λ))
         nₐ > 0 || throw(ArgumentError("Numerical aperture must be positive"))
         λ > 0 || throw(ArgumentError("Wavelength must be positive"))
@@ -68,7 +68,7 @@ Abstract type for all 3D point spread functions.
 abstract type Abstract3DPSF{T<:AbstractFloat} <: AbstractPSF end
 
 """
-    Scalar3DPSF{T} <: Abstract3DPSF{T}
+    ScalarPSF{T} <: Abstract3DPSF{T}
 
 Scalar 3D PSF using explicit pupil function representation.
 
@@ -81,16 +81,16 @@ Scalar 3D PSF using explicit pupil function representation.
 
 # Notes
 Can be initialized with either a PupilFunction or ZernikeCoefficients
-using the Scalar3DPSF factory function.
+using the ScalarPSF factory function.
 """
-struct Scalar3DPSF{T} <: Abstract3DPSF{T}
+struct ScalarPSF{T} <: Abstract3DPSF{T}
     nₐ::T
     λ::T
     n::T
     pupil::PupilFunction{T}
     zernike_coeffs::Union{Nothing, ZernikeCoefficients{T}}
 
-    function Scalar3DPSF(nₐ::Real, λ::Real, n::Real, pupil::PupilFunction, zernike_coeffs::Union{Nothing, ZernikeCoefficients}=nothing)
+    function ScalarPSF(nₐ::Real, λ::Real, n::Real, pupil::PupilFunction, zernike_coeffs::Union{Nothing, ZernikeCoefficients}=nothing)
         T = promote_type(typeof(nₐ), typeof(λ), typeof(n), real(eltype(pupil.field)))
         nₐ > 0 || throw(ArgumentError("NA must be positive"))
         λ > 0 || throw(ArgumentError("wavelength must be positive"))
@@ -100,7 +100,7 @@ struct Scalar3DPSF{T} <: Abstract3DPSF{T}
 end
 
 """
-    Vector3DPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
+    VectorPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
 
 Vector PSF model using explicit pupil function representation.
 Allows direct manipulation of pupil function for custom aberrations.
@@ -113,12 +113,13 @@ Allows direct manipulation of pupil function for custom aberrations.
 - `n_immersion::T`: Immersion medium refractive index
 - `dipole::DipoleVector{T}`: Dipole orientation
 - `z_stage::T`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm)
-- `vector_pupils::VectorPupilFunction{T}`: Pre-calculated pupil functions containing vector field components (Ex,Ey),
-  dipole orientation effects, base aberrations, apodization, and all position-independent factors
+- `vector_pupils::Vector{VectorPupilFunction{T}}`: Vector of pupil functions containing field components.
+  For a single dipole, this contains one pupil. For a rotating dipole, it contains three pupils
+  for x, y, and z orientations.
 - `base_pupil::Union{Nothing, PupilFunction{T}}`: Base pupil function representing system aberrations
 - `zernike_coeffs::Union{Nothing, ZernikeCoefficients{T}}`: Zernike coefficients used to create this PSF (if applicable)
 """
-struct Vector3DPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
+struct VectorPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
     nₐ::T
     λ::T
     n_medium::T
@@ -126,7 +127,7 @@ struct Vector3DPSF{T<:AbstractFloat} <: Abstract3DPSF{T}
     n_immersion::T
     dipole::DipoleVector{T}
     z_stage::T
-    vector_pupils::VectorPupilFunction{T}
+    vector_pupils::Vector{VectorPupilFunction{T}}
     base_pupil::Union{Nothing, PupilFunction{T}}
     zernike_coeffs::Union{Nothing, ZernikeCoefficients{T}}
 end

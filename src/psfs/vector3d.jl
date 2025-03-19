@@ -1,7 +1,7 @@
 # src/psfs/vector3d.jl
 
 """
-    Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
+    VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
                 base_pupil::Union{Nothing, PupilFunction}=nothing,
                 base_zernike::Union{Nothing, ZernikeCoefficients}=nothing,
                 n_medium::Real=1.33,
@@ -27,9 +27,9 @@ Create a vector PSF using either a pupil-based or Zernike-based approach.
 - `grid_size`: Size of pupil grid (default: 128)
 
 # Returns
-- Vector3DPSF instance
+- VectorPSF instance
 """
-function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
+function VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     base_pupil::Union{Nothing,PupilFunction}=nothing,
     base_zernike::Union{Nothing,ZernikeCoefficients}=nothing,
     n_medium::Real=1.33,
@@ -49,17 +49,20 @@ function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
         base_pupil = PupilFunction(nₐ, λ, n_medium, base_zernike; grid_size=grid_size)
     end
 
-    # Create vector pupil function with all position-independent factors
-    vector_pupils = VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, grid_size)
+    # Create a single vector pupil function
+    vector_pupil = VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, grid_size)
 
     # Fill with vector components using base aberration
     if !isnothing(base_pupil)
-        fill_vector_pupils!(vector_pupils, dipole, base_pupil)
+        fill_vector_pupils!(vector_pupil, dipole, base_pupil)
     else
-        fill_vector_pupils!(vector_pupils, dipole)
+        fill_vector_pupils!(vector_pupil, dipole)
     end
 
-    return Vector3DPSF{T}(
+    # Create vector with single pupil
+    vector_pupils = [vector_pupil]
+
+    return VectorPSF{T}(
         T(nₐ), T(λ), T(n_medium), T(n_coverslip),
         T(n_immersion), dipole, T(z_stage), vector_pupils,
         stored_base_pupil, stored_zernike
@@ -67,32 +70,123 @@ function Vector3DPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
 end
 
 """
-    amplitude(psf::Vector3DPSF, x::Real, y::Real, z::Real)
+    VectorPSF(nₐ::Real, λ::Real;
+                base_pupil::Union{Nothing, PupilFunction}=nothing,
+                base_zernike::Union{Nothing, ZernikeCoefficients}=nothing,
+                n_medium::Real=1.33,
+                n_coverslip::Real=1.52,
+                n_immersion::Real=1.52,
+                z_stage::Real=0.0,
+                grid_size::Integer=128)
 
-Compute complex vector amplitude at given position.
+Create a vector PSF with a rotating dipole, modeled as an incoherent sum of 
+x, y, and z dipole orientations.
 
 # Arguments
-- `psf`: Vector PSF instance
-- `x, y`: Lateral position in microns relative to PSF center
-- `z`: Axial position in microns representing depth above the coverslip
+- `nₐ`: Numerical aperture
+- `λ`: Wavelength in microns
+
+# Keyword Arguments
+- `base_pupil`: Optional base aberration pupil function
+- `base_zernike`: Optional Zernike coefficients for base aberration
+- `n_medium`: Sample medium refractive index (default: 1.33)
+- `n_coverslip`: Cover slip refractive index (default: 1.52)
+- `n_immersion`: Immersion medium refractive index (default: 1.52)
+- `z_stage`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm) (default: 0.0)
+- `grid_size`: Size of pupil grid (default: 128)
+
+# Returns
+- VectorPSF instance representing a rotating dipole
+
+# Notes
+- Intensity is calculated as incoherent average of three orthogonal dipole orientations
+- The amplitude() function is not meaningful for rotating dipoles and will throw an error
+"""
+function VectorPSF(nₐ::Real, λ::Real;
+    base_pupil::Union{Nothing,PupilFunction}=nothing,
+    base_zernike::Union{Nothing,ZernikeCoefficients}=nothing,
+    n_medium::Real=1.33,
+    n_coverslip::Real=1.52,
+    n_immersion::Real=1.52,
+    z_stage::Real=0.0,
+    grid_size::Integer=128)
+
+    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium), typeof(z_stage))
+
+    # Store the base pupil and/or convert Zernike coeffs to pupil if provided
+    stored_base_pupil = base_pupil
+    stored_zernike = base_zernike
+
+    if isnothing(base_pupil) && !isnothing(base_zernike)
+        # Create base pupil from Zernike coefficients
+        base_pupil = PupilFunction(nₐ, λ, n_medium, base_zernike; grid_size=grid_size)
+    end
+
+    # Create dipole orientations for x, y, z
+    dipoles = [
+        DipoleVector(1.0, 0.0, 0.0),  # x-dipole
+        DipoleVector(0.0, 1.0, 0.0),  # y-dipole
+        DipoleVector(0.0, 0.0, 1.0)   # z-dipole
+    ]
+    
+    # Use a placeholder dipole for the main struct field
+    # This isn't used for calculations with multiple pupils, just for metadata
+    placeholder_dipole = DipoleVector(0.0, 0.0, 0.0)
+    
+    # Create vector pupils for each dipole orientation
+    vector_pupils = Vector{VectorPupilFunction{T}}(undef, 3)
+    
+    for i in 1:3
+        pupil = VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, grid_size)
+        if !isnothing(base_pupil)
+            fill_vector_pupils!(pupil, dipoles[i], base_pupil)
+        else
+            fill_vector_pupils!(pupil, dipoles[i])
+        end
+        vector_pupils[i] = pupil
+    end
+
+    return VectorPSF{T}(
+        T(nₐ), T(λ), T(n_medium), T(n_coverslip),
+        T(n_immersion), placeholder_dipole, T(z_stage), vector_pupils,
+        stored_base_pupil, stored_zernike
+    )
+end
+
+"""
+    _calculate_field_amplitude(
+        pupil::VectorPupilFunction,
+        nₐ::Real, λ::Real, n_medium::Real, n_coverslip::Real, n_immersion::Real, z_stage::Real,
+        x::Real, y::Real, z::Real)
+
+Internal helper function to compute complex vector amplitude at given position.
+
+# Arguments
+- `pupil`: Vector pupil function containing Ex and Ey fields
+- `nₐ`, `λ`, `n_medium`, `n_coverslip`, `n_immersion`: Optical parameters 
+- `z_stage`: Distance the sample stage was moved away from the nominal focal plane
+- `x, y, z`: Position in microns
 
 # Returns
 - Vector [Ex, Ey] of complex field amplitudes
 
 # Notes
-- z coordinate represents the depth above the coverslip
-- z_stage in the PSF indicates the distance the stage was moved away from the nominal focal plane
-- Includes both UAF and SAF contributions automatically
+- This is a helper function used by both amplitude() and the PSF evaluation function
+- Implements the core field calculation for a single pupil
 """
-function amplitude(psf::Vector3DPSF{T}, x::Real, y::Real, z::Real) where {T}
-
+function _calculate_field_amplitude(
+    pupil::VectorPupilFunction,
+    nₐ::Real, λ::Real, n_medium::Real, n_coverslip::Real, n_immersion::Real, z_stage::Real,
+    x::Real, y::Real, z::Real)
+    
     # Initialize result vector [Ex, Ey]
-    result = zeros(Complex{promote_type(T, typeof(x), typeof(y), typeof(z))}, 2)
+    # Fixed: Don't use the type constructor in this way
+    T = promote_type(real(eltype(pupil.Ex.field)), typeof(x), typeof(y), typeof(z))
+    result = zeros(Complex{T}, 2)
 
     # Pupil parameters
-    vector_pupils = psf.vector_pupils
-    grid_size = size(vector_pupils.Ex.field, 1)
-    kmax_val = psf.nₐ / psf.λ
+    grid_size = size(pupil.Ex.field, 1)
+    kmax_val = nₐ / λ
     kpixel = 2 * kmax_val / (grid_size - 1)
     center = (grid_size + 1) / 2
 
@@ -108,26 +202,58 @@ function amplitude(psf::Vector3DPSF{T}, x::Real, y::Real, z::Real) where {T}
 
         # Get wave vectors in each medium
         kz_medium, kz_coverslip, kz_immersion = calculate_wave_vectors(
-            kr2, psf.λ, psf.n_medium, psf.n_coverslip, psf.n_immersion)
+            kr2, λ, n_medium, n_coverslip, n_immersion)
 
         # Calculate total phase with position dependence
         lateral_phase = kx * x + ky * y
-        axial_phase = calculate_axial_phase(z, psf.z_stage, kz_medium, kz_coverslip, kz_immersion)
+        axial_phase = calculate_axial_phase(z, z_stage, kz_medium, kz_coverslip, kz_immersion)
         total_phase = 2π * (lateral_phase + axial_phase)
 
         # Apply phase to pre-calculated pupil field
         phase_factor = exp(im * total_phase)
 
         # Add contribution to result
-        result[1] += vector_pupils.Ex.field[j, i] * phase_factor * kpixel^2
-        result[2] += vector_pupils.Ey.field[j, i] * phase_factor * kpixel^2
+        result[1] += pupil.Ex.field[j, i] * phase_factor * kpixel^2
+        result[2] += pupil.Ey.field[j, i] * phase_factor * kpixel^2
     end
 
     return result
 end
 
 """
-    (psf::Vector3DPSF)(x::Real, y::Real, z::Real)
+    amplitude(psf::VectorPSF, x::Real, y::Real, z::Real)
+
+Compute complex vector amplitude at given position.
+
+# Arguments
+- `psf`: Vector PSF instance
+- `x, y`: Lateral position in microns relative to PSF center
+- `z`: Axial position in microns representing depth above the coverslip
+
+# Returns
+- Vector [Ex, Ey] of complex field amplitudes
+
+# Notes
+- z coordinate represents the depth above the coverslip
+- z_stage in the PSF indicates the distance the stage was moved away from the nominal focal plane
+- Includes both UAF and SAF contributions automatically
+- Not meaningful for rotating dipoles (throws an error if PSF has multiple pupils)
+"""
+function amplitude(psf::VectorPSF{T}, x::Real, y::Real, z::Real) where {T}
+    if length(psf.vector_pupils) > 1
+        error("amplitude() not meaningful for multiple dipole orientations; use intensity evaluation directly")
+    end
+    
+    # Use the first (and only) pupil
+    return _calculate_field_amplitude(
+        psf.vector_pupils[1],
+        psf.nₐ, psf.λ, psf.n_medium, psf.n_coverslip, psf.n_immersion, psf.z_stage,
+        x, y, z
+    )
+end
+
+"""
+    (psf::VectorPSF)(x::Real, y::Real, z::Real)
 
 Compute PSF intensity at given position by summing squared field amplitudes.
 
@@ -139,30 +265,54 @@ Compute PSF intensity at given position by summing squared field amplitudes.
 - Total intensity |Ex|² + |Ey|²
 
 # Notes
-- For randomly oriented dipoles, evaluate three orthogonal orientations and average
+- For single dipole: evaluates intensity from field amplitude
+- For rotating dipole: calculates incoherent sum over three orthogonal dipole orientations
 """
-function (psf::Vector3DPSF)(x::Real, y::Real, z::Real)
-    E = amplitude(psf, x, y, z)
-    return abs2(E[1]) + abs2(E[2])
+function (psf::VectorPSF)(x::Real, y::Real, z::Real)
+    if length(psf.vector_pupils) == 1
+        # Single dipole case
+        E = _calculate_field_amplitude(
+            psf.vector_pupils[1],
+            psf.nₐ, psf.λ, psf.n_medium, psf.n_coverslip, psf.n_immersion, psf.z_stage,
+            x, y, z
+        )
+        return abs2(E[1]) + abs2(E[2])
+    else
+        # Multiple dipoles case - incoherent sum
+        intensity = 0.0
+        
+        for pupil in psf.vector_pupils
+            E = _calculate_field_amplitude(
+                pupil,
+                psf.nₐ, psf.λ, psf.n_medium, psf.n_coverslip, psf.n_immersion, psf.z_stage,
+                x, y, z
+            )
+            intensity += abs2(E[1]) + abs2(E[2])
+        end
+        
+        # Return average intensity
+        return intensity / length(psf.vector_pupils)
+    end
 end
 
 """
-    update_pupils!(psf::Vector3DPSF) -> Vector3DPSF
+    update_pupils!(psf::VectorPSF) -> VectorPSF
 
-Update the vector pupil function based on stored Zernike coefficients and/or base pupil.
+Update the vector pupil functions based on stored Zernike coefficients and/or base pupil.
 This is useful after modifying aberrations to regenerate the pupil fields.
 
 # Arguments
-- `psf`: Vector3DPSF to update
+- `psf`: VectorPSF to update
 
 # Returns
-- Updated Vector3DPSF
+- Updated VectorPSF
 
 # Notes
 - Requires either stored Zernike coefficients or a base pupil
+- For rotating dipoles (multiple pupils), updates each pupil with the appropriate dipole orientation
 - Returns the updated PSF for method chaining
 """
-function update_pupils!(psf::Vector3DPSF)
+function update_pupils!(psf::VectorPSF)
     # Check if we have necessary components to update
     if isnothing(psf.base_pupil) && isnothing(psf.zernike_coeffs)
         throw(ArgumentError("Cannot update pupil: no base pupil or Zernike coefficients stored"))
@@ -174,15 +324,33 @@ function update_pupils!(psf::Vector3DPSF)
         updated_base_pupil = PupilFunction(
             psf.nₐ, psf.λ, psf.n_medium,
             psf.zernike_coeffs;
-            grid_size=size(psf.vector_pupils.Ex.field, 1)
+            grid_size=size(psf.vector_pupils[1].Ex.field, 1)
         )
     end
 
-    # Fill the vector pupil with updated components
-    if !isnothing(updated_base_pupil)
-        fill_vector_pupils!(psf.vector_pupils, psf.dipole, updated_base_pupil)
+    # For single dipole case
+    if length(psf.vector_pupils) == 1
+        # Fill the vector pupil with updated components
+        if !isnothing(updated_base_pupil)
+            fill_vector_pupils!(psf.vector_pupils[1], psf.dipole, updated_base_pupil)
+        else
+            fill_vector_pupils!(psf.vector_pupils[1], psf.dipole)
+        end
     else
-        fill_vector_pupils!(psf.vector_pupils, psf.dipole)
+        # For rotating dipole case, update each pupil with its corresponding dipole orientation
+        dipoles = [
+            DipoleVector(1.0, 0.0, 0.0),  # x-dipole
+            DipoleVector(0.0, 1.0, 0.0),  # y-dipole
+            DipoleVector(0.0, 0.0, 1.0)   # z-dipole
+        ]
+        
+        for i in 1:length(psf.vector_pupils)
+            if !isnothing(updated_base_pupil)
+                fill_vector_pupils!(psf.vector_pupils[i], dipoles[i], updated_base_pupil)
+            else
+                fill_vector_pupils!(psf.vector_pupils[i], dipoles[i])
+            end
+        end
     end
 
     return psf
@@ -194,18 +362,18 @@ end
 """
     integrate_pixels_amplitude!(
         result::AbstractArray{Complex{T},3},
-        psf::Vector3DPSF,
+        psf::VectorPSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
         sampling::Integer=2
     ) where T <: Real
 
-Special version of amplitude integration for Vector3DPSF that preserves polarization components.
+Special version of amplitude integration for VectorPSF that preserves polarization components.
 Uses the flexible core integration function that handles vector returns.
 
 # Arguments
 - `result`: Pre-allocated 3D complex array where results will be stored, dimensions [y, x, pol]
-- `psf`: Vector3DPSF instance
+- `psf`: VectorPSF instance
 - `camera`: Camera geometry defining pixel edges
 - `emitter`: Emitter with position information
 - `sampling`: Subpixel sampling density (default: 2)
@@ -215,7 +383,7 @@ Uses the flexible core integration function that handles vector returns.
 """
 function integrate_pixels_amplitude!(
     result::AbstractArray{Complex{T},3},
-    psf::Vector3DPSF,
+    psf::VectorPSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
     sampling::Integer=2
@@ -240,16 +408,16 @@ end
 
 """
     integrate_pixels_amplitude(
-        psf::Vector3DPSF,
+        psf::VectorPSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
         sampling::Integer=2
     )
 
-Specialized version of amplitude integration for Vector3DPSF that preserves polarization components.
+Specialized version of amplitude integration for VectorPSF that preserves polarization components.
 
 # Arguments
-- `psf`: Vector3DPSF instance
+- `psf`: VectorPSF instance
 - `camera`: Camera geometry defining pixel edges
 - `emitter`: Emitter with position information
 - `sampling`: Subpixel sampling density (default: 2)
@@ -259,11 +427,15 @@ Specialized version of amplitude integration for Vector3DPSF that preserves pola
   where pol index 1 = Ex and pol index 2 = Ey
 """
 function integrate_pixels_amplitude(
-    psf::Vector3DPSF,
+    psf::VectorPSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
     sampling::Integer=2
 )
+    if length(psf.vector_pupils) > 1
+        error("integrate_pixels_amplitude() not meaningful for multiple dipole orientations")
+    end
+    
     T = Complex{typeof(emitter.photons)}
     
     # Use the generic function with additional dimension specified
@@ -283,17 +455,17 @@ end
 
 """
     integrate_pixels_amplitude(
-        psf::Vector3DPSF,
+        psf::VectorPSF,
         camera::AbstractCamera,
         emitters::Vector{<:AbstractEmitter};
         sampling::Integer=2
     )
 
 Integrate PSF complex amplitude over camera pixels for multiple emitters.
-Special version for Vector3DPSF that preserves polarization components.
+Special version for VectorPSF that preserves polarization components.
 
 # Arguments
-- `psf`: Vector3DPSF instance
+- `psf`: VectorPSF instance
 - `camera`: Camera geometry defining pixel edges
 - `emitters`: Vector of emitters with position information
 - `sampling`: Subpixel sampling density (default: 2)
@@ -306,11 +478,15 @@ Special version for Vector3DPSF that preserves polarization components.
 - Results are the coherent sum of individual emitter field contributions
 """
 function integrate_pixels_amplitude(
-    psf::Vector3DPSF,
+    psf::VectorPSF,
     camera::AbstractCamera,
     emitters::Vector{<:AbstractEmitter};
     sampling::Integer=2
 )
+    if length(psf.vector_pupils) > 1
+        error("integrate_pixels_amplitude() not meaningful for multiple dipole orientations")
+    end
+    
     isempty(emitters) && return zeros(Complex{Float64}, length(camera.pixel_edges_y)-1, length(camera.pixel_edges_x)-1, 2)
     
     # Determine result type from first emitter

@@ -97,7 +97,7 @@ Creating a SplinePSF:
 
 ```julia
 # Create a source PSF to accelerate
-scalar_psf = Scalar3DPSF(1.4, 0.532, 1.518)
+scalar_psf = ScalarPSF(1.4, 0.532, 1.518)
 
 # Define coordinate sampling grid
 x_range = y_range = range(-2.0, 2.0, step=0.1)  # μm, 0.1μm step size

@@ -6,18 +6,18 @@ using HDF5
 
 @testset "MicroscopePSFs" verbose=true begin
     
-    # Basic PSFs Test: Gaussian2D and Airy2D
+    # Basic PSFs Test: GaussianPSF and AiryPSF
     @testset "Basic PSFs" begin
         include("basic_psfs_tests.jl")
     end
     
-    # Scalar3D PSF tests
-    @testset "Scalar3D PSF" begin
+    # ScalarPSF tests
+    @testset "ScalarPSF" begin
         include("scalar3d_tests.jl")
     end
     
-    # Vector3D PSF tests
-    @testset "Vector3D PSF" begin
+    # VectorPSF tests
+    @testset "VectorPSF" begin
         include("vector3d_tests.jl")
     end
     
