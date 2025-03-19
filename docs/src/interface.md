@@ -24,11 +24,8 @@ The coordinate system uses physical units (microns) with the origin at the PSF c
 
 ```julia
 # Create camera and emitter
-# Using constructor with pixel edges directly
-pixel_edges_x = collect(0:0.1:2.0)  # Convert to Vector
-pixel_edges_y = collect(0:0.1:2.0)  # Convert to Vector
-camera = IdealCamera(pixel_edges_x, pixel_edges_y)  # 20x20 pixels, 100nm size
-emitter = Emitter2D(1.0, 1.0, 1000.0)               # At (1μm, 1μm) with 1000 photons
+camera = IdealCamera(20, 20, 0.1)  # 20x20 pixels, 100nm pixel size
+emitter = Emitter2D(1.0, 1.0, 1000.0)  # At (1μm, 1μm) with 1000 photons
 
 # Generate realistic microscope image
 pixels = integrate_pixels(psf, camera, emitter)
@@ -41,6 +38,41 @@ The `integrate_pixels` function is the primary way to generate physically realis
 - PSF shape
 - Camera pixel geometry
 - Emitter position and intensity
+
+### Optimization with Support Regions
+
+For performance optimization, both `integrate_pixels` and `integrate_pixels_amplitude` accept an optional `support` parameter to limit calculations to regions where the PSF has significant contribution:
+
+```julia
+# Calculate only within a radius of 0.5μm around the emitter
+pixels = integrate_pixels(psf, camera, emitter, support=0.5)
+
+# Or specify an explicit region
+region = (-1.0, 1.0, -1.0, 1.0)  # (x_min, x_max, y_min, y_max) in μm
+pixels = integrate_pixels(psf, camera, emitter, support=region)
+```
+
+This optimization is particularly valuable for multi-emitter simulations.
+
+### Multi-Emitter Simulation
+
+All PSF types support simulating images with multiple emitters:
+
+```julia
+# Create multiple emitters
+emitters = [
+    Emitter2D(1.0, 1.0, 1000.0),
+    Emitter2D(1.5, 1.2, 800.0)
+]
+
+# Generate camera image with all emitters
+pixels = integrate_pixels(psf, camera, emitters)
+
+# Use support region for efficiency
+pixels = integrate_pixels(psf, camera, emitters, support=0.5)
+```
+
+For incoherent emitters (typical fluorescence), intensities are summed. For coherent simulations, use `integrate_pixels_amplitude`.
 
 ## Working with PSFs
 
@@ -90,50 +122,10 @@ results_gaussian = analyze_psf_width(GaussianPSF(0.15))
 results_airy = analyze_psf_width(AiryPSF(1.4, 0.532))
 ```
 
-## Example: Visualizing Different PSF Models
-
-```julia
-using MicroscopePSFs
-using CairoMakie
-
-# Define position and image grid
-x = range(-1, 1, length=100)
-y = range(-1, 1, length=100)
-
-# Create different PSF models - using only 2D PSFs
-# Note: VectorPSF requires a dipole orientation
-dipole_z = DipoleVector(0.0, 0.0, 1.0)  # Dipole along z-axis (for reference)
-psfs = [
-    GaussianPSF(0.15),
-    AiryPSF(1.4, 0.532)
-    # ScalarPSF only supports 3D interface with (x,y,z) and isn't included here
-    # VectorPSF only supports 3D interface and isn't included here
-]
-titles = ["GaussianPSF", "AiryPSF"]
-
-# Compute PSF intensity values
-intensity_values = [[psf(xi, yi) for yi in y, xi in x] for psf in psfs]
-
-# Create visualization
-fig = Figure(size=(1000, 800))
-for (i, img) in enumerate(intensity_values)
-    ax = Axis(fig[div(i-1, 2)+1, mod(i-1, 2)+1], 
-              aspect=DataAspect(),
-              title=titles[i],
-              xlabel="x (μm)",
-              ylabel="y (μm)")
-    hm = heatmap!(ax, x, y, img, colormap=:viridis)
-    Colorbar(fig[div(i-1, 2)+1, mod(i-1, 2)+3], hm)
-end
-
-# Display or save the figure
-fig
-```
-
 ## Performance Considerations
 
 The interface is designed to be both flexible and performant. For high-performance applications, consider:
 
-1. Vectorizing operations when evaluating PSFs at multiple positions
+1. Using the `support` parameter to limit calculations to relevant regions
 2. Using SplinePSF to pre-compute complex PSFs for faster evaluation
-3. Using the appropriate PSF model for your needs (simpler models are faster)
+3. Selecting the appropriate PSF model for your needs (simpler models are faster)

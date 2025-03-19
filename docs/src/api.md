@@ -26,7 +26,7 @@ ScalarPSF
 VectorPSF
 ```
 
-#### Data-driven PSF
+#### PSF Acceleration
 
 ```@docs
 SplinePSF
@@ -38,6 +38,15 @@ SplinePSF
 amplitude
 integrate_pixels
 integrate_pixels_amplitude
+```
+
+### Multi-Emitter Integration
+
+The following functions support integrating PSFs for multiple emitters:
+
+```@docs
+integrate_pixels(psf::AbstractPSF, camera::AbstractCamera, emitters::Vector{<:AbstractEmitter}; support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf, sampling::Integer=2)
+integrate_pixels_amplitude(psf::AbstractPSF, camera::AbstractCamera, emitters::Vector{<:AbstractEmitter}; support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf, sampling::Integer=2)
 ```
 
 ### Pupil Functions

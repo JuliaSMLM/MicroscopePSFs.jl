@@ -7,16 +7,17 @@ This page documents the conventions used throughout MicroscopePSFs.jl.
 MicroscopePSFs.jl uses the following coordinate system conventions:
 
 - **Physical units**: All distances are in micrometers (μm)
-- **Origin**: The origin (0,0,0) is at the PSF center
+- **Origin**: For PSF evaluation, the origin (0,0,0) is at the PSF center
 - **Axes**:
   - x-axis: Lateral direction (positive right)
   - y-axis: Lateral direction (positive down)
   - z-axis: Axial direction (positive away from objective)
 
-### Image Coordinates
+## Image and Camera Coordinates
 
-When generating PSF images:
+When generating PSF images with `integrate_pixels`:
 
+- Camera coordinates have (0,0) at the top-left corner of the top-left pixel
 - Images are returned as Julia matrices with indices `[row, column]`
 - This corresponds to `[y, x]` in the coordinate system
 - The first element `[1, 1]` is the top-left pixel
@@ -25,27 +26,18 @@ When generating PSF images:
 
 PSF models use the following normalization conventions:
 
-- **Intensity**: PSF intensity is normalized to integrate to 1.0 over the entire domain
+- **PSF evaluation**: PSF intensity is normalized to integrate to 1.0 over the entire $x,y$ plane
 - **Amplitude**: Complex amplitudes are normalized such that `|amplitude|²` gives the normalized intensity
-- **Generated images**: PSF images are normalized to sum to 1.0 by default, unless specified otherwise
-
-## Parameters
-
-Common parameters across PSF models:
-
-- `na`: Numerical aperture of the objective
-- `wavelength`: Wavelength of light in micrometers (μm)
-- `n`: Refractive index of the sample medium
-- `n_i`: Refractive index of the immersion medium
+- **Camera images**: Images generated with `integrate_pixels` contain actual photon counts based on emitter.photons
 
 ## Aberrations
 
 Aberrations are represented using Zernike polynomials:
 
-- Zernike coefficients use the Noll indexing scheme by default
-- Coefficients are specified in wavelength units
-- Positive z (defocus) corresponds to increasing the optical path length
-- Note that this is consistent with a sample moving away from the objective
+- Zernike polynomials are normalized to give an RMS of 1.0
+- Coefficients can be set directly via indexing: `zc[5] = 0.5`
+- The OSA indexing scheme is used by default
+- Positive z (defocus) corresponds to the emitter moving away from the objective
 
 ## Units
 
@@ -57,13 +49,7 @@ Aberrations are represented using Zernike polynomials:
 | Sigma       | Micrometers (μm)    |
 | NA          | Dimensionless       |
 | Refractive index | Dimensionless  |
-| Zernike coefficients | Wavelengths |
-
-## Performance Considerations
-
-- Array dimensions are typically ordered as `[y, x]` for 2D and `[y, x, z]` for 3D
-- For performance-critical code, provide pre-allocated arrays whenever possible
-- PSF models are designed to be thread-safe for parallel evaluation
+| Zernike coefficients | Normalized (RMS=1) |
 
 ## Type Hierarchy
 
@@ -71,11 +57,17 @@ The package uses the following type hierarchy structure:
 
 ```
 AbstractPSF
-├── GaussianPSF
-├── AiryPSF
-├── ScalarPSF
-├── VectorPSF
+├── Abstract2DPSF
+│   ├── GaussianPSF
+│   └── AiryPSF
+├── Abstract3DPSF
+│   ├── ScalarPSF
+│   └── VectorPSF
 └── SplinePSF
 ```
 
-The `GaussianPSF` and `AiryPSF` types are 2D PSF models, while `ScalarPSF` and `VectorPSF` are 3D PSF models. Each implements the appropriate methods for PSF evaluation in their respective dimensions.
+## Performance Considerations
+
+- For multi-emitter simulations, use the `support` parameter to limit computation to relevant regions
+- Use `SplinePSF` to accelerate complex PSF models
+- The package automatically uses multithreading in the `integrate_pixels` methods. 

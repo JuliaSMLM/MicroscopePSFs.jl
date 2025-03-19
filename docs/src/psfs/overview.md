@@ -76,7 +76,7 @@ img = [psf(xi, yi) for yi in y, xi in x]
 
 # Camera integration example
 pixel_size = 0.1  # μm
-camera = IdealCamera(1:20, 1:20, pixel_size)
+camera = IdealCamera(20, 20, pixel_size)
 emitter = Emitter2D(1.0, 1.0, 1000.0)  # x, y, photons
 pixels = integrate_pixels(psf, camera, emitter)
 ```

@@ -25,6 +25,7 @@ makedocs(;
             "VectorPSF" => "psfs/vectorpsf.md",
             "SplinePSF" => "psfs/splinepsf.md",
         ],
+        "Examples" => "examples.md",
         "API Reference" => "api.md",
     ],
     doctest = false,  # Disable doctests for now
