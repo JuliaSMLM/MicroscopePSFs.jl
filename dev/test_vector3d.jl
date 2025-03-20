@@ -84,12 +84,12 @@ y_cam = (camera.pixel_edges_y[1:end-1] + camera.pixel_edges_y[2:end]) ./ 2
 # Row 1: Pupil field components - Ex and Ey amplitude
 ax_ex_amp = Axis(fig[1, 1], width=225, height=225)
 setup_axis!(ax_ex_amp, "Ex Pupil Amplitude")
-hm_ex_amp = heatmap!(ax_ex_amp, x, y, abs.(psf.vector_pupils.Ex.field), colormap=:viridis)
+hm_ex_amp = heatmap!(ax_ex_amp, x, y, abs.(psf.vector_pupils[1].Ex.field), colormap=:viridis)
 Colorbar(fig[1, 2], hm_ex_amp)
 
 ax_ey_amp = Axis(fig[1, 3], width=225, height=225)
 setup_axis!(ax_ey_amp, "Ey Pupil Amplitude")
-hm_ey_amp = heatmap!(ax_ey_amp, x, y, abs.(psf.vector_pupils.Ey.field), colormap=:viridis)
+hm_ey_amp = heatmap!(ax_ey_amp, x, y, abs.(psf.vector_pupils[1].Ey.field), colormap=:viridis)
 Colorbar(fig[1, 4], hm_ey_amp)
 
 # Row 2: Different dipole orientations (at z=0)

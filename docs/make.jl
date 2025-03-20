@@ -2,6 +2,7 @@ using Documenter
 using MicroscopePSFs
 
 DocMeta.setdocmeta!(MicroscopePSFs, :DocTestSetup, :(using MicroscopePSFs); recursive=true)
+DocMeta.setdocmeta!(MicroscopePSFs.Zernike, :DocTestSetup, :(using MicroscopePSFs.Zernike); recursive=true)
 
 makedocs(;
     modules=[MicroscopePSFs],
@@ -25,6 +26,7 @@ makedocs(;
             "VectorPSF" => "psfs/vectorpsf.md",
             "SplinePSF" => "psfs/splinepsf.md",
         ],
+        "Zernike Polynomials" => "zernike.md",
         "Examples" => "examples.md",
         "API Reference" => "api.md",
     ],

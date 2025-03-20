@@ -70,4 +70,6 @@ AbstractPSF
 
 - For multi-emitter simulations, use the `support` parameter to limit computation to relevant regions
 - Use `SplinePSF` to accelerate complex PSF models
-- The package automatically uses multithreading in the `integrate_pixels` methods. 
+- The package automatically uses multithreading in the `integrate_pixels` methods by default
+- For automatic differentiation, you can disable threading with the `threaded=false` parameter
+- Disabling threading is required for compatibility with most automatic differentiation frameworks

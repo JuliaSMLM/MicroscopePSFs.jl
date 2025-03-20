@@ -45,8 +45,8 @@ integrate_pixels_amplitude
 The following functions support integrating PSFs for multiple emitters:
 
 ```@docs
-integrate_pixels(psf::AbstractPSF, camera::AbstractCamera, emitters::Vector{<:AbstractEmitter}; support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf, sampling::Integer=2)
-integrate_pixels_amplitude(psf::AbstractPSF, camera::AbstractCamera, emitters::Vector{<:AbstractEmitter}; support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf, sampling::Integer=2)
+integrate_pixels(psf::AbstractPSF, camera::AbstractCamera, emitters::Vector{<:AbstractEmitter}; support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf, sampling::Integer=2, threaded::Bool=true)
+integrate_pixels_amplitude(psf::AbstractPSF, camera::AbstractCamera, emitters::Vector{<:AbstractEmitter}; support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf, sampling::Integer=2, threaded::Bool=true)
 ```
 
 ### Pupil Functions
@@ -59,47 +59,34 @@ VectorPupilFunction
 ### Zernike Module
 
 ```@docs
-ZernikeCoefficients
-ZernikeIndexing
-OSA
-Noll
-```
-
-### Aberration Functions
-
-```@docs
-add_aberration!
-add_defocus!
-add_astigmatism!
-add_coma!
-add_spherical!
-reset!
-scale!
-merge!
-rms
-trim!
-significant_terms
+MicroscopePSFs.Zernike.ZernikeCoefficients
 ```
 
 ### Zernike Polynomial Functions
 
 ```@docs
-zernikepolynomial
-radialpolynomial
-max_radial_order
-evaluate_pupil
+MicroscopePSFs.Zernike.zernikepolynomial
+MicroscopePSFs.Zernike.radialpolynomial
+MicroscopePSFs.Zernike.max_radial_order
+MicroscopePSFs.Zernike.evaluate_pupil
+```
+
+### Zernike Analysis Functions
+
+```@docs
+MicroscopePSFs.Zernike.rms
+MicroscopePSFs.Zernike.significant_terms
 ```
 
 ### Index Conversion
 
 ```@docs
-nl2osa
-osa2nl
-nl2noll
-noll2nl
-osa2noll
-noll2osa
-convert_index
+MicroscopePSFs.Zernike.nl2osa
+MicroscopePSFs.Zernike.osa2nl
+MicroscopePSFs.Zernike.nl2noll
+MicroscopePSFs.Zernike.noll2nl
+MicroscopePSFs.Zernike.osa2noll
+MicroscopePSFs.Zernike.noll2osa
 ```
 
 ### Emitters

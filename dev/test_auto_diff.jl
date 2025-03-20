@@ -6,9 +6,7 @@ using Revise
 using MicroscopePSFs
 using CairoMakie
 using Printf
-# using Zygote 
 using Enzyme
-
 
 # Microscope parameters
 λ = 0.532  # Green light wavelength in microns
@@ -19,35 +17,25 @@ n = 1.52   # Refractive index
 pixel_size = 0.1  # 100 nm pixels
 nx = 20           # Width
 ny = 10           # Height
-camera = IdealCamera(1:nx, 1:ny, pixel_size)
+camera = IdealCamera(nx, ny, pixel_size)
 
 # Create PSF with astigmatism
 zc = ZernikeCoefficients(15)
-zc.phase[6] = 0.0  # Add phase shift for visualization
+zc.phase[6] = 0.5  # Add vertical astigmatism
 psf = ScalarPSF(na, λ, n, coeffs=zc)
+psf = VectorPSF(na, λ; base_zernike=zc)  
 
 # Calculate the derivative with respect to x
 # dpsf_dx = x -> Zygote.gradient(x -> psf(x, y_value, z_value), x)[1]
 
 # Calc derivative image 
 x_range = y_range = range(-0.5, 0.5, 20)  # PSF field coordinates
-# Only compute the derivative with respect to x
 
-# Only compute the derivative with respect to x
-
-
-dpsf = Enzyme.autodiff(Enzyme.Reverse,  x -> psf(x, 0.0, 0.0), Active, Active(1.0))
-dx_values = [Enzyme.autodiff(Enzyme.Reverse, x -> psf(x, y, 0.0), Active, Active(x))[1] for x in x_range, y in y_range]
-
-# integrate pixels
-dx_image = [Enzyme.autodiff(Enzyme.Reverse, x -> integrate_pixels(psf, camera, Emitter3D(x, y, 0.0,1000.0)), Active, Active(x))[1] for x in x_range, y in y_range]
-
-
-dx_values = [gradient(x -> psf(x, y, 0.0), x)[1] for x in x_range, y in y_range]
-dy_values = [gradient(y -> psf(x, y, 0.0), y)[1] for x in x_range, y in y_range]
-dz_values = [gradient(z -> psf(x, y, z), 1.0)[1] for x in x_range, y in y_range]
+# Calculate the PSF and its derivatives using Enzyme
+dx_values = [Enzyme.autodiff(Enzyme.Reverse, x -> psf(x, y, 0.0), Active, Active(x))[1][1] for x in x_range, y in y_range]
+dy_values = [Enzyme.autodiff(Enzyme.Reverse, y -> psf(x, y, 0.0), Active, Active(y))[1][1] for x in x_range, y in y_range]
+dz_values = [Enzyme.autodiff(Enzyme.Reverse, z -> psf(x, y, z), Active, Active(0.0))[1][1] for x in x_range, y in y_range]
 psf_arr = [psf(x, y, 0.0) for x in x_range, y in y_range]
-
 
 # Plot with CairoMakie
 fig = Figure()
@@ -61,12 +49,23 @@ ax4 = Axis(fig[1, 4], title = "dPSF/dz", yreversed=true, aspect=DataAspect())
 heatmap!(ax4, dz_values')
 display(fig)
 
-# Now try with integrating the PSF
-dx_image = [gradient(x -> integrate_pixels(psf, camera, Emitter3D(x, y, 0.0,1000.0)), x)[1] for x in x_range, y in y_range]
-dy_image = [gradient(y -> integrate_pixels(psf, camera, Emitter3D(x, y, 0.0,1000.0)), y)[1] for x in x_range, y in y_range]
-dz_image = [gradient(z -> integrate_pixels(psf, camera, Emitter3D(x, y, z,1000.0)), 1.0)[1] for x in x_range, y in y_range]
+# Now try with integrating the PSF. Need to turn off threading for Zygote to work
+x_emitter = nx / 2 * pixel_size
+y_emitter = ny / 2 * pixel_size
+z_emitter = 0.5
+photons = 1000.0 
 
-image = [integrate_psf(psf, x, y, 0.0) for x in x_range, y in y_range]
+dx_image = Enzyme.jacobian(set_runtime_activity(Enzyme.Forward),
+    x -> integrate_pixels(psf, camera, Emitter3D(x, y_emitter, z_emitter, photons)), 
+    x_emitter)[1]
+dy_image = Enzyme.jacobian(set_runtime_activity(Enzyme.Forward),
+    y -> integrate_pixels(psf, camera, Emitter3D(x_emitter, y, z_emitter, photons)), 
+    y_emitter)[1]
+dz_image = Enzyme.jacobian(set_runtime_activity(Enzyme.Forward),
+    z -> integrate_pixels(psf, camera, Emitter3D(x_emitter, y_emitter, z, photons)), 
+    z_emitter)[1]
+
+image = integrate_pixels(psf, camera, Emitter3D(x_emitter, y_emitter, z_emitter, photons))
 
 # Plot with CairoMakie
 fig2 = Figure()

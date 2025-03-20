@@ -68,8 +68,7 @@
         
         # Test with Zernike aberrations
         zc = ZernikeCoefficients(15)
-        add_astigmatism!(zc, 0.5)
-        add_defocus!(zc, 0.3)
+        zc.phase[6] = 0.5  # Add vertical astigmatism
         psf_with_aberrations = ScalarPSF(1.4, 0.532, 1.518; coeffs=zc)
         test_save_load(psf_with_aberrations, test_points)
     end
@@ -155,10 +154,8 @@
     @testset "ZernikeCoefficients I/O" begin
         zc = ZernikeCoefficients(15)
         # Add some aberrations
-        add_astigmatism!(zc, 0.5, 0.2)
-        add_defocus!(zc, 0.3)
-        add_coma!(zc, 0.4, 0.1)
-        
+        zc.phase[6] = 0.5  # Add vertical astigmatism
+
         filename = temp_file("zernike.h5")
         try
             # Save and load

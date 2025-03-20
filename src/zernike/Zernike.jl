@@ -5,11 +5,12 @@
 
 Module for working with Zernike polynomials and PSF pupil functions.
 Provides tools for:
-- Converting between different Zernike indexing schemes
-- Computing Zernike polynomials
+- Computing Zernike polynomials with Noll normalization (RMS = 1)
+- Converting between Noll and OSA/ANSI indexing schemes
 - Manipulating pupil functions via Zernike coefficients
-- Fitting pupil functions to Zernike bases
-- Propagating Zernike-based fields to image space
+- Representing aberrations in optical systems
+
+Note: This module uses Noll indexing and normalization throughout.
 """
 module Zernike
 
@@ -17,7 +18,6 @@ using LinearAlgebra
 using SpecialFunctions  # For Bessel functions
 
 # Type exports
-export ZernikeIndexing, OSA, Noll
 export ZernikeCoefficients
 
 # Function exports for polynomial computation
@@ -26,21 +26,14 @@ export evaluate_pupil
 
 # Index conversion exports
 export nl2osa, osa2nl, nl2noll, noll2nl, osa2noll, noll2osa
-export convert_index
 
 # Utility exports
-export add_aberration!, reset!
-export fit_pupil_to_zernike
-
-# Field propagation exports
-export propagate_zernike
+export rms, significant_terms
 
 # Include all submodule files
 include("types.jl")
 include("indexing.jl")
 include("polynomials.jl")
-include("fitting.jl")
 include("utils.jl")
-include("debye.jl")
 
 end # module

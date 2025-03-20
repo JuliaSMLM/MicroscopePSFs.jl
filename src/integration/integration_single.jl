@@ -7,7 +7,8 @@
         pixel_edges_x::AbstractVector,
         pixel_edges_y::AbstractVector,
         emitter::AbstractEmitter;
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     ) where T <: Real
 
 Integrate PSF intensity over camera pixels, storing the result in a pre-allocated matrix.
@@ -19,6 +20,8 @@ Automatically uses z-coordinate if both PSF and emitter support it.
 - `pixel_edges_x`, `pixel_edges_y`: Arrays defining pixel edge coordinates
 - `emitter`: Emitter with position information
 - `sampling`: Subpixel sampling density (default: 2)
+- `threaded`: Whether to use multi-threading for integration (default: true)
+  Set to false when using with automatic differentiation frameworks
 
 # Returns
 - The `result` array, now filled with integrated intensities scaled by emitter.photons
@@ -32,7 +35,8 @@ function integrate_pixels!(
     pixel_edges_x::AbstractVector,
     pixel_edges_y::AbstractVector,
     emitter::AbstractEmitter;
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 ) where T <: Real
     
     # Define a function that handles both 2D and 3D cases automatically
@@ -52,7 +56,8 @@ function integrate_pixels!(
         pixel_edges_y,
         emitter,
         eval_func,  # Pass this flexible function
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
     
     # Scale by photon count
@@ -67,7 +72,8 @@ end
         psf::AbstractPSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     ) where T <: Real
 
 Integrate PSF intensity over camera pixels using camera object, storing the result in a pre-allocated matrix.
@@ -78,6 +84,7 @@ Integrate PSF intensity over camera pixels using camera object, storing the resu
 - `camera`: Camera geometry defining pixel edges
 - `emitter`: Emitter with position information
 - `sampling`: Subpixel sampling density (default: 2)
+- `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
 - The `result` array, now filled with integrated intensities
@@ -87,7 +94,8 @@ function integrate_pixels!(
     psf::AbstractPSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 ) where T <: Real
     
     # Delegate to the version that takes pixel edges
@@ -97,7 +105,8 @@ function integrate_pixels!(
         camera.pixel_edges_x,
         camera.pixel_edges_y,
         emitter;
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
 end
 
@@ -108,7 +117,8 @@ end
         pixel_edges_x::AbstractVector,
         pixel_edges_y::AbstractVector,
         emitter::AbstractEmitter;
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     ) where T <: Real
 
 Integrate PSF complex amplitude over camera pixels, storing the result in a pre-allocated matrix.
@@ -120,6 +130,7 @@ Automatically uses z-coordinate if both PSF and emitter support it.
 - `pixel_edges_x`, `pixel_edges_y`: Arrays defining pixel edge coordinates
 - `emitter`: Emitter with position information
 - `sampling`: Subpixel sampling density (default: 2)
+- `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
 - The `result` array, now filled with integrated complex amplitudes
@@ -133,7 +144,8 @@ function integrate_pixels_amplitude!(
     pixel_edges_x::AbstractVector,
     pixel_edges_y::AbstractVector,
     emitter::AbstractEmitter;
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 ) where T <: Real
     
     # Use the amplitude function which already has methods for both 2D and 3D
@@ -144,7 +156,8 @@ function integrate_pixels_amplitude!(
         pixel_edges_y,
         emitter,
         amplitude,  # The amplitude function already has appropriate methods
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
     
     return result
@@ -156,7 +169,8 @@ end
         psf::AbstractPSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     ) where T <: Real
 
 Integrate PSF complex amplitude over camera pixels using camera object, storing the result in a pre-allocated matrix.
@@ -167,6 +181,7 @@ Integrate PSF complex amplitude over camera pixels using camera object, storing 
 - `camera`: Camera geometry defining pixel edges
 - `emitter`: Emitter with position information
 - `sampling`: Subpixel sampling density (default: 2)
+- `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
 - The `result` array, now filled with integrated complex amplitudes
@@ -176,7 +191,8 @@ function integrate_pixels_amplitude!(
     psf::AbstractPSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 ) where T <: Real
     
     # Delegate to the version that takes pixel edges
@@ -186,7 +202,8 @@ function integrate_pixels_amplitude!(
         camera.pixel_edges_x,
         camera.pixel_edges_y,
         emitter;
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
 end
 
@@ -197,7 +214,8 @@ end
         pixel_edges_y::AbstractVector,
         emitter::AbstractEmitter; 
         support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     )
 
 Integrate PSF intensity over camera pixels with optional support region optimization.
@@ -215,6 +233,8 @@ Automatically handles z-coordinate if both PSF and emitter support it.
   - If Real: radius in microns around emitter
   - If Tuple: explicit (x_min, x_max, y_min, y_max) in microns
 - `sampling::Integer=2`: Number of samples per pixel in each dimension
+- `threaded::Bool=true`: Whether to use multi-threading for integration
+  Set to false when using with automatic differentiation frameworks
 
 # Returns
 - `Matrix{T}`: Integrated intensities where T matches emitter.photons type
@@ -243,7 +263,8 @@ function integrate_pixels(
     pixel_edges_y::AbstractVector,
     emitter::AbstractEmitter;
     support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 )
     T = typeof(emitter.photons)
     
@@ -269,7 +290,8 @@ function integrate_pixels(
         edges_x_view,
         edges_y_view,
         emitter,
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
     
     return result_full
@@ -281,7 +303,8 @@ end
         camera::AbstractCamera, 
         emitter::AbstractEmitter;
         support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     )
 
 Integrate PSF intensity over camera pixels with optional support region optimization.
@@ -296,6 +319,7 @@ This version takes a camera object instead of explicit pixel edges.
   - If Real: radius in microns around emitter
   - If Tuple: explicit (x_min, x_max, y_min, y_max) in microns
 - `sampling::Integer=2`: Number of samples per pixel in each dimension
+- `threaded::Bool=true`: Whether to use multi-threading for integration
 
 # Returns
 - Array of pixel values with dimensions [y,x] (matrix indexed [row,col])
@@ -309,7 +333,8 @@ function integrate_pixels(
     camera::AbstractCamera,
     emitter::AbstractEmitter;
     support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 )
     # Delegate to the version that takes pixel edges
     return integrate_pixels(
@@ -318,7 +343,8 @@ function integrate_pixels(
         camera.pixel_edges_y,
         emitter;
         support=support,
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
 end
 
@@ -329,7 +355,8 @@ end
         pixel_edges_y::AbstractVector,
         emitter::AbstractEmitter; 
         support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     )
 
 Integrate PSF complex amplitude over camera pixels with optional support region optimization.
@@ -348,6 +375,7 @@ Automatically handles z-coordinate if both PSF and emitter support it.
   - If Real: radius in microns around emitter
   - If Tuple: explicit (x_min, x_max, y_min, y_max) in microns
 - `sampling::Integer=2`: Number of samples per pixel in each dimension
+- `threaded::Bool=true`: Whether to use multi-threading for integration
 
 # Returns
 - `Matrix{Complex{T}}`: Integrated complex amplitudes where T matches emitter.photons type
@@ -367,7 +395,8 @@ function integrate_pixels_amplitude(
     pixel_edges_y::AbstractVector,
     emitter::AbstractEmitter;
     support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 )
     T = Complex{typeof(emitter.photons)}
     
@@ -393,7 +422,8 @@ function integrate_pixels_amplitude(
         edges_x_view,
         edges_y_view,
         emitter,
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
     
     return result_full
@@ -405,7 +435,8 @@ end
         camera::AbstractCamera, 
         emitter::AbstractEmitter;
         support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     )
 
 Integrate PSF complex amplitude over camera pixels with optional support region optimization.
@@ -420,6 +451,7 @@ This version takes a camera object instead of explicit pixel edges.
   - If Real: radius in microns around emitter
   - If Tuple: explicit (x_min, x_max, y_min, y_max) in microns
 - `sampling::Integer=2`: Number of samples per pixel in each dimension
+- `threaded::Bool=true`: Whether to use multi-threading for integration
 
 # Returns
 - Matrix of complex amplitudes
@@ -432,7 +464,8 @@ function integrate_pixels_amplitude(
     camera::AbstractCamera,
     emitter::AbstractEmitter;
     support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 )
     # Delegate to the version that takes pixel edges
     return integrate_pixels_amplitude(
@@ -441,6 +474,7 @@ function integrate_pixels_amplitude(
         camera.pixel_edges_y,
         emitter;
         support=support,
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
 end

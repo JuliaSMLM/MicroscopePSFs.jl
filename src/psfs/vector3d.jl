@@ -357,7 +357,8 @@ function update_pupils!(psf::VectorPSF)
 end
 
 
-# src/integration/integration_single.jl (additions)
+# Update to src/psfs/vector3d.jl
+# Add these methods at the end of the file
 
 """
     integrate_pixels_amplitude!(
@@ -365,7 +366,8 @@ end
         psf::VectorPSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     ) where T <: Real
 
 Special version of amplitude integration for VectorPSF that preserves polarization components.
@@ -377,6 +379,7 @@ Uses the flexible core integration function that handles vector returns.
 - `camera`: Camera geometry defining pixel edges
 - `emitter`: Emitter with position information
 - `sampling`: Subpixel sampling density (default: 2)
+- `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
 - The `result` array, filled with integrated complex amplitudes for each polarization
@@ -386,7 +389,8 @@ function integrate_pixels_amplitude!(
     psf::VectorPSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 ) where T <: Real
     # Verify dimensions
     ny, nx, npol = size(result)
@@ -400,7 +404,8 @@ function integrate_pixels_amplitude!(
         camera.pixel_edges_y,
         emitter,
         amplitude,  # The amplitude function returns [Ex, Ey]
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
     
     return result
@@ -411,7 +416,8 @@ end
         psf::VectorPSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     )
 
 Specialized version of amplitude integration for VectorPSF that preserves polarization components.
@@ -421,6 +427,7 @@ Specialized version of amplitude integration for VectorPSF that preserves polari
 - `camera`: Camera geometry defining pixel edges
 - `emitter`: Emitter with position information
 - `sampling`: Subpixel sampling density (default: 2)
+- `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
 - 3D array of integrated complex amplitudes with dimensions [y, x, pol]
@@ -430,7 +437,8 @@ function integrate_pixels_amplitude(
     psf::VectorPSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 )
     if length(psf.vector_pupils) > 1
         error("integrate_pixels_amplitude() not meaningful for multiple dipole orientations")
@@ -447,18 +455,18 @@ function integrate_pixels_amplitude(
         amplitude,
         T,
         (2,);  # Additional dimension for the polarization components
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
 end
-
-# src/integration/integration_multi.jl (additions)
 
 """
     integrate_pixels_amplitude(
         psf::VectorPSF,
         camera::AbstractCamera,
         emitters::Vector{<:AbstractEmitter};
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     )
 
 Integrate PSF complex amplitude over camera pixels for multiple emitters.
@@ -469,6 +477,7 @@ Special version for VectorPSF that preserves polarization components.
 - `camera`: Camera geometry defining pixel edges
 - `emitters`: Vector of emitters with position information
 - `sampling`: Subpixel sampling density (default: 2)
+- `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
 - 3D array of integrated complex amplitudes with dimensions [y, x, pol]
@@ -481,7 +490,8 @@ function integrate_pixels_amplitude(
     psf::VectorPSF,
     camera::AbstractCamera,
     emitters::Vector{<:AbstractEmitter};
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 )
     if length(psf.vector_pupils) > 1
         error("integrate_pixels_amplitude() not meaningful for multiple dipole orientations")
@@ -503,7 +513,7 @@ function integrate_pixels_amplitude(
     # Process each emitter
     for emitter in emitters
         fill!(buffer, zero(T))
-        integrate_pixels_amplitude!(buffer, psf, camera, emitter; sampling=sampling)
+        integrate_pixels_amplitude!(buffer, psf, camera, emitter; sampling=sampling, threaded=threaded)
         result .+= buffer
     end
     
