@@ -2,6 +2,7 @@ using Documenter
 using MicroscopePSFs
 
 DocMeta.setdocmeta!(MicroscopePSFs, :DocTestSetup, :(using MicroscopePSFs); recursive=true)
+DocMeta.setdocmeta!(MicroscopePSFs.Zernike, :DocTestSetup, :(using MicroscopePSFs.Zernike); recursive=true)
 
 makedocs(;
     modules=[MicroscopePSFs],

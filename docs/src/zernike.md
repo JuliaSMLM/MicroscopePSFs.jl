@@ -1,4 +1,4 @@
-# Zernike Module
+# Zernike Polynomials
 
 The Zernike module provides tools for working with Zernike polynomials, which are commonly used to represent optical aberrations in microscopy PSF models.
 
@@ -12,14 +12,10 @@ This module uses the following conventions:
 
 ## Core Types
 
-```@docs
-ZernikeCoefficients
-```
-
-## Creating and Manipulating Coefficients
+The `ZernikeCoefficients` type is the main container for Zernike polynomial coefficients, used to represent both phase and amplitude aberrations:
 
 ```julia
-# Create coefficients for 15 Zernike terms (default)
+# Create coefficients for 15 Zernike terms
 zc = ZernikeCoefficients(15)
 
 # Access and modify directly using Noll indices
@@ -29,27 +25,29 @@ zc.phase[11] = 0.2  # Add 0.2λ RMS of spherical aberration
 
 ## Core Functions
 
-```@docs
-zernikepolynomial
-radialpolynomial
-evaluate_pupil
-```
+The Zernike module provides several core functions for working with Zernike polynomials:
+
+- `zernikepolynomial(n, l, ρ, θ)`: Compute the Zernike polynomial with radial order `n` and azimuthal frequency `l` at polar coordinates `(ρ, θ)`
+- `radialpolynomial(n, m, ρ)`: Compute just the radial component of a Zernike polynomial
+- `evaluate_pupil(coeffs, grid_size)`: Generate a complex pupil function from Zernike coefficients
 
 ## Analysis Functions
 
-```@docs
-rms
-significant_terms
-```
+Additional utility functions for analyzing Zernike coefficients include:
+
+- `rms(coeffs)`: Calculate RMS values for magnitude and phase coefficients (excluding piston)
+- `significant_terms(coeffs, threshold)`: Return list of significant terms above a threshold
 
 ## Index Conversion
 
-```@docs
-noll2nl
-nl2noll
-noll2osa
-osa2noll
-```
+Functions for converting between different Zernike indexing schemes:
+
+- `noll2nl(j)`: Convert from Noll single index to (n,l) indices
+- `nl2noll(n, l)`: Convert from (n,l) indices to Noll single index
+- `noll2osa(j)`: Convert from Noll to OSA/ANSI index
+- `osa2noll(j)`: Convert from OSA/ANSI to Noll index
+- `nl2osa(n, l)`: Convert from (n,l) indices to OSA/ANSI single index
+- `osa2nl(j)`: Convert from OSA/ANSI single index to (n,l) indices
 
 ## Common Zernike Polynomials
 
@@ -143,3 +141,4 @@ psf = ScalarPSF(1.4, 0.532, 1.518, coeffs=zc)
 vector_psf = VectorPSF(1.4, 0.532, base_zernike=zc, n_medium=1.33)
 ```
 
+For a full API reference and details on all available functions, see the [API Reference](api.md#zernike-module) section.
