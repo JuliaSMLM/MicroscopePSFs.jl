@@ -1,30 +1,20 @@
 # src/zernike/types.jl
 
 """
-    ZernikeIndexing
-
-Enum type for different Zernike polynomial indexing conventions.
-Used to specify which indexing scheme to use in calculations.
-
-# Values
-- `OSA`: OSA/ANSI standard indexing
-- `Noll`: Noll indexing scheme
-"""
-@enum ZernikeIndexing OSA Noll
-
-"""
     ZernikeCoefficients{T<:Real}
 
 Mutable structure to hold Zernike coefficients for both magnitude and phase of a pupil function.
+Uses Noll indexing convention starting at index 1.
 
 # Fields
-- `mag::Vector{T}`: Coefficients for magnitude
-- `phase::Vector{T}`: Coefficients for phase
+- `mag::Vector{T}`: Coefficients for magnitude (1-indexed per Noll convention)
+- `phase::Vector{T}`: Coefficients for phase (1-indexed per Noll convention)
 
 # Notes
 - First coefficient (index 1) typically represents piston
 - Magnitude coefficients are typically normalized with mag[1] = 1
 - Phase coefficients represent phase in radians
+- RMS normalization (Noll convention) is used so coefficients directly represent RMS wavefront error
 """
 mutable struct ZernikeCoefficients{T<:Real}
     mag::Vector{T}
@@ -69,20 +59,24 @@ end
 Base.eltype(::ZernikeCoefficients{T}) where T = T
 Base.length(zc::ZernikeCoefficients) = length(zc.mag)
 
+# Indexing methods
+Base.getindex(zc::ZernikeCoefficients, i::Integer) = (mag=zc.mag[i], phase=zc.phase[i])
+Base.setindex!(zc::ZernikeCoefficients, v::Real, i::Integer, field::Symbol) = setfield!(zc, field)[i] = v
+
 # Show methods for nice printing
 function Base.show(io::IO, zc::ZernikeCoefficients{T}) where T
     print(io, "ZernikeCoefficients{$T}($(length(zc)) terms)")
 end
 
 function Base.show(io::IO, ::MIME"text/plain", zc::ZernikeCoefficients)
-    println(io, "ZernikeCoefficients with $(length(zc)) terms:")
+    println(io, "ZernikeCoefficients with $(length(zc)) terms (Noll indexed):")
     println(io, "  Magnitude coefficients:")
-    for (i, m) in enumerate(zc.mag)
-        abs(m) > 1e-10 && println(io, "    [$(i-1)] = $m")
+    for i in eachindex(zc.mag)
+        abs(zc.mag[i]) > 1e-10 && println(io, "    [$i] = $(zc.mag[i])")
     end
     println(io, "  Phase coefficients:")
-    for (i, p) in enumerate(zc.phase)
-        abs(p) > 1e-10 && println(io, "    [$(i-1)] = $p")
+    for i in eachindex(zc.phase)
+        abs(zc.phase[i]) > 1e-10 && println(io, "    [$i] = $(zc.phase[i])")
     end
 end
 
@@ -97,4 +91,3 @@ end
 
 # Copying
 Base.copy(zc::ZernikeCoefficients) = ZernikeCoefficients(copy(zc.mag), copy(zc.phase))
-

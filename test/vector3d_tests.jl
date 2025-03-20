@@ -28,7 +28,7 @@
         
         # Test constructor with aberrations
         zc = ZernikeCoefficients(10)
-        add_defocus!(zc, 0.5)
+        zc.phase[6] = 0.5  # Add vertical astigmatism
         psf_aberrated = VectorPSF(na, λ, dipole; 
                                    n_medium=n_medium, 
                                    base_zernike=zc)

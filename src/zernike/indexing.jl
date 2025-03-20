@@ -1,10 +1,9 @@
 # src/zernike/indexing.jl
 
 """
-Provides conversion functions between different Zernike polynomial indexing schemes:
+Provides essential conversion functions between Noll and OSA/ANSI indexing schemes:
 - OSA/ANSI: Based on radial order n and azimuthal frequency l
 - Noll: Single index ordering that follows specific pattern
-- (n,l): Raw radial and azimuthal indices
 
 All functions include input validation and maintain proper mathematical constraints.
 """
@@ -105,27 +104,20 @@ Convert from Noll single index to (n,l) indices.
 # Returns
 - Tuple of (n,l) indices
 """
-function noll2nl(j::Integer)::Tuple{Int,Int}
-    j > 0 || throw(ArgumentError("Noll index must be positive"))
-    
-    n = floor(Int, (-3 + sqrt(1 + 8j)) / 2)
-    l = 2 * (j - (n * (n + 1) ÷ 2)) - n
-    
-    # Adjust sign based on Noll convention
-    if mod(j, 2) == 0
-        l = abs(l)
-    else
-        l = -abs(l)
+function noll2nl(j::Int)::Tuple{Int,Int}
+    n = ceil((-3 + sqrt(1 + 8*j)) / 2);
+    l = j - n * (n + 1) / 2 - 1;
+    if mod(n, 2) != mod(l, 2)
+       l = l + 1;
     end
-    
-    # Validate result
-    mod(n - abs(l), 2) == 0 || throw(ArgumentError("Invalid Noll index"))
-    abs(l) ≤ n || throw(ArgumentError("Invalid Noll index"))
-    
-    return (n, l)
+    if mod(j, 2) == 1
+       l= -l;
+    end
+    return n,l
 end
 
-#= Cross-indexing conversions =#
+
+#= Cross-indexing conversions - directly between Noll and OSA =#
 
 """
     noll2osa(j::Integer) -> Int
@@ -147,38 +139,12 @@ function osa2noll(j::Integer)::Int
     return nl2noll(n, l)
 end
 
+# Helper function to get n,l from Noll index
 """
-    convert_index(j::Integer, from::ZernikeIndexing, to::ZernikeIndexing) -> Int
+    get_nl(j::Integer) -> Tuple{Int,Int}
 
-Convert between indexing schemes specified by ZernikeIndexing enum.
-
-# Examples
-```julia
-julia> convert_index(4, OSA, Noll)
-6
-julia> convert_index(6, Noll, OSA)
-4
-```
+Get (n,l) indices from Noll index.
 """
-function convert_index(j::Integer, from::ZernikeIndexing, to::ZernikeIndexing)
-    from == to && return j
-    if from == OSA && to == Noll
-        return osa2noll(j)
-    else
-        return noll2osa(j)
-    end
-end
-
-# Convenience method to get n,l from either indexing scheme
-"""
-    get_nl(j::Integer, indexing::ZernikeIndexing=OSA) -> Tuple{Int,Int}
-
-Get (n,l) indices from either OSA or Noll index.
-"""
-function get_nl(j::Integer, indexing::ZernikeIndexing=OSA)::Tuple{Int,Int}
-    if indexing == OSA
-        return osa2nl(j)
-    else
-        return noll2nl(j)
-    end
+function get_nl(j::Integer)::Tuple{Int,Int}
+    return noll2nl(j)
 end

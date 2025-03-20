@@ -13,32 +13,25 @@ using Dates
 include("zernike/Zernike.jl")
 
 # Use everything from Zernike within MicroscopePSFs
-using .Zernike: ZernikeCoefficients, ZernikeIndexing, OSA, Noll,
+using .Zernike: ZernikeCoefficients,
     # Basic manipulation
-    add_aberration!, reset!, propagate_field, evaluate_pupil, zernikepolynomial, radialpolynomial, max_radial_order,
-    # Common aberrations
-    add_defocus!, add_spherical!, add_astigmatism!, add_coma!,
-    # Coefficient manipulation
-    scale!, merge!, rms, trim!,
+    evaluate_pupil, zernikepolynomial, radialpolynomial, max_radial_order,
+     
     # Analysis
+    rms,
     significant_terms,
+    
     # Index conversion exports
-    nl2osa, osa2nl, nl2noll, noll2nl, osa2noll, noll2osa, convert_index
+    nl2osa, osa2nl, nl2noll, noll2nl, osa2noll, noll2osa
 
 # Re-export specific Zernike components
 export Zernike
-export ZernikeCoefficients, ZernikeIndexing, OSA, Noll
+export ZernikeCoefficients
 
 # Common operations
-export add_aberration!, reset!, propagate_zernike, evaluate_pupil, zernikepolynomial, radialpolynomial
+export zernikepolynomial, radialpolynomial
 
-# Common aberration functions
-export add_defocus!, add_spherical!, add_astigmatism!, add_coma!
-
-# Coefficient manipulation and analysis
-export scale!, merge!, rms, trim!, significant_terms
-
-# Rest of exports unchanged...
+# PSF exports
 export AbstractPSF
 export integrate_pixels, amplitude, integrate_pixels_amplitude
 export save_psf, load_psf 
