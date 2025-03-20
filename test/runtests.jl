@@ -41,6 +41,11 @@ using HDF5
         include("support_region_tests.jl")
     end
     
+    # Threading option tests
+    @testset "Threading Options" begin
+        include("thread_tests.jl")
+    end
+    
     # I/O functionality tests
     @testset "I/O Functions" begin
         include("io_tests.jl")

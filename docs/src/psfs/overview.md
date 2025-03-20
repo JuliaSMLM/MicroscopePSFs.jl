@@ -79,7 +79,27 @@ pixel_size = 0.1  # μm
 camera = IdealCamera(20, 20, pixel_size)
 emitter = Emitter2D(1.0, 1.0, 1000.0)  # x, y, photons
 pixels = integrate_pixels(psf, camera, emitter)
+
+# Optional parameters for integration
+pixels = integrate_pixels(psf, camera, emitter;
+                        support=0.5,    # Limit to 0.5μm radius
+                        sampling=3,     # 3×3 subpixel sampling
+                        threaded=true)  # Use multithreading
 ```
+
+## Performance and Automatic Differentiation
+
+For performance optimization:
+
+```julia
+# Standard use with multithreading (default)
+pixels = integrate_pixels(psf, camera, emitter)
+
+# For automatic differentiation compatibility, disable threading
+pixels = integrate_pixels(psf, camera, emitter, threaded=false)
+```
+
+Most automatic differentiation frameworks don't support multithreading, so the `threaded` parameter allows toggling this feature when needed.
 
 ## Visual Comparison
 

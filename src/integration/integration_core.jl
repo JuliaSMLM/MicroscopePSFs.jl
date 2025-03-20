@@ -97,7 +97,8 @@ end
         func::Function,
         emitter_x::Real,
         emitter_y::Real;
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     )
 
 Internal function implementing the core pixel integration logic.
@@ -109,6 +110,8 @@ Supports both scalar and vector/tensor return types from the function.
 - `func`: Function to evaluate at PSF coordinates - can return scalar, vector, or tensor
 - `emitter_x`, `emitter_y`: Emitter coordinates in same units as pixel edges
 - `sampling`: Subpixel sampling density (default: 2)
+- `threaded`: Whether to use multi-threading for integration (default: true)
+  Set to false when using with automatic differentiation frameworks
 
 # Returns
 - `result` array filled with integration values
@@ -120,7 +123,8 @@ function _integrate_pixels_core!(
     func::Function,
     emitter_x::Real,
     emitter_y::Real;
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 )
     nx = length(pixel_edges_x) - 1
     ny = length(pixel_edges_y) - 1
@@ -138,66 +142,79 @@ function _integrate_pixels_core!(
         throw(ArgumentError("Unsupported result array type: $(typeof(result))"))
     end
     
-    # Always use multi-threading - has minimal overhead with single thread
-    Threads.@threads for ix in 1:nx
+    # Define a nested function to process a single pixel
+    function process_pixel(ix, iy)
         x_start = pixel_edges_x[ix]
         x_end = pixel_edges_x[ix + 1]
         dx = x_end - x_start
         
-        for iy in 1:ny
-            y_start = pixel_edges_y[iy]
-            y_end = pixel_edges_y[iy + 1]
-            dy = y_end - y_start
+        y_start = pixel_edges_y[iy]
+        y_end = pixel_edges_y[iy + 1]
+        dy = y_end - y_start
+        
+        # Special case for single sampling point
+        if sampling == 1
+            # Just use pixel centers
+            x = (x_start + x_end)/2
+            y = (y_start + y_end)/2
             
-            # Special case for single sampling point
-            if sampling == 1
-                # Just use pixel centers
-                x = (x_start + x_end)/2
-                y = (y_start + y_end)/2
-                
-                # Calculate the function value once
-                func_val = func(x - emitter_x, y - emitter_y)
-                area = dx * dy
-                
-                # Handle different return types
-                if func_val isa Number
-                    # Scalar case
-                    result[iy, ix] = func_val * area
-                else
-                    # Vector or tensor case - use broadcasting to scale all elements
-                    result[iy, ix, :] .= func_val .* area
-                end
+            # Calculate the function value once
+            func_val = func(x - emitter_x, y - emitter_y)
+            area = dx * dy
+            
+            # Handle different return types
+            if func_val isa Number
+                # Scalar case
+                result[iy, ix] = func_val * area
             else
-                # Integration with subpixel sampling
-                dx_sample = dx / sampling
-                dy_sample = dy / sampling
-                area_factor = dx_sample * dy_sample
-                
-                # Subsampling points
-                xs = range(x_start + dx_sample/2, x_end - dx_sample/2, length=sampling)
-                ys = range(y_start + dy_sample/2, y_end - dy_sample/2, length=sampling)
-                
-                # Get first value to determine return type and initialize sum properly
-                x_psf = xs[1] - emitter_x
-                y_psf = ys[1] - emitter_y
-                first_val = func(x_psf, y_psf)
-                
-                if first_val isa Number
-                    # Scalar case
-                    pixel_sum = zero(typeof(first_val))
-                    for x in xs, y in ys
-                        pixel_sum += func(x - emitter_x, y - emitter_y)
-                    end
-                    result[iy, ix] = pixel_sum * area_factor
-                else
-                    # Vector case - initialize sum with correct dimensions
-                    pixel_sum = zeros(eltype(first_val), length(first_val))
-                    for x in xs, y in ys
-                        pixel_sum .+= func(x - emitter_x, y - emitter_y)
-                    end
-                    # Store each component scaled by area
-                    result[iy, ix, :] .= pixel_sum .* area_factor
+                # Vector or tensor case - use broadcasting to scale all elements
+                result[iy, ix, :] .= func_val .* area
+            end
+        else
+            # Integration with subpixel sampling
+            dx_sample = dx / sampling
+            dy_sample = dy / sampling
+            area_factor = dx_sample * dy_sample
+            
+            # Subsampling points
+            xs = range(x_start + dx_sample/2, x_end - dx_sample/2, length=sampling)
+            ys = range(y_start + dy_sample/2, y_end - dy_sample/2, length=sampling)
+            
+            # Get first value to determine return type and initialize sum properly
+            x_psf = xs[1] - emitter_x
+            y_psf = ys[1] - emitter_y
+            first_val = func(x_psf, y_psf)
+            
+            if first_val isa Number
+                # Scalar case
+                pixel_sum = zero(typeof(first_val))
+                for x in xs, y in ys
+                    pixel_sum += func(x - emitter_x, y - emitter_y)
                 end
+                result[iy, ix] = pixel_sum * area_factor
+            else
+                # Vector case - initialize sum with correct dimensions
+                pixel_sum = zeros(eltype(first_val), length(first_val))
+                for x in xs, y in ys
+                    pixel_sum .+= func(x - emitter_x, y - emitter_y)
+                end
+                # Store each component scaled by area
+                result[iy, ix, :] .= pixel_sum .* area_factor
+            end
+        end
+    end
+    
+    # Apply with or without threading
+    if threaded
+        Threads.@threads for ix in 1:nx
+            for iy in 1:ny
+                process_pixel(ix, iy)
+            end
+        end
+    else
+        for ix in 1:nx
+            for iy in 1:ny
+                process_pixel(ix, iy)
             end
         end
     end
@@ -213,7 +230,8 @@ end
         pixel_edges_y::AbstractVector,
         emitter::AbstractEmitter,
         f::Function;
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     )
 
 Generic wrapper for PSF integration that handles coordinate systems and validation.
@@ -227,6 +245,7 @@ Supports functions that return either scalars or vectors/tensors.
 - `emitter`: Emitter with position information
 - `f`: Function to evaluate (e.g., (p,x,y) -> p(x,y) for intensity)
 - `sampling`: Subpixel sampling density (default: 2)
+- `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
 - `result` array filled with integration values
@@ -238,7 +257,8 @@ function _integrate_pixels_generic!(
     pixel_edges_y::AbstractVector,
     emitter::AbstractEmitter,
     f::Function;
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 )
     # Determine if we should use z-coordinate based on PSF and emitter capabilities
     if supports_3d(psf) && has_z_coordinate(emitter)
@@ -257,7 +277,8 @@ function _integrate_pixels_generic!(
         eval_func,
         emitter.x,
         emitter.y;
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
 end
 
@@ -270,7 +291,8 @@ end
         f::Function,
         ::Type{T},
         output_dims=();
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     ) where T
 
 Internal generic integration routine used by both intensity and amplitude integration.
@@ -280,6 +302,7 @@ Supports both scalar and vector/tensor return types.
 # Arguments
 - `output_dims`: Additional dimensions for the result array beyond the basic [y,x] dimensions.
   For vector returns (e.g., [Ex, Ey]), set output_dims=(2,) for a [y,x,2] result array.
+- `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
 - Array with dimensions [y,x] or [y,x,output_dims...] depending on the function's return type
@@ -292,7 +315,8 @@ function _integrate_pixels_generic(
     f::Function,
     ::Type{T},
     output_dims=();
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 ) where T
     # Get pixel dimensions
     nx = length(pixel_edges_x) - 1
@@ -315,7 +339,8 @@ function _integrate_pixels_generic(
         pixel_edges_y,
         emitter,
         f,
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
     
     return result

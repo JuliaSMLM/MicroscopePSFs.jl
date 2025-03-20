@@ -32,6 +32,12 @@ pixels = integrate_pixels(psf, camera, emitter)
 
 # For complex amplitude integration
 pixels_amplitude = integrate_pixels_amplitude(psf, camera, emitter)
+
+# Optional parameters
+pixels = integrate_pixels(psf, camera, emitter; 
+                         support=0.5,    # 0.5μm radius around emitter
+                         sampling=2,     # 2×2 subpixel sampling
+                         threaded=true)  # Use multithreading
 ```
 
 The `integrate_pixels` function is the primary way to generate physically realistic microscope images, accounting for:
@@ -39,20 +45,33 @@ The `integrate_pixels` function is the primary way to generate physically realis
 - Camera pixel geometry
 - Emitter position and intensity
 
-### Optimization with Support Regions
+### Optional Parameters
 
-For performance optimization, both `integrate_pixels` and `integrate_pixels_amplitude` accept an optional `support` parameter to limit calculations to regions where the PSF has significant contribution:
+All integration functions accept these optional parameters:
 
-```julia
-# Calculate only within a radius of 0.5μm around the emitter
-pixels = integrate_pixels(psf, camera, emitter, support=0.5)
+1. **Support Region** (`support`): Limits calculations to regions where the PSF has significant contribution
+   ```julia
+   # Calculate only within a radius of 0.5μm around the emitter
+   pixels = integrate_pixels(psf, camera, emitter, support=0.5)
 
-# Or specify an explicit region
-region = (-1.0, 1.0, -1.0, 1.0)  # (x_min, x_max, y_min, y_max) in μm
-pixels = integrate_pixels(psf, camera, emitter, support=region)
-```
+   # Or specify an explicit region
+   region = (-1.0, 1.0, -1.0, 1.0)  # (x_min, x_max, y_min, y_max) in μm
+   pixels = integrate_pixels(psf, camera, emitter, support=region)
+   ```
 
-This optimization is particularly valuable for multi-emitter simulations.
+2. **Sub-pixel Sampling** (`sampling`): Controls integration accuracy
+   ```julia
+   # Use 4×4 sampling grid within each pixel for higher accuracy
+   pixels = integrate_pixels(psf, camera, emitter, sampling=4)
+   ```
+
+3. **Threading** (`threaded`): Controls parallelization
+   ```julia
+   # Disable multithreading (necessary for automatic differentiation)
+   pixels = integrate_pixels(psf, camera, emitter, threaded=false)
+   ```
+
+The support parameter optimization is particularly valuable for multi-emitter simulations. The threading parameter is important when using these functions with automatic differentiation frameworks.
 
 ### Multi-Emitter Simulation
 
@@ -70,6 +89,9 @@ pixels = integrate_pixels(psf, camera, emitters)
 
 # Use support region for efficiency
 pixels = integrate_pixels(psf, camera, emitters, support=0.5)
+
+# Disable threading if using with automatic differentiation
+pixels = integrate_pixels(psf, camera, emitters, threaded=false)
 ```
 
 For incoherent emitters (typical fluorescence), intensities are summed. For coherent simulations, use `integrate_pixels_amplitude`.
@@ -127,5 +149,16 @@ results_airy = analyze_psf_width(AiryPSF(1.4, 0.532))
 The interface is designed to be both flexible and performant. For high-performance applications, consider:
 
 1. Using the `support` parameter to limit calculations to relevant regions
-2. Using SplinePSF to pre-compute complex PSFs for faster evaluation
+2. Using SplinePSF to pre-compute complex PSFs for faster evaluation 
 3. Selecting the appropriate PSF model for your needs (simpler models are faster)
+
+### Automatic Differentiation Compatibility
+
+When using MicroscopePSFs.jl with automatic differentiation (AD) frameworks like Zygote or ForwardDiff:
+
+```julia
+# Disable threading for AD compatibility
+pixels = integrate_pixels(psf, camera, emitter, threaded=false)
+```
+
+Most AD frameworks do not support multithreading, so this parameter allows you to disable it when needed while maintaining threading performance in standard use cases.

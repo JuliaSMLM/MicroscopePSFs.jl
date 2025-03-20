@@ -422,15 +422,14 @@ end
 
 # --- Integration methods for pixel calculation ---
 
-
-
 """
     integrate_pixels(
         psf::SplinePSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
         support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     )
 
 Integrate PSF over camera pixels using interpolation.
@@ -443,6 +442,7 @@ Integrate PSF over camera pixels using interpolation.
   - If Real: radius in microns around emitter
   - If Tuple: explicit (x_min, x_max, y_min, y_max) in microns
 - `sampling`: Subpixel sampling density for integration accuracy
+- `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
 - Array of integrated PSF intensities with dimensions [ny, nx]
@@ -456,7 +456,8 @@ function integrate_pixels(
     camera::AbstractCamera,
     emitter::AbstractEmitter;
     support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 )
     # Check for 3D PSF with non-3D emitter
     if supports_3d(psf) && !has_z_coordinate(emitter)
@@ -469,7 +470,8 @@ function integrate_pixels(
         Tuple{AbstractPSF, AbstractCamera, AbstractEmitter}, 
         psf, camera, emitter;
         support=support,
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
 end
 
@@ -479,7 +481,8 @@ end
         camera::AbstractCamera,
         emitter::AbstractEmitter;
         support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-        sampling::Integer=2
+        sampling::Integer=2,
+        threaded::Bool=true
     )
 
 Integrate PSF amplitude (complex) over camera pixels.
@@ -492,6 +495,7 @@ Integrate PSF amplitude (complex) over camera pixels.
   - If Real: radius in microns around emitter
   - If Tuple: explicit (x_min, x_max, y_min, y_max) in microns
 - `sampling`: Subpixel sampling density for integration accuracy
+- `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
 - Array of integrated PSF complex amplitudes with dimensions [ny, nx]
@@ -504,7 +508,8 @@ function integrate_pixels_amplitude(
     camera::AbstractCamera,
     emitter::AbstractEmitter;
     support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}} = Inf,
-    sampling::Integer=2
+    sampling::Integer=2,
+    threaded::Bool=true
 )
     # Check for 3D PSF with non-3D emitter
     if supports_3d(psf) && !has_z_coordinate(emitter)
@@ -517,12 +522,10 @@ function integrate_pixels_amplitude(
         Tuple{AbstractPSF, AbstractCamera, AbstractEmitter}, 
         psf, camera, emitter;
         support=support,
-        sampling=sampling
+        sampling=sampling,
+        threaded=threaded
     )
 end
-
-# --- Pretty printing ---
-
 
 function Base.show(io::IO, psf::SplinePSF)
     nx = length(psf.x_range)

@@ -45,8 +45,8 @@ integrate_pixels_amplitude
 The following functions support integrating PSFs for multiple emitters:
 
 ```@docs
-integrate_pixels(psf::AbstractPSF, camera::AbstractCamera, emitters::Vector{<:AbstractEmitter}; support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf, sampling::Integer=2)
-integrate_pixels_amplitude(psf::AbstractPSF, camera::AbstractCamera, emitters::Vector{<:AbstractEmitter}; support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf, sampling::Integer=2)
+integrate_pixels(psf::AbstractPSF, camera::AbstractCamera, emitters::Vector{<:AbstractEmitter}; support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf, sampling::Integer=2, threaded::Bool=true)
+integrate_pixels_amplitude(psf::AbstractPSF, camera::AbstractCamera, emitters::Vector{<:AbstractEmitter}; support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf, sampling::Integer=2, threaded::Bool=true)
 ```
 
 ### Pupil Functions
