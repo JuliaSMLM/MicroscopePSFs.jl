@@ -48,8 +48,8 @@ end
 # Create heatmaps for each dipole orientation and field component
 for (i, psf) in enumerate(psfs)
     # Extract pupil fields - importantly, direct array access to preserve orientation
-    ex_field = psf.vector_pupils.Ex.field
-    ey_field = psf.vector_pupils.Ey.field
+    ex_field = psf.vector_pupils[1].Ex.field
+    ey_field = psf.vector_pupils[1].Ey.field
     
     # Apply mask to fields - set values outside pupil to NaN for nicer visualization
     ex_mag = abs.(ex_field)

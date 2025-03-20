@@ -73,5 +73,3 @@ function test_depth_dependence(psf::VectorPSF, max_depth::Real=5.0)
     end
 end
 test_depth_dependence(vector3d, 5.0)
-
-MicroscopePSFs.kpixelsize() 
