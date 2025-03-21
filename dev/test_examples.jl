@@ -1,14 +1,11 @@
-# Examples
-
-This page provides practical examples demonstrating common use cases of MicroscopePSFs.jl.
-
-## Rendering a Camera Image as a Heatmap
-To render an image so that it matches the coordinate system used by cameras, we need to place the (1,1) pixel at the top left corner and have the $y$ axis descend. Note the deliberate use of a non-square camera pixel array to demonstrate the coordinate system.
-
-```@example camera_heatmap
+using Pkg 
+Pkg.activate("dev")
+using Revise
 using MicroscopePSFs
 using CairoMakie
 using Enzyme 
+
+## Render a camera image as a heatmap 
 
 # Create a psf 
 psf = AiryPSF(1.4, 0.532)
@@ -27,17 +24,9 @@ ax = Axis(fig[1, 1], yreversed=true, aspect=DataAspect())
 heatmap!(ax, image', colormap=:inferno)
 display(fig)
 save("camera_heatmap.png", fig)
-```
 
-![](camera_heatmap.png)
 
-## Generate a Simulation with Multiple Emitters
-This example demonstrates how to simulate an image with multiple emitters very quickly. This could be used to simulate large data sets of SMLM data. It makes use of the SplinePSF and finite support regions. 
-
-```@example multi_emitters
-using MicroscopePSFs
-using CairoMakie
-using Enzyme 
+## Generate a simulation with multiple emitters
 
 # Create a psf with astigmatism
 zc = ZernikeCoefficients(15)
@@ -69,17 +58,10 @@ heatmap!(ax, image', colormap=:inferno)
 hidedecorations!(ax)
 display(fig)
 save("camera_multi_emitters.png", fig)
-```
 
-![](camera_multi_emitters.png)
 
-## Model a PSF Measurement with Stage Movement
-In the `VectorPSF` model, moving the stage and moving the emitter are not equivalent. This example demonstrates how to simulate a series of images with the stage moving in the $z$ direction, while the emitter stays fixed on the coverslip.  This is a common experimental prodecure to measure microscope PSFs.
 
-```@example stage_movement
-using MicroscopePSFs
-using CairoMakie
-using Enzyme 
+## Model a PSF measurement with stage movement (as opposed to emitter movement)
 
 # Create a Vector PSF with x-dipole 
 dipole = DipoleVector(1.0, 0.0, 0.0)  # x-dipole
@@ -112,18 +94,8 @@ for (i, image) in enumerate(z_stack)
 end
 display(fig)
 save("camera_z_stack_stage.png", fig)
-```
 
-![](camera_z_stack_stage.png)
-
-## Example of Using Enzyme to Differentiate a PSF
-We can differentiate both the `psf(x, y, z)` and the `integrate_pixels(psf, camera, emitter)` functions using Enzyme.jl.  
-
-### PSF Derivatives
-```@example psf_derivatives
-using MicroscopePSFs
-using CairoMakie
-using Enzyme 
+## Example of using Enzyme to differentiate a PSF 
 
 # Camera setup
 nx, ny, pixel_size = 20, 20, 0.1  # 100 nm pixels
@@ -156,25 +128,12 @@ ax4 = Axis(fig[1, 4], title = "dPSF/dz", yreversed=true, aspect=DataAspect())
 heatmap!(ax4, dz_values')
 display(fig)
 save("psf_derivatives.png", fig)
-```
 
-![](psf_derivatives.png)
-
-### Integrated PSF Derivatives
-
-```@example integrated_derivatives
-using MicroscopePSFs
-using CairoMakie
-using Enzyme 
+# Now try with integrating the PSF. 
 
 # Setup camera
 nx, ny, pixel_size = 20, 20, 0.1  # 100 nm pixels
 camera = IdealCamera(nx, ny, pixel_size)
-
-# Create PSF with astigmatism
-zc = ZernikeCoefficients(15)
-zc.phase[6] = 0.5  # Add vertical astigmatism
-psf = ScalarPSF(1.2, 0.6, 1.33; zernike_coeffs=zc)
 
 x_emitter = y_emitter = nx / 2 * pixel_size
 z_emitter, photons = 0.0, 1000.0
@@ -203,7 +162,8 @@ ax8 = Axis(fig2[1, 4], title = "dPSF/dz", yreversed=true, aspect=DataAspect())
 heatmap!(ax8, dz_image')
 display(fig2)
 save("psf_integrated_derivatives.png", fig2)
-```
 
-![](psf_integrated_derivatives.png)
+
+
+
 

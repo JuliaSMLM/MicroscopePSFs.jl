@@ -69,7 +69,7 @@
         # Test with Zernike aberrations
         zc = ZernikeCoefficients(15)
         zc.phase[6] = 0.5  # Add vertical astigmatism
-        psf_with_aberrations = ScalarPSF(1.4, 0.532, 1.518; coeffs=zc)
+        psf_with_aberrations = ScalarPSF(1.4, 0.532, 1.518; zernike_coeffs=zc)
         test_save_load(psf_with_aberrations, test_points)
     end
     

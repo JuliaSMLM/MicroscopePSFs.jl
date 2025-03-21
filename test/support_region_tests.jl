@@ -155,9 +155,9 @@
         psf = GaussianPSF(0.15)
         
         # Test different sampling rates
-        result_s1 = integrate_pixels(psf, camera, emitters[1], support=0.5, sampling=1)
-        result_s2 = integrate_pixels(psf, camera, emitters[1], support=0.5, sampling=2)
-        result_s4 = integrate_pixels(psf, camera, emitters[1], support=0.5, sampling=4)
+        result_s1 = integrate_pixels(psf, camera, emitters, support=0.5, sampling=1)
+        result_s2 = integrate_pixels(psf, camera, emitters, support=0.5, sampling=2)
+        result_s4 = integrate_pixels(psf, camera, emitters, support=0.5, sampling=4)
         
         @test size(result_s1) == size(result_s2) == size(result_s4) == (ny, nx)
         

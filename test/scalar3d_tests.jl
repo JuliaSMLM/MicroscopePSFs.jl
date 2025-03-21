@@ -16,7 +16,7 @@
         # Test with Zernike coefficients
         zernike = ZernikeCoefficients(4)  # 4 terms
         zernike.mag[2] = 0.2
-        psf_zernike = ScalarPSF(na, λ, n_medium; coeffs=zernike)
+        psf_zernike = ScalarPSF(na, λ, n_medium; zernike_coeffs=zernike)
         @test psf_zernike.zernike_coeffs.mag[2] ≈ 0.2
     end
     
@@ -70,7 +70,7 @@
         # Create aberrated PSF with vertical astigmatism
         zernike = ZernikeCoefficients(6)
         zernike.phase[6] = 0.2  # Astigmatism
-        psf_aberrated = ScalarPSF(na, λ, n_medium; coeffs=zernike)
+        psf_aberrated = ScalarPSF(na, λ, n_medium; zernike_coeffs=zernike)
         
         # Astigmatism breaks circular symmetry
         # Test at points on the x and y axes (should be different)
