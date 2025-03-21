@@ -214,3 +214,11 @@ save("psf_integrated_derivatives.png", fig2)
 
 ![](psf_integrated_derivatives.png)
 
+## CRLB Calculation Example
+We can use the derivatives from autodiff to calculate CRLBs. 
+
+```@example crlb_example
+
+
+```
+![](crlb_example.png)
