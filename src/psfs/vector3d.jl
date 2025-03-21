@@ -54,9 +54,9 @@ function VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
 
     # Fill with vector components using base aberration
     if !isnothing(base_pupil)
-        fill_vector_pupils!(vector_pupil, dipole, base_pupil)
+        fill_vector_pupils!(vector_pupil, dipole, base_pupil; normalize=true)
     else
-        fill_vector_pupils!(vector_pupil, dipole)
+        fill_vector_pupils!(vector_pupil, dipole; normalize=true)
     end
 
     # Create vector with single pupil
@@ -136,14 +136,30 @@ function VectorPSF(nₐ::Real, λ::Real;
     # Create vector pupils for each dipole orientation
     vector_pupils = Vector{VectorPupilFunction{T}}(undef, 3)
     
+    vector_pupils = Vector{VectorPupilFunction{T}}(undef, 3)
+    
     for i in 1:3
         pupil = VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, grid_size)
         if !isnothing(base_pupil)
-            fill_vector_pupils!(pupil, dipoles[i], base_pupil)
+            fill_vector_pupils!(pupil, dipoles[i], base_pupil, normalize=false)
         else
-            fill_vector_pupils!(pupil, dipoles[i])
+            fill_vector_pupils!(pupil, dipoles[i], normalize=false)
         end
         vector_pupils[i] = pupil
+    end
+    
+    # Calculate total energy across all pupils
+    total_energy = 0.0
+    for pupil in vector_pupils
+        kpix² = kpixelsize(pupil)^2
+        total_energy += (sum(abs2, pupil.Ex.field) + sum(abs2, pupil.Ey.field)) * kpix²
+    end
+    
+    # Apply joint normalization
+    scale = 1/sqrt(total_energy)
+    for pupil in vector_pupils
+        pupil.Ex.field .*= scale
+        pupil.Ey.field .*= scale
     end
 
     return VectorPSF{T}(
@@ -332,9 +348,9 @@ function update_pupils!(psf::VectorPSF)
     if length(psf.vector_pupils) == 1
         # Fill the vector pupil with updated components
         if !isnothing(updated_base_pupil)
-            fill_vector_pupils!(psf.vector_pupils[1], psf.dipole, updated_base_pupil)
+            fill_vector_pupils!(psf.vector_pupils[1], psf.dipole, updated_base_pupil; normalize=true)
         else
-            fill_vector_pupils!(psf.vector_pupils[1], psf.dipole)
+            fill_vector_pupils!(psf.vector_pupils[1], psf.dipole; normalize=true)
         end
     else
         # For rotating dipole case, update each pupil with its corresponding dipole orientation

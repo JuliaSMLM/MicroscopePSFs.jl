@@ -99,7 +99,8 @@ end
 
 """
     fill_vector_pupils!(vpupil::VectorPupilFunction, dipole::DipoleVector,
-                      base_pupil::Union{Nothing, PupilFunction}=nothing)
+                      base_pupil::Union{Nothing, PupilFunction}=nothing;
+                      normalize::Bool=true)
 
 Fill vector pupil function with field components including dipole orientation,
 base aberrations, and proper apodization.
@@ -111,12 +112,16 @@ This pre-calculates all position-independent factors of the pupil function.
 - `dipole`: Dipole orientation vector
 - `base_pupil`: Optional base aberration pupil function
 
+# Keyword Arguments
+- `normalize`: Whether to normalize the pupil function (default: true)
+
 # Returns
-- Filled and normalized vector pupil function
+- Filled vector pupil function (normalized if `normalize=true`)
 """
 function fill_vector_pupils!(vpupil::VectorPupilFunction, 
                            dipole::DipoleVector, 
-                           base_pupil::Union{Nothing, PupilFunction}=nothing)
+                           base_pupil::Union{Nothing, PupilFunction}=nothing;
+                           normalize::Bool=true)
     
     grid_size = size(vpupil.Ex.field, 1)
     xs = ys = range(-1, 1, length=grid_size)
@@ -163,8 +168,11 @@ function fill_vector_pupils!(vpupil::VectorPupilFunction,
         vpupil.Ey.field[j,i] = Ey
     end
     
-    # Normalize pupils
-    normalize!(vpupil)
+    # Normalize pupils only if requested
+    if normalize
+        normalize!(vpupil)
+    end
+    
     return vpupil
 end
 
