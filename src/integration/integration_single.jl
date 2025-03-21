@@ -271,14 +271,21 @@ function integrate_pixels(
     # Get pixel indices for the support region
     i_range, j_range = get_pixel_indices(pixel_edges_x, pixel_edges_y, emitter, support)
     
-    # Create views of the pixel edges for the region
-    edges_x_view = view(pixel_edges_x, minimum(i_range):maximum(i_range)+1)
-    edges_y_view = view(pixel_edges_y, minimum(j_range):maximum(j_range)+1)
-    
     # Allocate result for the full domain
     nx_full = length(pixel_edges_x) - 1
     ny_full = length(pixel_edges_y) - 1
     result_full = zeros(T, ny_full, nx_full)
+    
+    # Check if ranges are empty (emitter too far from camera or support too small)
+    if isempty(i_range) || isempty(j_range)
+        # Emitter is outside the camera's field of view with this support region
+        # Return zeros (no contribution)
+        return result_full
+    end
+    
+    # Create views of the pixel edges for the region
+    edges_x_view = view(pixel_edges_x, minimum(i_range):maximum(i_range)+1)
+    edges_y_view = view(pixel_edges_y, minimum(j_range):maximum(j_range)+1)
     
     # Create view of the result for the region
     result_view = view(result_full, j_range, i_range)
@@ -322,7 +329,7 @@ This version takes a camera object instead of explicit pixel edges.
 - `threaded::Bool=true`: Whether to use multi-threading for integration
 
 # Returns
-- Array of pixel values with dimensions [y,x] (matrix indexed [row,col])
+- Array of pixel values with dimensions [y, x] (matrix indexed [row,col])
 - Values are normalized to sum to 1
 - Array indices start at [1,1] for top-left pixel
 
@@ -403,14 +410,21 @@ function integrate_pixels_amplitude(
     # Get pixel indices for the support region
     i_range, j_range = get_pixel_indices(pixel_edges_x, pixel_edges_y, emitter, support)
     
-    # Create views of the pixel edges for the region
-    edges_x_view = view(pixel_edges_x, minimum(i_range):maximum(i_range)+1)
-    edges_y_view = view(pixel_edges_y, minimum(j_range):maximum(j_range)+1)
-    
     # Allocate result for the full domain
     nx_full = length(pixel_edges_x) - 1
     ny_full = length(pixel_edges_y) - 1
     result_full = zeros(T, ny_full, nx_full)
+    
+    # Check if ranges are empty (emitter too far from camera or support too small)
+    if isempty(i_range) || isempty(j_range)
+        # Emitter is outside the camera's field of view with this support region
+        # Return zeros (no contribution)
+        return result_full
+    end
+    
+    # Create views of the pixel edges for the region
+    edges_x_view = view(pixel_edges_x, minimum(i_range):maximum(i_range)+1)
+    edges_y_view = view(pixel_edges_y, minimum(j_range):maximum(j_range)+1)
     
     # Create view of the result for the region
     result_view = view(result_full, j_range, i_range)

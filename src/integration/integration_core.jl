@@ -50,6 +50,7 @@ Get the pixel indices that overlap with the support region.
 
 # Returns
 - Tuple of (i_range, j_range) with pixel indices that cover the support region
+  If the support region doesn't overlap with the camera, returns empty ranges
 """
 function get_pixel_indices(
     pixel_edges_x::AbstractVector,
@@ -79,6 +80,14 @@ function get_pixel_indices(
     i_max = searchsortedfirst(pixel_edges_x, x_max)
     j_min = searchsortedlast(pixel_edges_y, y_min)
     j_max = searchsortedfirst(pixel_edges_y, y_max)
+    
+    # Validate indices
+    if i_min >= length(pixel_edges_x) || i_max <= 1 || 
+       j_min >= length(pixel_edges_y) || j_max <= 1 ||
+       i_min >= i_max || j_min >= j_max
+        # Support region doesn't overlap with camera
+        return UnitRange{Int}(1:0), UnitRange{Int}(1:0)  # Empty ranges
+    end
     
     # Ensure at least one pixel in each dimension
     i_min = max(1, i_min)

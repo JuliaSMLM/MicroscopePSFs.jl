@@ -4,7 +4,7 @@
     ScalarPSF(nₐ::Real, λ::Real, n::Real;
                 pupil=nothing,
                 pupil_data::Union{Nothing,AbstractMatrix}=nothing,
-                coeffs=nothing)
+                zernike_coeffs=nothing)
 
 Create a scalar 3D PSF with the specified optical parameters.
 
@@ -16,13 +16,13 @@ Create a scalar 3D PSF with the specified optical parameters.
 # Keyword Arguments
 - `pupil`: Optional pre-created PupilFunction
 - `pupil_data`: Optional complex matrix to initialize the pupil function
-- `coeffs`: Optional ZernikeCoefficients for aberrations
+- `zernike_coeffs`: Optional ZernikeCoefficients for aberrations
 
 # Returns
 - `ScalarPSF`: 3D PSF with scalar diffraction model
 
 # Notes
-- Exactly one of `pupil`, `pupil_data`, or `coeffs` should be provided
+- Exactly one of `pupil`, `pupil_data`, or `zernike_coeffs` should be provided
 - If none are provided, creates an unaberrated pupil
 - The constructed PSF stores the provided Zernike coefficients for later use
 
@@ -34,13 +34,13 @@ psf = ScalarPSF(1.4, 0.532, 1.518)
 # Create PSF with Zernike aberrations
 zc = ZernikeCoefficients(15)
 add_astigmatism!(zc, 0.5)  # Add astigmatism
-psf = ScalarPSF(1.4, 0.532, 1.518; coeffs=zc)
+psf = ScalarPSF(1.4, 0.532, 1.518; zernike_coeffs=zc)
 ```
 """
 function ScalarPSF(nₐ::Real, λ::Real, n::Real;
     pupil::Union{Nothing,PupilFunction}=nothing,
     pupil_data::Union{Nothing,AbstractMatrix}=nothing,
-    coeffs::Union{Nothing,ZernikeCoefficients}=nothing)
+    zernike_coeffs::Union{Nothing,ZernikeCoefficients}=nothing)
     
     # Add this check to enforce n ≥ NA
     n >= nₐ || throw(ArgumentError("Refractive index (n=$n) must be ≥ numerical aperture (NA=$nₐ). " * 
@@ -53,12 +53,12 @@ function ScalarPSF(nₐ::Real, λ::Real, n::Real;
     elseif !isnothing(pupil_data)
         PupilFunction(nₐ, λ, n, pupil_data)
     else
-        zernike_coeffs = isnothing(coeffs) ? ZernikeCoefficients(1) : coeffs
-        PupilFunction(nₐ, λ, n, zernike_coeffs)
+        zernike_coeffs_out = isnothing(zernike_coeffs) ? ZernikeCoefficients(1) : zernike_coeffs
+        PupilFunction(nₐ, λ, n, zernike_coeffs_out)
     end
 
     normalize!(pupil_func)
-    stored_coeffs = !isnothing(coeffs) ? coeffs : nothing
+    stored_coeffs = !isnothing(zernike_coeffs) ? zernike_coeffs : nothing
     
     return ScalarPSF(nₐ, λ, n, pupil_func, stored_coeffs)
 end

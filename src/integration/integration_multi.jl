@@ -41,6 +41,7 @@ function integrate_pixels(
     sampling::Integer=2,
     threaded::Bool=true
 )
+    # Return zeros if no emitters
     isempty(emitters) && return zeros(Float64, length(pixel_edges_y)-1, length(pixel_edges_x)-1)
     
     # Determine result type from first emitter (promotion will happen automatically)
@@ -51,43 +52,21 @@ function integrate_pixels(
     ny = length(pixel_edges_y) - 1
     result = zeros(T, ny, nx)
     
-    # Process each emitter
+    # Process each emitter by calling the single emitter version and accumulating results
     for emitter in emitters
-        # Calculate the support region for this emitter
-        if support isa Real
-            # For radius, calculate region centered on this emitter
-            emitter_support = support
-        else
-            # For explicit region, use as is (fixed for all emitters)
-            emitter_support = support
-        end
-        
-        # Get pixel indices for the emitter's support region
-        i_range, j_range = get_pixel_indices(pixel_edges_x, pixel_edges_y, emitter, emitter_support)
-        
-        # Create views of the pixel edges for the region
-        edges_x_view = view(pixel_edges_x, minimum(i_range):maximum(i_range)+1)
-        edges_y_view = view(pixel_edges_y, minimum(j_range):maximum(j_range)+1)
-        
-        # Create view of the result array for the region
-        result_view = view(result, j_range, i_range)
-        
-        # Temporary buffer for this emitter's contribution to the region
-        buffer = zeros(T, length(j_range), length(i_range))
-        
-        # Integrate this emitter's contribution
-        integrate_pixels!(
-            buffer,
+        # Get the contribution from this emitter
+        emitter_result = integrate_pixels(
             psf,
-            edges_x_view,
-            edges_y_view,
+            pixel_edges_x,
+            pixel_edges_y,
             emitter;
+            support=support,
             sampling=sampling,
             threaded=threaded
         )
         
         # Add to the result
-        result_view .+= buffer
+        result .+= emitter_result
     end
     
     return result
@@ -176,6 +155,7 @@ function integrate_pixels_amplitude(
     sampling::Integer=2,
     threaded::Bool=true
 )
+    # Return zeros if no emitters
     isempty(emitters) && return zeros(Complex{Float64}, length(pixel_edges_y)-1, length(pixel_edges_x)-1)
     
     # Determine result type from first emitter
@@ -186,43 +166,21 @@ function integrate_pixels_amplitude(
     ny = length(pixel_edges_y) - 1
     result = zeros(T, ny, nx)
     
-    # Process each emitter
+    # Process each emitter by calling the single emitter version and accumulating results
     for emitter in emitters
-        # Calculate the support region for this emitter
-        if support isa Real
-            # For radius, calculate region centered on this emitter
-            emitter_support = support
-        else
-            # For explicit region, use as is (fixed for all emitters)
-            emitter_support = support
-        end
-        
-        # Get pixel indices for the emitter's support region
-        i_range, j_range = get_pixel_indices(pixel_edges_x, pixel_edges_y, emitter, emitter_support)
-        
-        # Create views of the pixel edges for the region
-        edges_x_view = view(pixel_edges_x, minimum(i_range):maximum(i_range)+1)
-        edges_y_view = view(pixel_edges_y, minimum(j_range):maximum(j_range)+1)
-        
-        # Create view of the result array for the region
-        result_view = view(result, j_range, i_range)
-        
-        # Temporary buffer for this emitter's contribution to the region
-        buffer = zeros(T, length(j_range), length(i_range))
-        
-        # Integrate this emitter's contribution
-        integrate_pixels_amplitude!(
-            buffer,
+        # Get the contribution from this emitter
+        emitter_result = integrate_pixels_amplitude(
             psf,
-            edges_x_view,
-            edges_y_view,
+            pixel_edges_x,
+            pixel_edges_y,
             emitter;
+            support=support,
             sampling=sampling,
             threaded=threaded
         )
         
         # Add to the result
-        result_view .+= buffer
+        result .+= emitter_result
     end
     
     return result
