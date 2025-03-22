@@ -27,6 +27,7 @@ makedocs(;
             "SplinePSF" => "psfs/splinepsf.md",
         ],
         "Zernike Polynomials" => "zernike.md",
+        "I/O Functionality" => "io.md",
         "Examples" => "examples.md",
         "API Reference" => "api.md",
     ],
