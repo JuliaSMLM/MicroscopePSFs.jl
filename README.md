@@ -19,10 +19,10 @@ A Julia package for working with microscope Point Spread Functions (PSFs). This 
 
 | PSF Type | Description | Key Parameters | When to Use |
 |:---------|:------------|:---------------|:------------|
-| `Gaussian2D` | Isotropic 2D Gaussian | `σ` | Rapid prototyping, computational efficiency |
-| `Airy2D` | Diffraction-limited circular aperture | `NA`, `λ` | Accurate 2D diffraction modeling |
-| `Scalar3DPSF` | 3D scalar diffraction model | `NA`, `λ`, `n` | 3D imaging, aberrations |
-| `Vector3DPSF` | 3D vectorial model with polarization | `NA`, `λ`, dipole, refractive indices | High-NA objectives, polarization effects |
+| `GaussianPSF` | Isotropic 2D Gaussian | `σ` | Rapid prototyping, computational efficiency |
+| `AiryPSF` | Diffraction-limited circular aperture | `NA`, `λ` | Accurate 2D diffraction modeling |
+| `ScalarPSF` | 3D scalar diffraction model | `NA`, `λ`, `n` | 3D imaging, aberrations |
+| `VectorPSF` | 3D vectorial model with polarization | `NA`, `λ`, dipole, refractive indices | High-NA objectives, polarization effects |
 | `SplinePSF` | B-spline approximation | Sampled grid | Accelerating computation of complex PSFs |
 
 For detailed descriptions of each PSF type, see the [documentation](https://JuliaSMLM.github.io/MicroscopePSFs.jl/stable/psfs/overview/).
@@ -58,9 +58,9 @@ Pkg.add("MicroscopePSFs")
 using MicroscopePSFs
 
 # Create a PSF model
-psf = Airy2D(1.4, 0.532)  # NA = 1.4, λ = 532nm
+psf = AiryPSF(1.4, 0.532)  # NA = 1.4, λ = 532nm
 # or
-psf = Gaussian2D(0.15)    # σ = 150nm
+psf = GaussianPSF(0.15)    # σ = 150nm
 
 # Direct PSF evaluation at a point
 intensity = psf(0.5, 0.3)  # x = 0.5μm, y = 0.3μm
@@ -81,8 +81,8 @@ pixels = integrate_pixels(psf, camera, emitter)
 ```julia
 # Create a 3D PSF with aberrations
 zernike = ZernikeCoefficients(15)        # Up to 15 Zernike terms
-zernike[5] = 1.0 # Add astigmatism
-psf_3d = Scalar3DPSF(1.4, 0.532, 1.518, coeffs=zernike)
+zernike.phase[6] = 0.5  # Add vertical astigmatism
+psf_3d = ScalarPSF(1.4, 0.532, 1.518; zernike_coeffs=zernike)
 
 # Create 3D emitter
 emitter_3d = Emitter3D(1.0, 1.0, 0.5, 1000.0)  # x, y, z, photons
@@ -96,7 +96,7 @@ pixels_3d = integrate_pixels(psf_3d, camera, emitter_3d)
 - All physical dimensions are in micrometers (μm)
 - Function arguments are (x, y, z)
 - Array dimensions are [y, x, z]
-- Camera coordinates have (0,0) at the top-left corner
+- Camera coordinates have (0,0) at the top-left corner of the top-left pixel
 
 For detailed conventions, see the [documentation](https://JuliaSMLM.github.io/MicroscopePSFs.jl/stable/conventions/).
 
