@@ -163,7 +163,3 @@ heatmap!(ax8, dz_image')
 display(fig2)
 save("psf_integrated_derivatives.png", fig2)
 
-
-
-
-
