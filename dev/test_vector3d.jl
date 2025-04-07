@@ -46,19 +46,19 @@ psf = VectorPSF(
 )
 
 # Check normalization over camera
-emitter_center = Emitter3D(nx/2 * pixel_size, ny/2 * pixel_size, 0.0, 0.0)
+emitter_center = Emitter3D(nx/2 * pixel_size, ny/2 * pixel_size, 0.0, 1.0)
 psf_normalized = integrate_pixels(psf, camera, emitter_center)
 println("PSF normalization: ", sum(psf_normalized))
 
 # Evaluation coordinates
 x = y = range(-1, 1, 100)  # PSF field coordinates
-z_planes = [-1.0, -0.5, 0.0, 0.5, 1.0]  # z positions in microns
+z_planes = [0.0, 0.25, 0.5, 0.75, 1.0]  # z positions in microns
 
 # Emitter positions to test
 emitters = [
     Emitter3D(1.0, 0.5, 0.0, 1000.0),    # center, in focus
-    Emitter3D(1.5, 0.3, 0.5, 1000.0),    # right side, above focus
-    Emitter3D(0.5, 0.7, -0.5, 1000.0),   # left side, below focus
+    Emitter3D(1.5, 0.3, 1.2, 1000.0),    # right side, above focus
+    Emitter3D(0.5, 0.7, 0.5, 1000.0),   # left side, below focus
     Emitter3D(1.2, 0.4, 1.0, 1000.0),    # off center, far from focus
 ]
 

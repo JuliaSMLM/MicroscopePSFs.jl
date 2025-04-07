@@ -139,8 +139,8 @@ function fill_vector_pupils!(vpupil::VectorPupilFunction,
         ϕ = ComplexF64(atan(y, x))
             
         # Calculate angles in medium for field components
-        sinθ = sqrt(complex(kr2*vpupil.λ^2/(4π^2*vpupil.n_medium^2)))
-        cosθ = sqrt(complex(1 - kr2*vpupil.λ^2/(4π^2*vpupil.n_medium^2)))
+        sinθ = sqrt(complex(kr2 * vpupil.λ^2 / vpupil.n_medium^2))
+        cosθ = sqrt(complex(1 - kr2 * vpupil.λ^2 / vpupil.n_medium^2))
         
         # Calculate Fresnel coefficients for interfaces
         Tp, Ts = calculate_fresnel_coefficients(

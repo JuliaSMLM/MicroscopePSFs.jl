@@ -51,8 +51,8 @@ Calculate Fresnel transmission coefficients for a single interface.
 """
 function calculate_interface_fresnel(kr2::Real, λ::Real, n1::Real, n2::Real)
     # Calculate cosines of angles in both media
-    cosθ1 = sqrt(complex(1 - kr2 * λ^2 / (4π^2 * n1^2)))
-    cosθ2 = sqrt(complex(1 - kr2 * λ^2 / (4π^2 * n2^2)))
+    cosθ1 = sqrt(complex(1 - kr2 * λ^2 / n1^2))
+    cosθ2 = sqrt(complex(1 - kr2 * λ^2 / n2^2))
 
     # Calculate transmission coefficients
     Tp = 2 * n1 * cosθ1 / (n1 * cosθ2 + n2 * cosθ1)
@@ -167,8 +167,8 @@ Calculate apodization factor for energy conservation.
 function calculate_apodization(kr2::Real, λ::Real,
     n_medium::Real, n_immersion::Real)
     # Calculate cosines of angles
-    cosθ_medium = sqrt(complex(1 - kr2 * λ^2 / (4π^2 * n_medium^2)))
-    cosθ_immersion = sqrt(complex(1 - kr2 * λ^2 / (4π^2 * n_immersion^2)))
+    cosθ_medium = sqrt(complex(1 - kr2 * λ^2 / n_medium^2))
+    cosθ_immersion = sqrt(complex(1 - kr2 * λ^2 / n_immersion^2))
 
     # Calculate apodization factor
     # This accounts for the change in solid angle with refraction
