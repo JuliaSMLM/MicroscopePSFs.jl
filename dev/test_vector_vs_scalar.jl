@@ -16,7 +16,7 @@ n_immersion = 1.52  # Immersion medium refractive index (oil)
 z_stage = 1.0  # Distance the sample stage was moved away from the nominal focal plane at the coverslip
 
 # Create dipole orientation (x-oriented)
-dipole = DipoleVector(1.0, 1.0, 0.0)
+dipole = DipoleVector(0.0, 1.0, 0.0)
 
 # Create Zernike coefficients with astigmatism
 zc = ZernikeCoefficients(15)
@@ -24,7 +24,7 @@ zc.phase[6] = 1.0  # Add vertical astigmatism
 
 # Create VectorPSF with x-oriented dipole
 vector_psf = VectorPSF(
-    na, λ, dipole; 
+    na, λ; # no dipole so it will use freely rotating dipole 
     base_zernike=zc,
     n_medium=n_medium, 
     n_coverslip=n_coverslip, 
@@ -33,7 +33,7 @@ vector_psf = VectorPSF(
 )
 
 # Create ScalarPSF with the same aberration
-scalar_psf = ScalarPSF(na, λ, n_medium; coeffs=zc)
+scalar_psf = ScalarPSF(na, λ, n_medium; zernike_coeffs=zc)
 
 # Evaluation coordinates
 x = y = range(-1, 1, 100)  # PSF field coordinates
@@ -81,7 +81,7 @@ for (i, (ax, z)) in enumerate(zip(vector_axes, z_planes))
     setup_axis!(ax, @sprintf("z = %.1f μm", z))
     
     # Calculate vector PSF intensity
-    vector_intensity = [vector_psf(xi, yi, z) for yi in y, xi in x]
+    vector_intensity = [vector_psf(xi, yi, z + z_stage) for yi in y, xi in x]
     hm = heatmap!(ax, x, y, vector_intensity, colormap=:viridis)
     
     # Add colorbar for last plot
@@ -103,11 +103,11 @@ ax_zslice = Axis(g_slice[2, 1],
 
 # Calculate cross-section data
 x_profile = [scalar_psf(xi, 0.0, 0.0) for xi in x]
-v_x_profile = [vector_psf(xi, 0.0, 0.0) for xi in x]
+v_x_profile = [vector_psf(xi, 0.0, z_stage) for xi in x]
 
 z_fine = range(-1.0, 1.0, 100)
 z_profile = [scalar_psf(0.0, 0.0, zi) for zi in z_fine]
-v_z_profile = [vector_psf(0.0, 0.0, zi) for zi in z_fine]
+v_z_profile = [vector_psf(0.0, 0.0, zi+z_stage) for zi in z_fine]
 
 # Plot cross-sections
 lines!(ax_xslice, x, x_profile, label="Scalar PSF", linewidth=3)
