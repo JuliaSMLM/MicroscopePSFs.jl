@@ -307,7 +307,7 @@ function (psf::VectorPSF)(x::Real, y::Real, z::Real)
         end
         
         # Return average intensity
-        return intensity / length(psf.vector_pupils)
+        return intensity 
     end
 end
 
@@ -371,10 +371,6 @@ function update_pupils!(psf::VectorPSF)
 
     return psf
 end
-
-
-# Update to src/psfs/vector3d.jl
-# Add these methods at the end of the file
 
 """
     integrate_pixels_amplitude!(
