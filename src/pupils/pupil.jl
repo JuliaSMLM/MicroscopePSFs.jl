@@ -91,7 +91,7 @@ function PupilFunction(nₐ::Real, λ::Real, n::Real,
         # Accumulate amplitude aberrations
         for n_rad in 0:max_n
             for m in -n_rad:2:n_rad
-                idx = nl2osa(n_rad, m) + 1  # +1 for 1-based indexing
+                idx = nl2noll(n_rad, m) 
                 if idx > length(zc.mag)
                     continue
                 end
@@ -115,7 +115,7 @@ function PupilFunction(nₐ::Real, λ::Real, n::Real,
         # Accumulate phase aberrations
         for n_rad in 0:max_n
             for m in -n_rad:2:n_rad
-                idx = nl2osa(n_rad, m) + 1
+                idx = nl2noll(n_rad, m)
                 if idx > length(zc.phase)
                     continue
                 end
@@ -127,7 +127,7 @@ function PupilFunction(nₐ::Real, λ::Real, n::Real,
                 if abs(phase_coeff) < 1e-10
                     continue
                 end
-
+  
                 # Evaluate Zernike polynomial
                 Z = zernikepolynomial(n_rad, m, ρ, θ)
 
