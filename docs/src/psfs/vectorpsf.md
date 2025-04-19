@@ -1,10 +1,10 @@
 # VectorPSF
 
-The `VectorPSF` model implements a comprehensive three-dimensional point spread function based on vectorial diffraction theory. It accounts for polarization effects, high-NA phenomena, dipole emission patterns, refractive index interfaces, and arbitrary aberrations, providing the highest level of physical accuracy among the PSF models.
+The `VectorPSF` model implements a comprehensive three-dimensional point spread function based on vectorial diffraction theory. It accounts for polarization effects, high-NA phenomena, dipole emission patterns, refractive index interfaces, and arbitrary aberrations.
 
 ## Mathematical Model
 
-The VectorPSF implements the full Richards-Wolf vector diffraction theory, accounting for the vectorial nature of light. The key formula for the electric field at the image plane is:
+The VectorPSF is based on the vector Debye integral originally derived by Richards & Wolf and later extended for oriented dipole emission and stratified media by Sheppard–Török, Enderlein, and others. The expression for the electric field at the image plane is:
 
 $$PSF(x - x_i, y - y_i, z_i, z_s) = \sum_{m=x,y} \sum_{n=p_x, p_y, p_z} |F[h(k_x, k_y)w_{m,n}A(k_x, k_y)e^{\iota 2\pi(k_x x_i+k_y y_i+k_{z\mathrm{med}} z_i-k_{z\mathrm{imm}}z_s)}]|^2$$
 
