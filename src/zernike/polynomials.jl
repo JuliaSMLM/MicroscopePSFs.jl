@@ -141,15 +141,26 @@ end
 """
     max_radial_order(num_coeffs::Integer)
 
-Calculate maximum radial order N given number of coefficients L.
-Solves (N+1)(N+2)/2 = L
+Calculate maximum radial order N given number of coefficients L using Noll indexing.
+Returns the maximum radial order where at least one Zernike term can be represented
+(even if not all terms of that order can fit in the coefficient vector).
+
+# Arguments
+- `num_coeffs`: Maximum Noll index available
+
+# Returns
+- Maximum radial order n where at least the first term of that order has index ≤ num_coeffs
 """
 function max_radial_order(num_coeffs::Integer)
-    # Solve quadratic equation (N+1)(N+2)/2 = L
-    # N² + 3N + (2-2L) = 0
-    a = 1
-    b = 3
-    c = 2 - 2 * num_coeffs
-    N = (-b + sqrt(b^2 - 4a * c)) / (2a)
-    return floor(Int, N)
+    num_coeffs < 1 && return 0
+    
+    # Use the fact that the first Noll index for radial order n is approximately n(n+1)/2 + 1
+    # We want to find largest n where n(n+1)/2 + 1 ≤ num_coeffs
+    # This solves: n² + n - 2(num_coeffs-1) ≤ 0
+    
+    # Quadratic formula for n² + n - 2(num_coeffs-1) = 0
+    discriminant = 1 + 8*(num_coeffs-1)
+    n = floor(Int, (-1 + sqrt(discriminant))/2)
+    
+    return n
 end
