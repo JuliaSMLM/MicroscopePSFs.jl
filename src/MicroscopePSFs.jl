@@ -1,5 +1,22 @@
 # src/MicroscopePSFs.jl
 
+"""
+    MicroscopePSFs
+
+A Julia package for working with microscope Point Spread Functions (PSFs).
+This package provides implementations of common PSF models and tools for 
+integrating them with camera geometry for single-molecule localization 
+microscopy applications.
+
+# API Overview
+For a comprehensive overview of the API, use the help mode on `api_overview`:
+
+    ?api_overview
+
+Or access the complete API documentation programmatically:
+
+    docs = MicroscopePSFs.api_overview()
+"""
 module MicroscopePSFs
 
 using LinearAlgebra
@@ -78,5 +95,8 @@ include("psfs/spline_psf.jl")
 
 # I/O functions
 include("io/io.jl")
+
+# Include the API overview functionality
+include("api.jl")
 
 end

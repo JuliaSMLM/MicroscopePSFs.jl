@@ -21,23 +21,23 @@ The pupil function can incorporate various aberrations, typically represented us
 ## Constructor and Parameters
 
 ```julia
-ScalarPSF(na::Real, wavelength::Real, n::Real; 
+ScalarPSF(nₐ::Real, λ::Real, n::Real; 
          pupil::Union{Nothing, PupilFunction}=nothing,
          pupil_data::Union{Nothing, AbstractMatrix}=nothing,
-         coeffs::Union{Nothing, ZernikeCoefficients}=nothing)
+         zernike_coeffs::Union{Nothing, ZernikeCoefficients}=nothing)
 ```
 
 ### Required Parameters
 
-- `na`: Numerical aperture of the objective
-- `wavelength`: Wavelength of light in microns
+- `nₐ`: Numerical aperture of the objective
+- `λ`: Wavelength of light in microns
 - `n`: Refractive index of the medium
 
 ### Optional Parameters
 
 - `pupil`: Pre-created `PupilFunction` instance
 - `pupil_data`: Complex matrix to initialize the pupil function
-- `coeffs`: `ZernikeCoefficients` instance for representing aberrations
+- `zernike_coeffs`: `ZernikeCoefficients` instance for representing aberrations
 
 You should provide exactly one of the optional parameters. If none are provided, an unaberrated pupil is created.
 
@@ -50,37 +50,38 @@ You should provide exactly one of the optional parameters. If none are provided,
 
 ## Aberration Modeling
 
-A key feature of the ScalarPSF is its ability to incorporate optical aberrations:
+A key feature of the ScalarPSF is its ability to incorporate optical aberrations using Zernike polynomials with Noll indexing and RMS normalization:
 
 ```julia
 # Create Zernike coefficients object
-zc = ZernikeCoefficients(15)  # Up to 15th Zernike polynomial
+zc = ZernikeCoefficients(15)  # Up to 15th Zernike polynomial (Noll indexed)
 
-# Add common aberrations
-add_defocus!(zc, 1.0)         # 1 wave of defocus
-add_astigmatism!(zc, 0.5)     # 0.5 waves of astigmatism
-add_coma!(zc, 0.3)            # 0.3 waves of coma
-add_spherical!(zc, 0.2)       # 0.2 waves of spherical aberration
+# Add common aberrations by directly setting coefficients
+# Note: The package uses Noll indexing and RMS normalization
+zc.phase[4] = 0.5   # 0.5 waves RMS of defocus (Noll index 4)
+zc.phase[5] = 0.3   # 0.3 waves RMS of astigmatism (Noll index 5)
+zc.phase[7] = 0.2   # 0.2 waves RMS of coma (Noll index 7)
+zc.phase[11] = 0.1  # 0.1 waves RMS of spherical aberration (Noll index 11)
 
 # Create PSF with these aberrations
-psf = ScalarPSF(1.4, 0.532, 1.518, coeffs=zc)
+psf = ScalarPSF(1.4, 0.532, 1.518, zernike_coeffs=zc)
 ```
 
 ## Examples
 
-Creating a Scalar3DPSF:
+Creating a ScalarPSF:
 
 ```julia
 # Create a basic unaberrated 3D PSF
 psf = ScalarPSF(1.4, 0.532, 1.518)  # NA=1.4, λ=532nm, n=1.518
 
 # Create a PSF with spherical aberration
-zc = ZernikeCoefficients(15)  # Up to 15th Zernike polynomial
-add_spherical!(zc, 0.5)       # Add 0.5 waves of spherical aberration
-psf_aberrated = ScalarPSF(1.4, 0.532, 1.518, coeffs=zc)
+zc = ZernikeCoefficients(15)  # Up to 15th Zernike polynomial (Noll indexed)
+zc.phase[11] = 0.5            # Add 0.5 waves RMS of spherical aberration (Noll index 11)
+psf_aberrated = ScalarPSF(1.4, 0.532, 1.518, zernike_coeffs=zc)
 
 # Create a PSF with a pre-computed pupil function
-pupil = PupilFunction(1.4, 0.532, 1.518, zernike_coeffs)
+pupil = PupilFunction(1.4, 0.532, 1.518, zc)
 psf_from_pupil = ScalarPSF(1.4, 0.532, 1.518, pupil=pupil)
 ```
 

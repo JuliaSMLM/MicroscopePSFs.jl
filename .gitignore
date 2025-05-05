@@ -15,3 +15,5 @@
 dev/Manifest.toml
 Manifest.toml
 Manifest.toml
+
+**/.claude/settings.local.json

@@ -14,16 +14,17 @@ A Julia package for working with microscope Point Spread Functions (PSFs). This 
 - Complex field amplitude calculations for coherent optics
 - Flexible pixel integration with adjustable sampling density
 - Zernike polynomial tools for wavefront modeling
+- Support for dipole emitters and polarization effects
 
 ## PSF Models Overview
 
 | PSF Type | Description | Key Parameters | When to Use |
 |:---------|:------------|:---------------|:------------|
 | `GaussianPSF` | Isotropic 2D Gaussian | `σ` | Rapid prototyping, computational efficiency |
-| `AiryPSF` | Diffraction-limited circular aperture | `NA`, `λ` | Accurate 2D diffraction modeling |
-| `ScalarPSF` | 3D scalar diffraction model | `NA`, `λ`, `n` | 3D imaging, aberrations |
-| `VectorPSF` | 3D vectorial model with polarization | `NA`, `λ`, dipole, refractive indices | High-NA objectives, polarization effects |
-| `SplinePSF` | B-spline approximation | Sampled grid | Accelerating computation of complex PSFs |
+| `AiryPSF` | Diffraction-limited circular aperture | `nₐ`, `λ` | Accurate 2D diffraction modeling |
+| `ScalarPSF` | 3D scalar diffraction model | `nₐ`, `λ`, `n` | 3D imaging, aberrations |
+| `VectorPSF` | 3D vectorial model with polarization | `nₐ`, `λ`, optional dipole | High-NA objectives, polarization effects |
+| `SplinePSF` | B-spline approximation | Source PSF, sampling parameters | Accelerating computation of complex PSFs |
 
 For detailed descriptions of each PSF type, see the [documentation](https://JuliaSMLM.github.io/MicroscopePSFs.jl/stable/psfs/overview/).
 
@@ -55,21 +56,20 @@ Pkg.add("MicroscopePSFs")
 ## Basic Usage
 
 ```julia
-using MicroscopePSFs
+using MicroscopePSFs, SMLMData
 
 # Create a PSF model
-psf = AiryPSF(1.4, 0.532)  # NA = 1.4, λ = 532nm
+psf = AiryPSF(1.4, 0.532)  # NA = 1.4, λ = 0.532μm (532nm)
 # or
-psf = GaussianPSF(0.15)    # σ = 150nm
+psf = GaussianPSF(0.15)    # σ = 0.15μm (150nm)
 
 # Direct PSF evaluation at a point
 intensity = psf(0.5, 0.3)  # x = 0.5μm, y = 0.3μm
 
-# Get complex field amplitude
-amp = amplitude(psf, 0.5, 0.3)
+# Create camera (20×20 pixels, 0.1μm pixel size)
+camera = IdealCamera(20, 20, 0.1)
 
-# Create camera and emitter
-camera = IdealCamera(20, 20, 0.1)  # 20×20 pixels, 100nm pixel size
+# Create emitter 
 emitter = Emitter2D(1.0, 1.0, 1000.0)  # x = 1μm, y = 1μm, 1000 photons
 
 # Generate realistic microscope image
@@ -80,9 +80,9 @@ pixels = integrate_pixels(psf, camera, emitter)
 
 ```julia
 # Create a 3D PSF with aberrations
-zernike = ZernikeCoefficients(15)        # Up to 15 Zernike terms
-zernike.phase[6] = 0.5  # Add vertical astigmatism
-psf_3d = ScalarPSF(1.4, 0.532, 1.518; zernike_coeffs=zernike)
+zernike_coeffs = ZernikeCoefficients(15)        # Up to 15 Zernike terms
+zernike_coeffs[6] = 0.5                         # Add vertical astigmatism
+psf_3d = ScalarPSF(1.4, 0.532, 1.518; zernike_coeffs=zernike_coeffs)
 
 # Create 3D emitter
 emitter_3d = Emitter3D(1.0, 1.0, 0.5, 1000.0)  # x, y, z, photons
@@ -108,4 +108,4 @@ Comprehensive documentation is available:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details
