@@ -1,12 +1,12 @@
-# Integrating API Overview into Package
+# Integrate API Overview Into This Package's Help System
 
-This document provides instructions for integrating the API overview into the package structure.
+Please create the necessary code to integrate an api_overview.md file into this Julia package's help system. You'll need to create an api.jl file that makes the documentation accessible via Julia's help system.
 
-## Integration Steps
+## Implementation Steps
 
 ### Step 1: Create src/api.jl
 
-Create a new file at `src/api.jl` with the following generic code:
+Create a new file at `src/api.jl` with the following code:
 
 ```julia
 # Simple API overview functionality for Julia packages
@@ -28,7 +28,7 @@ const _API_OVERVIEW = if isfile(_API_OVERVIEW_PATH)
 else
     """
     API overview documentation not found.
-    
+
     Expected file: $(basename(_API_OVERVIEW_PATH))
     Expected location: $(dirname(_API_OVERVIEW_PATH))
     """
@@ -47,9 +47,15 @@ end
 # Note: No export statement - this function remains internal to the package
 ```
 
+This code:
+1. Locates the package root directory
+2. Loads the content of `api_overview.md` if it exists
+3. Creates an `api_overview()` function that returns the documentation
+4. Adds the documentation to the function's docstring, making it accessible via Julia's help system
+
 ### Step 2: Update Your Main Package File
 
-Add the following to your main package file (`src/MicroscopePSFs.jl`):
+Add the following to your main package file (`src/YourPackage.jl`):
 
 1. Include the `api.jl` file near the end of your module:
 
@@ -64,12 +70,9 @@ Your module docstring should look something like this:
 
 ```julia
 """
-    MicroscopePSFs
+    YourPackage
 
-A Julia package for working with microscope Point Spread Functions (PSFs).
-This package provides implementations of common PSF models and tools for 
-integrating them with camera geometry for single-molecule localization 
-microscopy applications.
+[Your normal package description here]
 
 # API Overview
 For a comprehensive overview of the API, use the help mode on `api_overview`:
@@ -78,9 +81,9 @@ For a comprehensive overview of the API, use the help mode on `api_overview`:
 
 Or access the complete API documentation programmatically:
 
-    docs = MicroscopePSFs.api_overview()
+    docs = YourPackage.api_overview()
 """
-module MicroscopePSFs
+module YourPackage
 # Rest of your module code...
 ```
 
@@ -89,21 +92,45 @@ module MicroscopePSFs
 After implementing these changes:
 
 1. Build/load your package
-2. Test the help mode: `?MicroscopePSFs.api_overview`
-3. Test programmatic access: `docs = MicroscopePSFs.api_overview()`
+2. Test the help mode: `?YourPackage.api_overview`
+3. Test programmatic access: `docs = YourPackage.api_overview()`
 
-## Why Integrate the API Overview?
+## How It Works
 
-### For Humans
-- Provides a **concise reference** without diving into full documentation
-- Offers **quick-start examples** for common use cases
-- Shows **relevant patterns** more clearly than individual docstrings
-- Creates an **at-a-glance understanding** of package capabilities
-- Complements detailed documentation with a **higher-level view**
+The implementation works by:
 
-### For AI Assistants
-- Enables **better code generation** with correct API patterns
-- Provides **structured context** about type hierarchies and relationships
-- Offers **consistent examples** to learn from when generating code
-- Creates **clear patterns** to follow when suggesting package usage
-- Helps avoid **common pitfalls** or misunderstandings about the API
+1. Reading the `api_overview.md` file at package load time
+2. Storing the content in a constant variable
+3. Using the content in the docstring of the `api_overview()` function
+4. Making the function available for programmatic access
+
+This approach ensures that:
+- Documentation is always available through Julia's help system
+- The document can be accessed programmatically
+- The implementation has minimal impact on package load time
+- Updates to the `api_overview.md` file are automatically reflected when the package is rebuilt
+
+## Accessing the Documentation
+
+Users of your package can access the API documentation in two ways:
+
+```julia
+# View documentation in help mode (most common)
+?YourPackage.api_overview
+
+# Access documentation programmatically
+docs = YourPackage.api_overview()
+```
+
+The help mode provides the documentation in a formatted, searchable interface, while the programmatic access allows users to extract and process the documentation as needed.
+
+## Benefits of This Approach
+
+1. **Separation of Concerns**: Documentation content is separate from code
+2. **Easy Maintenance**: Update the documentation without changing code
+3. **REPL Integration**: Full access through Julia's built-in help system
+4. **Programmatic Access**: Documentation available as a string for further processing
+5. **Fallback Message**: Clear error message if the documentation file is missing
+6. **No Exports**: Function doesn't clutter the package's exported namespace
+
+By implementing this system, you provide a consistent, accessible way for both humans and AI assistants to understand your package's API without having to navigate through individual function docstrings or external documentation sites.
