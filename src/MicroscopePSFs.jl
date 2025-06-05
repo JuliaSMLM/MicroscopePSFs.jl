@@ -9,13 +9,13 @@ integrating them with camera geometry for single-molecule localization
 microscopy applications.
 
 # API Overview
-For a comprehensive overview of the API, use the help mode on `api_overview`:
+For a comprehensive overview of the API, use the help mode on `api`:
 
-    ?api_overview
+    ?api
 
 Or access the complete API documentation programmatically:
 
-    docs = MicroscopePSFs.api_overview()
+    docs = MicroscopePSFs.api()
 """
 module MicroscopePSFs
 
