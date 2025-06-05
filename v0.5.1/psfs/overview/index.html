@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Overview · MicroscopePSFs.jl</title><meta name="title" content="Overview · MicroscopePSFs.jl"/><meta property="og:title" content="Overview · MicroscopePSFs.jl"/><meta property="twitter:title" content="Overview · MicroscopePSFs.jl"/><meta name="description" content="Documentation for MicroscopePSFs.jl."/><meta property="og:description" content="Documentation for MicroscopePSFs.jl."/><meta property="twitter:description" content="Documentation for MicroscopePSFs.jl."/><meta property="og:url" content="https://JuliaSMLM.github.io/MicroscopePSFs.jl/psfs/overview/"/><meta property="twitter:url" content="https://JuliaSMLM.github.io/MicroscopePSFs.jl/psfs/overview/"/><link rel="canonical" href="https://JuliaSMLM.github.io/MicroscopePSFs.jl/psfs/overview/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">MicroscopePSFs.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../interface/">Interface</a></li><li><a class="tocitem" href="../../conventions/">Conventions</a></li><li><span class="tocitem">PSF Types</span><ul><li class="is-active"><a class="tocitem" href>Overview</a><ul class="internal"><li><a class="tocitem" href="#PSF-Model-Comparison"><span>PSF Model Comparison</span></a></li><li><a class="tocitem" href="#When-to-Use-Each-PSF-Type"><span>When to Use Each PSF Type</span></a></li><li><a class="tocitem" href="#Standard-Usage-Pattern"><span>Standard Usage Pattern</span></a></li><li><a class="tocitem" href="#Performance-and-Automatic-Differentiation"><span>Performance and Automatic Differentiation</span></a></li><li><a class="tocitem" href="#Visual-Comparison"><span>Visual Comparison</span></a></li><li><a class="tocitem" href="#PSF-Conversion"><span>PSF Conversion</span></a></li><li><a class="tocitem" href="#Computational-Considerations"><span>Computational Considerations</span></a></li></ul></li><li><a class="tocitem" href="../gaussianpsf/">GaussianPSF</a></li><li><a class="tocitem" href="../airypsf/">AiryPSF</a></li><li><a class="tocitem" href="../scalarpsf/">ScalarPSF</a></li><li><a class="tocitem" href="../vectorpsf/">VectorPSF</a></li><li><a class="tocitem" href="../splinepsf/">SplinePSF</a></li></ul></li><li><a class="tocitem" href="../../zernike/">Zernike Polynomials</a></li><li><a class="tocitem" href="../../io/">I/O Functionality</a></li><li><a class="tocitem" href="../../examples/">Examples</a></li><li><a class="tocitem" href="../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">PSF Types</a></li><li class="is-active"><a href>Overview</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Overview</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/JuliaSMLM/MicroscopePSFs.jl/blob/main/docs/src/psfs/overview.md#" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="PSF-Types-Overview"><a class="docs-heading-anchor" href="#PSF-Types-Overview">PSF Types Overview</a><a id="PSF-Types-Overview-1"></a><a class="docs-heading-anchor-permalink" href="#PSF-Types-Overview" title="Permalink"></a></h1><p>MicroscopePSFs.jl provides several PSF (Point Spread Function) models with varying complexity, accuracy, and computational requirements. This page gives an overview of the available models and guidance on selecting the appropriate PSF for your application.</p><h2 id="PSF-Model-Comparison"><a class="docs-heading-anchor" href="#PSF-Model-Comparison">PSF Model Comparison</a><a id="PSF-Model-Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#PSF-Model-Comparison" title="Permalink"></a></h2><table><tr><th style="text-align: left">PSF Type</th><th style="text-align: left">Parameters</th><th style="text-align: left">2D/3D</th><th style="text-align: left">Aberrations</th><th style="text-align: left">Polarization</th><th style="text-align: left">Relative Speed</th></tr><tr><td style="text-align: left"><code>GaussianPSF</code></td><td style="text-align: left">σ</td><td style="text-align: left">2D</td><td style="text-align: left">No</td><td style="text-align: left">No</td><td style="text-align: left">Fastest</td></tr><tr><td style="text-align: left"><code>AiryPSF</code></td><td style="text-align: left">NA, λ</td><td style="text-align: left">2D</td><td style="text-align: left">No</td><td style="text-align: left">No</td><td style="text-align: left">Fast</td></tr><tr><td style="text-align: left"><code>ScalarPSF</code></td><td style="text-align: left">NA, λ, n</td><td style="text-align: left">3D</td><td style="text-align: left">Yes</td><td style="text-align: left">No</td><td style="text-align: left">Moderate</td></tr><tr><td style="text-align: left"><code>VectorPSF</code></td><td style="text-align: left">NA, λ, dipole, n_medium, etc.</td><td style="text-align: left">3D</td><td style="text-align: left">Yes</td><td style="text-align: left">Yes</td><td style="text-align: left">Slowest</td></tr><tr><td style="text-align: left"><code>SplinePSF</code></td><td style="text-align: left">any</td><td style="text-align: left">2D/3D</td><td style="text-align: left">Via source PSF</td><td style="text-align: left">Via source PSF</td><td style="text-align: left">Fast evaluation</td></tr></table><h2 id="When-to-Use-Each-PSF-Type"><a class="docs-heading-anchor" href="#When-to-Use-Each-PSF-Type">When to Use Each PSF Type</a><a id="When-to-Use-Each-PSF-Type-1"></a><a class="docs-heading-anchor-permalink" href="#When-to-Use-Each-PSF-Type" title="Permalink"></a></h2><h3 id="GaussianPSF"><a class="docs-heading-anchor" href="#GaussianPSF">GaussianPSF</a><a id="GaussianPSF-1"></a><a class="docs-heading-anchor-permalink" href="#GaussianPSF" title="Permalink"></a></h3><p>Best for:</p><ul><li>Rapid prototyping and initial development</li><li>Simple fitting algorithms where computational speed is critical</li><li>Applications where physical accuracy is less important than performance</li><li>Educational purposes demonstrating basic PSF concepts</li></ul><h3 id="AiryPSF"><a class="docs-heading-anchor" href="#AiryPSF">AiryPSF</a><a id="AiryPSF-1"></a><a class="docs-heading-anchor-permalink" href="#AiryPSF" title="Permalink"></a></h3><p>Best for:</p><ul><li>Diffraction-limited 2D imaging simulations</li><li>More accurate 2D fitting that accounts for diffraction rings</li><li>Cases where you need a physically accurate model but don&#39;t need 3D capabilities</li><li>Applications requiring a good balance between accuracy and speed</li></ul><h3 id="ScalarPSF"><a class="docs-heading-anchor" href="#ScalarPSF">ScalarPSF</a><a id="ScalarPSF-1"></a><a class="docs-heading-anchor-permalink" href="#ScalarPSF" title="Permalink"></a></h3><p>Best for:</p><ul><li>3D imaging simulations with moderate accuracy requirements</li><li>Modeling defocus, spherical aberration, and other aberrations</li><li>Applications with moderate NA objectives (typically NA &lt; 1.2)</li><li>When you need 3D capabilities but polarization effects aren&#39;t critical</li></ul><h3 id="VectorPSF"><a class="docs-heading-anchor" href="#VectorPSF">VectorPSF</a><a id="VectorPSF-1"></a><a class="docs-heading-anchor-permalink" href="#VectorPSF" title="Permalink"></a></h3><p>Best for:</p><ul><li>High-NA objectives (NA &gt; 1.2)</li><li>Applications where polarization effects matter</li><li>Modeling complex dipole emission patterns</li><li>Research requiring the highest physical accuracy</li><li>Simulations with significant refractive index mismatches</li><li>When you need to account for all types of optical aberrations</li></ul><h3 id="SplinePSF"><a class="docs-heading-anchor" href="#SplinePSF">SplinePSF</a><a id="SplinePSF-1"></a><a class="docs-heading-anchor-permalink" href="#SplinePSF" title="Permalink"></a></h3><p>Best for:</p><ul><li>Accelerating computationally intensive PSF models</li><li>Using experimental PSF measurements from calibration beads</li><li>Performance-critical applications like real-time fitting</li><li>Creating fast approximations of complex physical models</li></ul><h2 id="Standard-Usage-Pattern"><a class="docs-heading-anchor" href="#Standard-Usage-Pattern">Standard Usage Pattern</a><a id="Standard-Usage-Pattern-1"></a><a class="docs-heading-anchor-permalink" href="#Standard-Usage-Pattern" title="Permalink"></a></h2><p>All PSF types follow the same core interface, making it easy to switch between models:</p><pre><code class="language-julia hljs"># Create a PSF (example with AiryPSF)
+psf = AiryPSF(1.4, 0.532)  # NA=1.4, λ=532nm
+
+# Evaluate at specific position
+intensity = psf(0.1, 0.2)  # at x=0.1μm, y=0.2μm
+
+# Get complex field amplitude
+amp = amplitude(psf, 0.1, 0.2)
+
+# Create image grid
+x = y = range(-1, 1, length=101)  # μm
+img = [psf(xi, yi) for yi in y, xi in x]
+
+# Camera integration example
+pixel_size = 0.1  # μm
+camera = IdealCamera(20, 20, pixel_size)
+emitter = Emitter2D(1.0, 1.0, 1000.0)  # x, y, photons
+pixels = integrate_pixels(psf, camera, emitter)
+
+# Optional parameters for integration
+pixels = integrate_pixels(psf, camera, emitter;
+                        support=0.5,    # Limit to 0.5μm radius
+                        sampling=3,     # 3×3 subpixel sampling
+                        threaded=true)  # Use multithreading</code></pre><h2 id="Performance-and-Automatic-Differentiation"><a class="docs-heading-anchor" href="#Performance-and-Automatic-Differentiation">Performance and Automatic Differentiation</a><a id="Performance-and-Automatic-Differentiation-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-and-Automatic-Differentiation" title="Permalink"></a></h2><p>For performance optimization:</p><pre><code class="language-julia hljs"># Standard use with multithreading (default)
+pixels = integrate_pixels(psf, camera, emitter)
+
+# For automatic differentiation compatibility, disable threading
+pixels = integrate_pixels(psf, camera, emitter, threaded=false)</code></pre><p>Most automatic differentiation frameworks don&#39;t support multithreading, so the <code>threaded</code> parameter allows toggling this feature when needed.</p><h2 id="Visual-Comparison"><a class="docs-heading-anchor" href="#Visual-Comparison">Visual Comparison</a><a id="Visual-Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#Visual-Comparison" title="Permalink"></a></h2><p>Below is a comparison of the different PSF models using the same physical parameters:</p><pre><code class="language-julia hljs">using MicroscopePSFs
+using CairoMakie
+
+function compare_psf_profiles()
+    # Common parameters
+    na = 1.4
+    wavelength = 0.532  # μm
+    n = 1.518
+    
+    # Create consistent PSF instances
+    gaussian = GaussianPSF(0.22 * wavelength / na)
+    airy = AiryPSF(na, wavelength)
+    scalar = ScalarPSF(na, wavelength, n)
+    
+    # Dipole for vector PSF (z-oriented)
+    dipole_z = DipoleVector(1.0, 0.0, 0.0)
+    vector = VectorPSF(na, wavelength, dipole_z, n_medium=n)
+    
+    # Define positions for profile
+    x = range(-1, 1, length=200)  # μm
+    y = 0.0
+    z = 0.0
+    
+    # Calculate profiles
+    gaussian_profile = [gaussian(xi, y) for xi in x]
+    airy_profile = [airy(xi, y) for xi in x]
+    scalar_profile = [scalar(xi, y, z) for xi in x]
+    vector_profile = [vector(xi, y, z) for xi in x]
+    
+    # Create figure
+    fig = Figure(size=(900, 700))
+    
+    # 1D profiles
+    ax1 = Axis(fig[1, 1:2], 
+              xlabel=&quot;Position (μm)&quot;, 
+              ylabel=&quot;Normalized Intensity&quot;,
+              title=&quot;PSF Intensity Profiles (y=0)&quot;)
+    
+    lines!(ax1, x, gaussian_profile, label=&quot;GaussianPSF&quot;, linewidth=2, color=:blue)
+    lines!(ax1, x, airy_profile, label=&quot;AiryPSF&quot;, linewidth=2, color=:red)
+    lines!(ax1, x, scalar_profile, label=&quot;ScalarPSF&quot;, linewidth=2, color=:green)
+    lines!(ax1, x, vector_profile, label=&quot;VectorPSF&quot;, linewidth=2, color=:purple)
+    
+    axislegend(ax1, position=:rt)
+    
+    # 2D images
+    x_grid = y_grid = range(-1, 1, length=101)  # μm
+    
+    # Calculate 2D images
+    gaussian_img = [gaussian(xi, yi) for yi in y_grid, xi in x_grid]
+    airy_img = [airy(xi, yi) for yi in y_grid, xi in x_grid]
+    scalar_img = [scalar(xi, yi, 0.0) for yi in y_grid, xi in x_grid]
+    vector_img = [vector(xi, yi, 0.0) for yi in y_grid, xi in x_grid]
+    
+    # Plot 2D images
+    psf_images = [gaussian_img, airy_img, scalar_img, vector_img]
+    titles = [&quot;GaussianPSF&quot;, &quot;AiryPSF&quot;, &quot;ScalarPSF&quot;, &quot;VectorPSF&quot;]
+    
+    for (i, (img, title)) in enumerate(zip(psf_images, titles))
+        ax = Axis(fig[2, i], aspect=DataAspect(), 
+                 title=title,
+                 xlabel=&quot;x (μm)&quot;, 
+                 ylabel=i==1 ? &quot;y (μm)&quot; : &quot;&quot;)
+        
+        hm = heatmap!(ax, x_grid, y_grid, img, colormap=:viridis)
+    end
+    
+    return fig
+end
+
+fig = compare_psf_profiles()</code></pre><h2 id="PSF-Conversion"><a class="docs-heading-anchor" href="#PSF-Conversion">PSF Conversion</a><a id="PSF-Conversion-1"></a><a class="docs-heading-anchor-permalink" href="#PSF-Conversion" title="Permalink"></a></h2><p>The PSF types provide methods to convert between models where appropriate:</p><pre><code class="language-julia hljs"># Convert AiryPSF to GaussianPSF approximation
+airy = AiryPSF(1.4, 0.532)
+gaussian = GaussianPSF(airy)  # Automatically uses appropriate σ
+
+# Convert GaussianPSF to equivalent AiryPSF
+gaussian = GaussianPSF(0.15)
+airy = AiryPSF(gaussian, λ=0.532)  # Need to specify wavelength</code></pre><h2 id="Computational-Considerations"><a class="docs-heading-anchor" href="#Computational-Considerations">Computational Considerations</a><a id="Computational-Considerations-1"></a><a class="docs-heading-anchor-permalink" href="#Computational-Considerations" title="Permalink"></a></h2><p>When selecting a PSF model, consider the trade-off between accuracy and computational cost:</p><ul><li><strong>GaussianPSF</strong>: Closed-form expression, extremely fast</li><li><strong>AiryPSF</strong>: Uses Bessel functions, fast but more expensive than Gaussian</li><li><strong>ScalarPSF</strong>: Requires numerical integration or pre-computation, moderate speed</li><li><strong>VectorPSF</strong>: Most computationally intensive, especially with aberrations</li><li><strong>SplinePSF</strong>: Fast evaluation but requires initial computation or measurement</li></ul><p>For performance-critical applications, consider using <code>SplinePSF</code> to pre-compute a more complex PSF model for faster repeated evaluations.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../conventions/">« Conventions</a><a class="docs-footer-nextpage" href="../gaussianpsf/">GaussianPSF »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.11.4 on <span class="colophon-date" title="Thursday 5 June 2025 19:48">Thursday 5 June 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
