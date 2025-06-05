@@ -27,9 +27,9 @@ end
 $(_API_OVERVIEW)
 
 ---
-`api_overview()` returns this documentation as a plain `String`.
+`api()` returns this documentation as a plain `String`.
 """
-function api_overview()
+function api()
     return _API_OVERVIEW
 end
 
