@@ -46,12 +46,13 @@ function ImmPSF(nₐ, λ, n::Vector, pixelsize; zstage = 0.0,inputpupil=nothing,
         #immphase = exp(2*pi*(n[1]/λ*cosθ₁*n[1]/n[3]*zstage-n[3]/λ*cosθ₃*zstage)*im)
         immphase = exp(-2*pi*(n[3]/λ*cosθ₃*zstage)*im)
         Eex = 1.0 # excitation field, scalar
+        δ = nothing # phase shift, default is nothing
         if kr2 < (nₐ / λ)^2 
             apod = sqrt(cosθ₃)/cosθ₁
             
             ρ=sqrt(kr2)/(nₐ / λ)
             ϕ=atan(ky,kx)
-            _, _, h = calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁,Eex)
+            _, _, h = calEfield(ϕ, Tp, Ts, sinθ₁, cosθ₁,Eex,δ)
             pupil_mag = 0.0
             pupil_phase = 0.0
             for nn=1:length(z.mag)
@@ -78,15 +79,15 @@ function ImmPSF(nₐ, λ, n::Vector, pixelsize; zstage = 0.0,inputpupil=nothing,
 
     normf = 0.0
     for j=eachindex(pupil)
-        normf += sum(pupil[j][:,:,1].^2)
+        #normf += sum(pupil[j][:,:,1].^2)
         if inputpupil !== nothing
             pupil[j][:,:,1] .*= inputpupil[:,:,1]
             pupil[j][:,:,2] .+= inputpupil[:,:,2]
         end
-        #normf += sum(pupil[j][:,:,1].^2)
+        normf += sum(pupil[j][:,:,1].^2)
     end
 
-    normf = sqrt(normf)/kpixelsize
+    normf = sqrt(normf)
     for j=eachindex(pupil)
         pupil[j][:,:,1] = pupil[j][:,:,1]./normf
     end
