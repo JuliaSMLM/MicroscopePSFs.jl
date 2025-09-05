@@ -1,7 +1,6 @@
 using Revise
 using MicroscopePSFs
 PSF=MicroscopePSFs
-using Plots
 using CairoMakie
 CM = CairoMakie
 # Create a scalar PSF
@@ -9,20 +8,29 @@ na=1.49
 n=[1.33,1.52,1.52] # refractive indices (sample medium, cover glass, immersion)
 λ=.69
 pixelsize=.05
-dipole_ang = [0,0].*pi./180
-p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang; ksize=128,excitationfield=1.0,mvtype="stage") # scalar excitation, for fast rotating dipole
+dipole_ang = [45,0].*pi./180
+p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang; ksize=128,excitationfield=1.0,mvtype="stage",δ=0.0) # scalar excitation, for fast rotating dipole
 #p=PSF.Dipole3D(na,λ,n,pixelsize,dipole_ang; ksize=128,excitationfield=[0,0,1],mvtype="stage") # polarized excitation, for slow rotating dipole
 
 
 #look at pupil
-hx = p.pupilfunctionx.pupil[:,:,1].*exp.(im*p.pupilfunctionx.pupil[:,:,2])
-hy = p.pupilfunctiony.pupil[:,:,1].*exp.(im*p.pupilfunctiony.pupil[:,:,2])
 fig = Figure(size = (600, 300))
-ax = CM.Axis(fig[1, 1],title="Ex",aspect=1,titlesize=20)
-hm = CM.heatmap!(ax, abs.(hx),colormap=:inferno)
+ax = CM.Axis(fig[1, 1],title="Ex, magnitude",aspect=1,titlesize=20)
+hm = CM.heatmap!(ax, p.pupilfunctionx.pupil[:,:,1],colormap=:inferno)
 hidedecorations!(ax)
-ax = CM.Axis(fig[1, 2],title="Ey",aspect=1,titlesize=20)
-hm = CM.heatmap!(ax, abs.(hy),colormap=:inferno)
+Colorbar(fig[1, 1][1, 2], hm)
+ax = CM.Axis(fig[1, 2],title="Ex, phase",aspect=1,titlesize=20)
+hm = CM.heatmap!(ax, p.pupilfunctionx.pupil[:,:,2],colormap=:viridis)
+hidedecorations!(ax)
+fig
+
+fig = Figure(size = (600, 300))
+ax = CM.Axis(fig[1, 1],title="Ey, magnitude",aspect=1,titlesize=20)
+hm = CM.heatmap!(ax, p.pupilfunctiony.pupil[:,:,1],colormap=:inferno)
+hidedecorations!(ax)
+Colorbar(fig[1, 1][1, 2], hm)
+ax = CM.Axis(fig[1, 2],title="Ey, phase",aspect=1,titlesize=20)
+hm = CM.heatmap!(ax, p.pupilfunctiony.pupil[:,:,2],colormap=:viridis)
 hidedecorations!(ax)
 fig
 
@@ -32,7 +40,7 @@ roi=[(y,x,0) for y=1:sz, x=1:sz]
 
 pos_emitter = (sz/2,sz/2,0.0)
 p.electricfield = 'x'
-imx=PSF.pdf(p,roi,pos_emitter)
+@time imx=PSF.pdf(p,roi,pos_emitter)
 p.electricfield = 'y'
 imy=PSF.pdf(p,roi,pos_emitter)
 

@@ -52,16 +52,17 @@ function importpsf(filename, psftype; zstage=0.0, source="python", mvtype="bead"
 
         if haskey(f, "res/pupil") && psftype != "splinePSF_FD" && psftype != "splinePSF_tilt"
             pupilcomplex = read(f["res/pupil"])
+            apod = read(f["res/apodization"])
             ksize = size(pupilcomplex, 1)
             kpixelsize = 2 * na / λ / ksize
-            pupil = Float64.(cat(abs.(pupilcomplex), angle.(pupilcomplex), dims=3))
             if psftype == "scalar3D"
+                pupil = Float64.(cat(abs.(pupilcomplex), angle.(pupilcomplex), dims=3))
                 p = Scalar3D(na, λ, n[3], pixelsize_x; inputpupil=pupil, ksize=ksize)
                 h = PupilFunction(na, λ, n[3], pixelsize_x, kpixelsize, pupil)
             end
 
             if psftype == "immPSF"
-
+                pupil = Float64.(cat(abs.(pupilcomplex./apod), angle.(pupilcomplex./apod), dims=3))
                 p = ImmPSF(na, λ, n, pixelsize_x; inputpupil=pupil, zstage=zstage, ksize=ksize,mvtype=mvtype)    
                 h = PupilFunction(na, λ, n[1], pixelsize_x, kpixelsize, pupil)
             end

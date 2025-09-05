@@ -21,5 +21,8 @@ include("import.jl")
 include("splinePSF.jl")
 include("dipole3D.jl")
 include("immPSF.jl")
+include("focusfield.jl")
+include("pupil_1d.jl")
+include("dipole3D_fast.jl")
 
 end
