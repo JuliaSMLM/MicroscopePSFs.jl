@@ -15,13 +15,13 @@
     
     # Create single emitter
     emitter = Emitter2D(1.0, 1.0, 1000.0)  # Emitter at (1μm, 1μm)
-    
+
     # Create multiple emitters
     emitters = [
         Emitter2D(0.5, 0.5, 500.0),
         Emitter2D(1.5, 1.5, 750.0)
     ]
-    
+
     # 3D emitters for 3D PSFs
     emitter_3d = Emitter3D(1.0, 1.0, 0.2, 1000.0)
     emitters_3d = [

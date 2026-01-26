@@ -18,7 +18,7 @@
         Emitter2D(1.0, 1.0, 1000.0),  # Emitter at (1μm, 1μm)
         Emitter2D(3.0, 3.0, 1000.0)   # Emitter at (3μm, 3μm)
     ]
-    
+
     # Create a 3D emitter for 3D PSF tests
     emitter_3d = Emitter3D(2.0, 2.0, 0.0, 1000.0)
     
