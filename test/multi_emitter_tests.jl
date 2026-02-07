@@ -18,7 +18,7 @@
         Emitter2D(0.7, 0.6, 800.0),   # Emitter at (0.7μm, 0.6μm) with 800 photons
         Emitter3D(0.6, 0.3, 0.2, 1200.0)  # 3D emitter at (0.6μm, 0.3μm, 0.2μm) with 1200 photons
     ]
-    
+
     # Create a set of 3D emitters for testing 3D PSFs
     emitters_3d = AbstractEmitter[
         Emitter3D(0.5, 0.4, 0.1, 1000.0),
