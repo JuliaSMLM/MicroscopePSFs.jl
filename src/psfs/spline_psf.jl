@@ -101,7 +101,12 @@ function SplinePSF(psf_stack::AbstractArray{<:Real,3},
     # The scale function expects individual ranges, not a tuple
     scaled_itp = scale(itp, y_range_f64, x_range_f64, z_range_f64)
     
-    return SplinePSF{Float64, typeof(scaled_itp)}(scaled_itp, x_range_f64, y_range_f64, z_range_f64, grid_copy, order)
+    return SplinePSF{Float64, typeof(scaled_itp)}(
+        scaled_itp, x_range_f64, y_range_f64, z_range_f64,
+        Float64(first(x_range_f64)), Float64(last(x_range_f64)),
+        Float64(first(y_range_f64)), Float64(last(y_range_f64)),
+        Float64(first(z_range_f64)), Float64(last(z_range_f64)),
+        grid_copy, order)
 end
 
 # --- Core constructors for 2D PSFs ---
@@ -158,7 +163,12 @@ function SplinePSF(psf_stack::AbstractArray{<:Real,2},
     # The scale function expects individual ranges, not a tuple
     scaled_itp = scale(itp, y_range_f64, x_range_f64)
     
-    return SplinePSF{Float64, typeof(scaled_itp)}(scaled_itp, x_range_f64, y_range_f64, nothing, grid_copy, order)
+    return SplinePSF{Float64, typeof(scaled_itp)}(
+        scaled_itp, x_range_f64, y_range_f64, nothing,
+        Float64(first(x_range_f64)), Float64(last(x_range_f64)),
+        Float64(first(y_range_f64)), Float64(last(y_range_f64)),
+        zero(Float64), zero(Float64),
+        grid_copy, order)
 end
 
 # --- Constructors for building from existing PSF types ---
@@ -323,14 +333,14 @@ function (psf::SplinePSF)(x::Real, y::Real, z::Real)
     if psf.z_range === nothing
         throw(ArgumentError("Cannot evaluate a 2D SplinePSF with 3D coordinates. Use psf(x, y) instead."))
     end
-    
-    # Check bounds in x, y, and z
-    if x < first(psf.x_range) || x > last(psf.x_range) ||
-       y < first(psf.y_range) || y > last(psf.y_range) ||
-       z < first(psf.z_range) || z > last(psf.z_range)
+
+    # Check bounds using cached Float64 values (avoids type-instability from first/last on ranges)
+    if x < psf.x_min || x > psf.x_max ||
+       y < psf.y_min || y > psf.y_max ||
+       z < psf.z_min || z > psf.z_max
         return zero(Float64)
     end
-    
+
     # Evaluate using the scaled interpolant.
     # Note the order: since our data is (y, x, z), we call it as (y, x, z).
     return psf.spline(y, x, z)
@@ -361,18 +371,18 @@ intensity = spline_psf(0.1, 0.2)
 ```
 """
 function (psf::SplinePSF)(x::Real, y::Real)
-    # Check bounds in x and y
-    if x < first(psf.x_range) || x > last(psf.x_range) ||
-       y < first(psf.y_range) || y > last(psf.y_range)
+    # Check bounds using cached Float64 values
+    if x < psf.x_min || x > psf.x_max ||
+       y < psf.y_min || y > psf.y_max
         return zero(Float64)
     end
-    
+
     # For 2D PSFs
     if psf.z_range === nothing
         return psf.spline(y, x)
     else
         # For 3D PSFs, check if z=0 is in range
-        if first(psf.z_range) <= 0.0 && last(psf.z_range) >= 0.0
+        if psf.z_min <= 0.0 && psf.z_max >= 0.0
             return psf.spline(y, x, 0.0)
         else
             return zero(Float64)
@@ -530,18 +540,18 @@ end
 function Base.show(io::IO, psf::SplinePSF)
     nx = length(psf.x_range)
     ny = length(psf.y_range)
-    
-    x_size = last(psf.x_range) - first(psf.x_range)
-    y_size = last(psf.y_range) - first(psf.y_range)
-    
-    order_name = psf.interp_order == 0 ? "constant" : 
-                 psf.interp_order == 1 ? "linear" : 
-                 psf.interp_order == 3 ? "cubic" : 
+
+    x_size = psf.x_max - psf.x_min
+    y_size = psf.y_max - psf.y_min
+
+    order_name = psf.interp_order == 0 ? "constant" :
+                 psf.interp_order == 1 ? "linear" :
+                 psf.interp_order == 3 ? "cubic" :
                  "order $(psf.interp_order)"
-    
+
     if psf.z_range !== nothing
         nz = length(psf.z_range)
-        z_size = last(psf.z_range) - first(psf.z_range)
+        z_size = psf.z_max - psf.z_min
         print(io, "SplinePSF($(ny)×$(nx)×$(nz) grid, $(round(x_size, digits=2))×$(round(y_size, digits=2))×$(round(z_size, digits=2))μm, $(order_name))")
     else
         print(io, "SplinePSF($(ny)×$(nx) grid, $(round(x_size, digits=2))×$(round(y_size, digits=2))μm, $(order_name))")

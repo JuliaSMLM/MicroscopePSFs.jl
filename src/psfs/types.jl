@@ -138,16 +138,18 @@ end
 A point spread function (PSF) represented as a B-spline interpolation.
 
 # Fields
-- `spline`: The B-spline interpolation object 
+- `spline`: The B-spline interpolation object
 - `x_range`: Range of x-coordinates used for uniform grid interpolation
-- `y_range`: Range of y-coordinates used for uniform grid interpolation  
+- `y_range`: Range of y-coordinates used for uniform grid interpolation
 - `z_range`: Range of z-coordinates for 3D PSFs, or `nothing` for 2D PSFs
+- `x_min`, `x_max`, `y_min`, `y_max`, `z_min`, `z_max`: Cached bounds for fast evaluation
 - `original_grid`: Original grid data used to create the interpolation
 - `interp_order`: Interpolation order used (0=constant, 1=linear, 3=cubic)
 
 # Notes
 - Coordinates and ranges are in physical units (typically microns)
 - PSF values are preserved from the original PSF that was sampled
+- Bounds are cached as plain Float64 to avoid type-instability in hot loops
 - Full implementation is in spline_psf.jl
 """
 struct SplinePSF{T<:AbstractFloat, IT<:AbstractInterpolation} <: AbstractPSF
@@ -155,6 +157,12 @@ struct SplinePSF{T<:AbstractFloat, IT<:AbstractInterpolation} <: AbstractPSF
     x_range::StepRangeLen{T}
     y_range::StepRangeLen{T}
     z_range::Union{StepRangeLen{T}, Nothing}
+    x_min::T
+    x_max::T
+    y_min::T
+    y_max::T
+    z_min::T
+    z_max::T
     original_grid::Array{T}
     interp_order::Int
 end
