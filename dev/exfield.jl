@@ -40,9 +40,17 @@ function phase_phi(x)
     return x
 end
 
+function phase_phi1(x)
+    if x < pi && x >= 0
+        return 0.0
+    else
+        return pi
+    end
+end
+
 fθ = (x) -> phase_theta(x, na, n[1], [1.0])
-fϕ = (x) -> phase_phi(x)*(1-0.00)
-p=PSF.Focusfield(na,λ,n,pixelsize; ksize=128,excitationfield=[1.0,1*im], fϕ=fϕ, zstage=0.0) 
+fϕ = (x) -> phase_phi1(x)
+p=PSF.Focusfield(na,λ,n,pixelsize; ksize=128,excitationfield=[1.0,0.0], fϕ=fϕ, zstage=0.0,sigmax_pixel=1.0) 
 
 function focus_gui(na,λ,n,pixelsize)
     imx_xy = Observable{Any}(0.0)
@@ -164,7 +172,7 @@ fig
 ringsz = [1]
 fθ = (x) -> phase_theta(x, na, n[1], ringsz) # 3D: [0.42, 0.61, 1.0]
 fϕ = (x) -> phase_phi(x)
-p=PSF.Focusfield(na,λ,n,pixelsize; ksize=128,excitationfield=[1.0,1*im],fθ=fθ,fϕ=fϕ,zstage=0.0) 
+p=PSF.Focusfield(na,λ,n,pixelsize; ksize=128,excitationfield=[1.0,-1*im],fθ=fθ,fϕ=fϕ,zstage=0.0) 
 sz=50 
 #roi=[(y,x,z) for y=1:sz, x=1:sz, z=0:-0.04:-1.5] 
 roi=[(y,x,z) for y=1:sz, x=1:sz, z=0:0] 
@@ -190,7 +198,7 @@ ax = CM.Axis(fig[1, 3],title="Ez psf",aspect=1)
 hm = CM.heatmap!(ax, imz[cc,:,:],colormap=:inferno)
 hidedecorations!(ax)
 ax = CM.Axis(fig[1, 4],title="total psf",aspect=1)
-hm = CM.heatmap!(ax, imall[cc,:,:],colormap=:inferno)
+hm = CM.heatmap!(ax, imall[:,cc,:],colormap=:inferno)
 hidedecorations!(ax)
 ax = CM.Axis(fig[2, 1],title="Ex psf",aspect=1)
 hm = CM.heatmap!(ax, imx[:,:,1],colormap=:inferno)
@@ -206,6 +214,60 @@ hm = CM.heatmap!(ax, imall[:,:,1],colormap=:inferno)
 hidedecorations!(ax)
 CM.activate!()
 display(fig)
+
+
+
+sz=50 
+#roi=[(y,x,z) for y=1:sz, x=1:sz, z=0:-0.04:-1.5] 
+roi=[(y,x,z) for y=1:sz, x=1:sz, z=0:0] 
+
+pos_emitter = (sz/2+1,sz/2+1,0.0)
+p.electricfield = 'x'
+imx=PSF.pdfₐ(p,roi,pos_emitter)
+p.electricfield = 'y'
+imy=PSF.pdfₐ(p,roi,pos_emitter)
+p.electricfield = 'z'
+imz=PSF.pdfₐ(p,roi,pos_emitter)
+cc = Int(pos_emitter[1])
+#look at psf in x and y polarization
+fig = Figure(size = (600, 400))
+ax = CM.Axis(fig[1, 1],title="Ex psf",aspect=1)
+hm = CM.heatmap!(ax, real.(imx[:,:,1]),colormap=:inferno)
+hidedecorations!(ax)
+ax = CM.Axis(fig[1, 2],title="Ey psf",aspect=1)
+hm = CM.heatmap!(ax, real.(imy[:,:,1]),colormap=:inferno)
+hidedecorations!(ax)
+ax = CM.Axis(fig[1, 3],title="Ez psf",aspect=1)
+hm = CM.heatmap!(ax, real.(imz[:,:,1]),colormap=:inferno)
+hidedecorations!(ax)
+ax = CM.Axis(fig[2, 1],title="Ex psf",aspect=1)
+hm = CM.heatmap!(ax, imag.(imx[:,:,1]),colormap=:inferno)
+hidedecorations!(ax)
+ax = CM.Axis(fig[2, 2],title="Ey psf",aspect=1)
+hm = CM.heatmap!(ax, imag.(imy[:,:,1]),colormap=:inferno)
+hidedecorations!(ax)
+ax = CM.Axis(fig[2, 3],title="Ez psf",aspect=1)
+hm = CM.heatmap!(ax, imag.(imz[:,:,1]),colormap=:inferno)
+hidedecorations!(ax)
+CM.activate!()
+display(fig)
+
+fig = Figure(size = (600, 400))
+ax = CM.Axis(fig[1, 1],title="Ex psf",aspect=1)
+hm = CM.lines!(ax, real.(imx[:,cc,1]),colormap=:inferno)
+ax = CM.Axis(fig[1, 2],title="Ey psf",aspect=1)
+hm = CM.lines!(ax, real.(imy[cc,:,1]),colormap=:inferno)
+ax = CM.Axis(fig[1, 3],title="Ez psf",aspect=1)
+hm = CM.lines!(ax, real.(imz[cc,:,1]),colormap=:inferno)
+ax = CM.Axis(fig[2, 1],title="Ex psf",aspect=1)
+hm = CM.lines!(ax, imag.(imx[:,cc,1]),colormap=:inferno)
+ax = CM.Axis(fig[2, 2],title="Ey psf",aspect=1)
+hm = CM.lines!(ax, imag.(imy[cc,:,1]),colormap=:inferno)
+ax = CM.Axis(fig[2, 3],title="Ez psf",aspect=1)
+hm = CM.lines!(ax, imag.(imz[cc,:,1]),colormap=:inferno)
+CM.activate!()
+display(fig)
+
 
 using HDF5
 

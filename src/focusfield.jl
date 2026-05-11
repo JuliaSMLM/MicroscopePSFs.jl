@@ -20,7 +20,9 @@ function Focusfield(nₐ, λ, n::Vector, pixelsize;
     excitationfield=[1.0, 0],
     fθ=(x) -> 0.0,
     fϕ=(x) -> 0.0,
-    zstage=0.0)
+    zstage=0.0,
+    sigmax_pixel= 0.1 # in pixel
+)
 
     pupilx = zeros(ksize, ksize, 2)
     pupily = zeros(ksize, ksize, 2)
@@ -29,6 +31,11 @@ function Focusfield(nₐ, λ, n::Vector, pixelsize;
     kpixelsize = 2 * nₐ / λ / ksize
     k = n[1] / λ
     k0 = (ksize + 1) / 2
+
+    sigmax = pixelsize *sigmax_pixel
+    sigmak = 1 / (2 * pi * sigmax)
+    println("sigmak=$sigmak")
+    println("kpixelsize=$kpixelsize")
 
 
     for ii in 1:ksize, jj in 1:ksize # jj is index along y  
@@ -40,12 +47,13 @@ function Focusfield(nₐ, λ, n::Vector, pixelsize;
         immphase = exp(-2*pi*(n[1]/λ*cosθ₁*zstage)*im)
 
         if kr2 < (nₐ / λ)^2
+            g = exp(-kr2/(2*sigmak^2))
             ϕ = atan(ky, kx)
             θ = asin(sqrt(kr2) / k)
             nθ = [cos(ϕ), sin(ϕ)]
             nϕ = [-sin(ϕ), cos(ϕ)]
-            Eθ = dot(nθ, excitationfield)
-            Eϕ = dot(nϕ, excitationfield)
+            Eθ = dot(nθ, excitationfield.*g)
+            Eϕ = dot(nϕ, excitationfield.*g)
             #Eθ = 0.0
             #Eϕ = 1.0
             # transmit through sample medium
