@@ -3,8 +3,9 @@ on:
   push:
     branches:
       - main
-    tags: '*'
+    tags: ['*']
   pull_request:
+  workflow_dispatch:
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
@@ -12,21 +13,26 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions: # needed to allow julia-actions/cache to proactively delete old caches that it has created
+      actions: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         version:
-          - '1.9'
-          - 'nightly'
+          - '1.10'      # LTS / minimum supported (matches Project.toml compat)
+          - '1'         # latest stable release
+          - 'pre'       # latest prerelease
         os:
           - ubuntu-latest
         arch:
           - x64
     steps:
-      - uses: actions/checkout@v5
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
@@ -34,27 +40,33 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v6
         with:
           files: lcov.info
-          token: ${{ secrets.CODECOV_TOKEN }}  # required for protected branches; add as repo secret to enable uploads
-          fail_ci_if_error: false  # Coverage upload is best-effort; don't fail CI when it can't upload
+          token: ${{ secrets.CODECOV_TOKEN }}  # add as repo secret to enable coverage uploads
+          fail_ci_if_error: false  # coverage upload is best-effort; don't fail CI when it can't upload
   docs:
     name: Documentation
     runs-on: ubuntu-latest
+    permissions:
+      actions: write # needed to allow julia-actions/cache to proactively delete old caches that it has created
+      contents: write
+      statuses: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
         with:
           version: '1'
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-docdeploy@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
-      - run: |
-          julia --project=docs -e '
-            using Documenter: DocMeta, doctest
-            using MicroscopePSFs
-            DocMeta.setdocmeta!(MicroscopePSFs, :DocTestSetup, :(using MicroscopePSFs); recursive=true)
-            doctest(MicroscopePSFs)'
+      - name: Run doctests
+        shell: julia --project=docs --color=yes {0}
+        run: |
+          using Documenter: DocMeta, doctest
+          using MicroscopePSFs
+          DocMeta.setdocmeta!(MicroscopePSFs, :DocTestSetup, :(using MicroscopePSFs); recursive=true)
+          doctest(MicroscopePSFs)
