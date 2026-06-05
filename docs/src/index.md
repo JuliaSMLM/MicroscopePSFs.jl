@@ -22,7 +22,7 @@ Pkg.add("MicroscopePSFs")
 
 ## Quick Start
 
-```jldoctest; output = false
+```jldoctest
 using MicroscopePSFs
 
 # Create a GaussianPSF
@@ -44,8 +44,12 @@ camera = IdealCamera(nx, ny, pixel_size)  # 20x20 pixels, 100nm size
 emitter = Emitter2D(1.0, 1.0, 1000.0)               # At (1μm, 1μm) with 1000 photons
 pixels = integrate_pixels(psf, camera, emitter)
 
+# Inspect the resulting image dimensions
+size(pixels)
+
 # output
-pixels
+
+(20, 20)
 ```
 
 ## Contents

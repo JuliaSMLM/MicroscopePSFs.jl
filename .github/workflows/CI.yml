@@ -25,7 +25,7 @@ jobs:
         arch:
           - x64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
@@ -37,12 +37,13 @@ jobs:
       - uses: codecov/codecov-action@v5
         with:
           files: lcov.info
-          fail_ci_if_error: true  # This will make CI fail if Codecov upload fails
+          token: ${{ secrets.CODECOV_TOKEN }}  # required for protected branches; add as repo secret to enable uploads
+          fail_ci_if_error: false  # Coverage upload is best-effort; don't fail CI when it can't upload
   docs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
