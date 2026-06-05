@@ -55,6 +55,7 @@ export save_psf, load_psf
 
 # Pupil Function types
 export PupilFunction, VectorPupilFunction
+export pupil_at
 
 # PSF implementations
 export GaussianPSF, AiryPSF

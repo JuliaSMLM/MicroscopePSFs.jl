@@ -133,6 +133,64 @@
         @test all(intensity_from_amp .>= 0)
         @test size(intensity_from_amp) == size(img)
     end
+
+    @testset "Position-Evaluated Pupil (pupil_at)" begin
+        # Integrate a vector pupil over the aperture with only the lateral phase.
+        # If pupil_at has baked in the axial defocus phase correctly, this must
+        # reproduce amplitude(psf, x, y, z) exactly (same grid/convention as eval).
+        function lateral_field(vp, x, y)
+            gs = size(vp.Ex.field, 1)
+            kmax_val = vp.nₐ / vp.λ
+            kpixel = 2 * kmax_val / (gs - 1)
+            center = (gs + 1) / 2
+            ex = zero(ComplexF64); ey = zero(ComplexF64)
+            for i in 1:gs, j in 1:gs
+                kx = (i - center) * kpixel
+                ky = (j - center) * kpixel
+                kr2 = kx^2 + ky^2
+                kr2 > kmax_val^2 && continue
+                ph = exp(im * 2π * (kx * x + ky * y))
+                ex += vp.Ex.field[j, i] * ph * kpixel^2
+                ey += vp.Ey.field[j, i] * ph * kpixel^2
+            end
+            return [ex, ey]
+        end
+
+        dipole = DipoleVector(1.0, 0.0, 0.0)
+        psf = VectorPSF(na, λ, dipole; n_medium=n_medium)
+
+        # Single dipole returns a single VectorPupilFunction, leaving psf untouched
+        before = copy(psf.vector_pupils[1].Ex.field)
+        vp = pupil_at(psf, 0.7)
+        @test vp isa VectorPupilFunction
+        @test psf.vector_pupils[1].Ex.field == before   # not mutated
+
+        # z = 0, z_stage = 0 -> identity (defocus phase is 1)
+        vp0 = pupil_at(psf, 0.0; z_stage=0.0)
+        @test vp0.Ex.field ≈ psf.vector_pupils[1].Ex.field
+        @test vp0.Ey.field ≈ psf.vector_pupils[1].Ey.field
+
+        # Core invariant: lateral integral of pupil_at reproduces amplitude()
+        for (x, y, z) in [(0.0, 0.0, 0.0), (0.3, 0.4, 0.5), (-0.2, 0.1, 1.0)]
+            @test lateral_field(pupil_at(psf, z), x, y) ≈ amplitude(psf, x, y, z)
+        end
+
+        # z_stage: stored pupil is z_stage-independent; default flows from the PSF
+        psf_stage = VectorPSF(na, λ, dipole; n_medium=n_medium, z_stage=0.3)
+        @test psf_stage.vector_pupils[1].Ex.field ≈ psf.vector_pupils[1].Ex.field
+        for (x, y, z) in [(0.0, 0.0, 0.5), (0.25, -0.15, 1.0)]
+            @test lateral_field(pupil_at(psf_stage, z), x, y) ≈ amplitude(psf_stage, x, y, z)
+        end
+        # Explicit z_stage override matches a PSF built with that stage position
+        @test lateral_field(pupil_at(psf, 0.5; z_stage=0.3), 0.2, 0.1) ≈
+              amplitude(psf_stage, 0.2, 0.1, 0.5)
+
+        # Free/rotating dipole returns one pupil per x/y/z orientation
+        psf_rot = VectorPSF(na, λ; n_medium=n_medium)
+        vps = pupil_at(psf_rot, 0.5)
+        @test vps isa Vector{<:VectorPupilFunction}
+        @test length(vps) == 3
+    end
     
    
 end

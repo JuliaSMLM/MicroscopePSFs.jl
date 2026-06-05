@@ -46,6 +46,13 @@ Get pupil plane sampling in μm⁻¹"""
 kpixelsize(p::PupilFunction) = 2kmax(p) / (size(p.field, 1) - 1)
 
 """
+    copy(p::PupilFunction)
+
+Return a deep copy of `p` with an independent `field` array.
+"""
+Base.copy(p::PupilFunction) = PupilFunction(p.nₐ, p.λ, p.n, copy(p.field))
+
+"""
     PupilFunction(nₐ::Real, λ::Real, n::Real, 
                   zc::ZernikeCoefficients;
                   grid_size::Int=64)

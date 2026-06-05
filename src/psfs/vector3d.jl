@@ -312,6 +312,49 @@ function (psf::VectorPSF)(x::Real, y::Real, z::Real)
 end
 
 """
+    pupil_at(psf::VectorPSF, z::Real; z_stage::Real=psf.z_stage)
+
+Return the vector pupil(s) of `psf` with the axial defocus phase applied for an emitter
+at depth `z` (μm above the coverslip) and stage position `z_stage`.
+
+The pupils stored in `psf.vector_pupils` hold only the position-independent field
+(dipole orientation, Fresnel transmission, apodization, aberrations). This function
+multiplies in the defocus phase `exp(im·2π·(k_{z,medium}·z − k_{z,immersion}·z_stage))`,
+returning the pupil whose Fourier transform is the field at depth `z`. The result is the
+same field that `VectorPSF` evaluation integrates over (apart from the lateral `x`,`y`
+phase tilt, which only shifts the PSF laterally and is therefore not applied here).
+
+`psf` is not modified; the returned pupils are independent copies.
+
+# Arguments
+- `psf`: Vector PSF instance
+- `z`: Emitter depth above the coverslip (μm)
+
+# Keyword Arguments
+- `z_stage`: Stage displacement from the nominal focal plane (μm). Defaults to the PSF's
+  own `z_stage`, so `pupil_at(psf, z)` matches `amplitude(psf, x, y, z)`.
+
+# Returns
+- A `VectorPupilFunction` for a fixed-dipole PSF (single pupil), or a
+  `Vector{VectorPupilFunction}` (one per x/y/z dipole orientation) for a free/rotating
+  dipole PSF.
+
+# Examples
+```julia
+psf = VectorPSF(1.4, 0.532, DipoleVector(1.0, 0.0, 0.0))
+vp  = pupil_at(psf, 1.0)        # pupil for an emitter 1 μm above the coverslip
+Ex  = vp.Ex.field               # complex H-polarization pupil at that depth
+Ey  = vp.Ey.field               # complex V-polarization pupil at that depth
+```
+
+See also [`apply_defocus!`](@ref), [`amplitude`](@ref).
+"""
+function pupil_at(psf::VectorPSF, z::Real; z_stage::Real=psf.z_stage)
+    defocused = [apply_defocus!(copy(vp), z, z_stage) for vp in psf.vector_pupils]
+    return length(defocused) == 1 ? defocused[1] : defocused
+end
+
+"""
     update_pupils!(psf::VectorPSF) -> VectorPSF
 
 Update the vector pupil functions based on stored Zernike coefficients and/or base pupil.

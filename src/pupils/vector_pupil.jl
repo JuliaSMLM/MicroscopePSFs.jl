@@ -185,3 +185,58 @@ function Base.show(io::IO, p::VectorPupilFunction)
           "n_medium=$(p.n_medium), n_coverslip=$(p.n_coverslip), ",
           "n_immersion=$(p.n_immersion), $(sz)x$(sz))")
 end
+
+"""
+    copy(vp::VectorPupilFunction)
+
+Return a deep copy of `vp` with independent `Ex` and `Ey` field arrays.
+"""
+Base.copy(vp::VectorPupilFunction) = VectorPupilFunction(
+    vp.nₐ, vp.λ, vp.n_medium, vp.n_coverslip, vp.n_immersion,
+    copy(vp.Ex), copy(vp.Ey))
+
+"""
+    apply_defocus!(vp::VectorPupilFunction, z::Real, z_stage::Real=zero(z))
+
+Apply the vectorial axial defocus phase to a `VectorPupilFunction` in place.
+
+The phase `exp(im·2π·(k_{z,medium}·z − k_{z,immersion}·z_stage))` is multiplied into
+both the `Ex` and `Ey` field components at every in-aperture sample, using the optical
+parameters (`nₐ`, `λ`, `n_medium`, `n_coverslip`, `n_immersion`) stored in `vp`. Samples
+outside the aperture are left unchanged (they are already zero).
+
+This reuses the same k-space grid and phase convention (`calculate_wave_vectors`,
+`calculate_axial_phase`) as `VectorPSF` evaluation, so the result is the pupil whose
+Fourier transform yields the field at emitter depth `z` and stage position `z_stage`.
+
+# Arguments
+- `vp`: Vector pupil function to modify
+- `z`: Emitter depth above the coverslip (μm)
+- `z_stage`: Distance the stage was moved from the nominal focal plane (μm, default 0)
+
+# Returns
+- The modified `vp`
+"""
+function apply_defocus!(vp::VectorPupilFunction, z::Real, z_stage::Real=zero(z))
+    grid_size = size(vp.Ex.field, 1)
+    kmax_val = vp.nₐ / vp.λ
+    kpixel = 2 * kmax_val / (grid_size - 1)
+    center = (grid_size + 1) / 2
+
+    for i in 1:grid_size, j in 1:grid_size
+        kx = (i - center) * kpixel
+        ky = (j - center) * kpixel
+        kr2 = kx^2 + ky^2
+        kr2 > kmax_val^2 && continue
+
+        kz_medium, kz_coverslip, kz_immersion = calculate_wave_vectors(
+            kr2, vp.λ, vp.n_medium, vp.n_coverslip, vp.n_immersion)
+        axial_phase = calculate_axial_phase(z, z_stage, kz_medium, kz_coverslip, kz_immersion)
+        phase_factor = exp(im * 2π * axial_phase)
+
+        vp.Ex.field[j, i] *= phase_factor
+        vp.Ey.field[j, i] *= phase_factor
+    end
+
+    return vp
+end
