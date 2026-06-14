@@ -74,6 +74,11 @@ export DipoleEmitter3D
 export DipoleVector, DipoleEmitter3D
 export calculate_pupil_field, calculate_fresnel_coefficients
 
+# Vector pupil physics primitives (pure, branch-free, broadcast-/AD-safe;
+# blessed as public API for reuse in differentiable forwards, e.g. PSFLearning)
+export calculate_wave_vectors, calculate_interface_fresnel, calculate_axial_phase
+export calculate_dipole_field_components, calculate_apodization
+
 # File includes...
 include("emitters.jl")
 include("pupils/pupil.jl")
