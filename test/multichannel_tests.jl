@@ -120,6 +120,59 @@ end
         @test_throws ArgumentError PlanePSF(scalar; dz=Inf)
     end
 
+    @testset "Wrapper amplitude integration preserves polarization" begin
+        fast = vector(DipoleVector(1.0, 0.0, 0.0); grid_size=64)
+        camera = IdealCamera(4, 3, 0.1)
+        emitter = Emitter3D(0.18, 0.14, 0.03, 1.0)
+        emitters = [emitter, Emitter3D(0.22, 0.12, -0.02, 4.0)]
+        plane = PlanePSF(fast; dz=0.1)
+        analyzer = AnalyzerPSF(fast; component=1)
+        cavity = FourPiPSF(fast, fast; phase=0.3)
+        nested = PlanePSF(AnalyzerPSF(cavity; component=2); dz=0.05)
+        kwargs = (; sampling=2, threaded=false)
+        base = integrate_pixels_amplitude(fast, camera, emitter; kwargs...)
+        shifted = Emitter3D(emitter.x, emitter.y, emitter.z+plane.dz, emitter.photons)
+        @test integrate_pixels_amplitude(plane, camera, emitter; kwargs...) ==
+              integrate_pixels_amplitude(fast, camera, shifted; kwargs...)
+        analyzed = integrate_pixels_amplitude(analyzer, camera, emitter; kwargs...)
+        @test analyzed[:,:,1] == base[:,:,1]
+        @test all(iszero, analyzed[:,:,2])
+        mirrored = Emitter3D(emitter.x, emitter.y, -emitter.z, emitter.photons)
+        @test integrate_pixels_amplitude(cavity, camera, emitter; kwargs...) ≈
+              (base .+ cis(cavity.phase) .* integrate_pixels_amplitude(fast, camera, mirrored; kwargs...)) ./ sqrt(2) rtol=1e-12
+        for p in (plane, analyzer, cavity, nested)
+            @test size(integrate_pixels_amplitude(p, camera, emitter; kwargs...)) == (3,4,2)
+            combined = integrate_pixels_amplitude(p, camera, emitters; kwargs...)
+            @test size(combined) == (3,4,2)
+            @test combined ≈ sum(integrate_pixels_amplitude(p, camera, e; kwargs...) for e in emitters) rtol=1e-12
+            empty_image = integrate_pixels_amplitude(p, camera, empty(emitters); kwargs...)
+            @test size(empty_image) == (3,4,2)
+            @test all(iszero, empty_image)
+            for support in (0.2, (-0.1,0.1,-0.1,0.1)), source in (emitter, emitters)
+                @test_throws ArgumentError integrate_pixels_amplitude(p, camera, source; support, kwargs...)
+            end
+        end
+        for p in (PlanePSF(rotating; dz=0.1), AnalyzerPSF(rotating; component=1), FourPiPSF(rotating,rotating)),
+            source in (emitter, emitters, empty(emitters))
+            base_error = try integrate_pixels_amplitude(rotating, camera, source; kwargs...) catch e; e end
+            wrapper_error = try integrate_pixels_amplitude(p, camera, source; kwargs...) catch e; e end
+            @test wrapper_error isa ErrorException
+            @test sprint(showerror, wrapper_error) == sprint(showerror, base_error)
+        end
+        for p in (PlanePSF(scalar; dz=0.1), FourPiPSF(scalar,scalar; phase=0.3)),
+            source in (emitter, emitters, empty(emitters)),
+            support in (Inf, 0.05, (0.1,0.2,0.1,0.2)), threaded in (false, true)
+            actual = integrate_pixels_amplitude(p, camera, source; support, sampling=1, threaded)
+            expected = integrate_pixels_amplitude(p, camera.pixel_edges_x, camera.pixel_edges_y,
+                                                 source; support, sampling=1, threaded)
+            @test actual isa Matrix
+            @test size(actual) == (3,4)
+            @test actual == expected
+        end
+        ambiguities = Test.detect_ambiguities(MicroscopePSFs)
+        @test isempty(filter(pair -> any(m -> m.name == :integrate_pixels_amplitude, pair), ambiguities))
+    end
+
     @testset "FourPiPSF scalar" begin
         ca, cb = ZernikeCoefficients(15), ZernikeCoefficients(15)
         ca.phase[6], cb.phase[8] = 0.3, 0.2
@@ -210,6 +263,42 @@ end
         @test FourPiPSF(AnalyzerPSF(PlanePSF(tilt; dz=0.1); component=1), AnalyzerPSF(mirror; component=1)) isa FourPiPSF
     end
 
+    @testset "4Pi rejects malformed pupil counts" begin
+        malformed = vector(; grid_size=64)
+        pop!(malformed.vector_pupils)
+        @test length(malformed.vector_pupils) == 2
+        @test_throws ArgumentError FourPiPSF(malformed, malformed)
+        err = try FourPiPSF(malformed, malformed) catch e; e end
+        @test err isa ArgumentError
+        if err isa ArgumentError
+            @test occursin("2 pupils", err.msg)
+        end
+        empty!(malformed.vector_pupils)
+        @test_throws ArgumentError FourPiPSF(malformed, malformed)
+        append!(malformed.vector_pupils, fill(first(rotating.vector_pupils), 4))
+        @test_throws ArgumentError FourPiPSF(malformed, malformed)
+    end
+
+    @testset "4Pi requires one optical frequency" begin
+        other = ScalarPSF(NA, 0.80, n)
+        @test_throws ArgumentError FourPiPSF(scalar, other)
+        @test_throws ArgumentError FourPiPSF(PlanePSF(scalar; dz=0.1), PlanePSF(other; dz=-0.1))
+        other_vector = VectorPSF(NA, 0.80, DipoleVector(1.0,0.0,0.0);
+                                 n_medium=n, n_coverslip=n, n_immersion=n, grid_size=64)
+        @test_throws ArgumentError FourPiPSF(AnalyzerPSF(fixed; component=1),
+                                            PlanePSF(AnalyzerPSF(other_vector; component=1); dz=0.1))
+        err = try FourPiPSF(scalar, other) catch e; e end
+        @test err isa ArgumentError
+        if err isa ArgumentError
+            @test occursin(string(scalar.λ), err.msg)
+            @test occursin(string(other.λ), err.msg)
+        end
+        τ = sqrt(eps(Float64))
+        @test FourPiPSF(scalar, ScalarPSF(NA, λ*(1+τ/2), n)) isa FourPiPSF
+        @test_throws ArgumentError FourPiPSF(scalar, ScalarPSF(NA, λ*(1+2τ), n))
+        @test FourPiPSF(scalar, ScalarPSF(1.1, λ, n)) isa FourPiPSF
+    end
+
     @testset "Analyzer over 4Pi" begin
         p = FourPiPSF(rotating, rotating; phase=0.4)
         h, v = AnalyzerPSF(p; component=1), AnalyzerPSF(p; component=2)
@@ -285,6 +374,43 @@ end
         @test maximum(abs.(sum(images) .- N.*expected)) < 0.02 * maximum(N.*expected)
     end
 
+    @testset "Container numeric types are writable" begin
+        for T in (Float16, BigFloat)
+            for kwargs in ((;transmission=T[1]), (;z_offset=T[0]),
+                           (;registration=[T[1 0 0;0 1 0]]))
+                @test_throws ArgumentError MultiChannelPSF(;channels=[scalar], kwargs...)
+            end
+            err = try MultiChannelPSF(;channels=[scalar], transmission=T[1]) catch e; e end
+            @test err isa ArgumentError
+            if err isa ArgumentError
+                @test occursin("Float32 or Float64", err.msg)
+            end
+        end
+        @test MultiChannelPSF(;channels=[scalar], registration=[Float32[1 0 0;0 1 0]]) isa MultiChannelPSF{Float32}
+        @test MultiChannelPSF(;channels=[scalar], transmission=[1], z_offset=[0],
+                             registration=[[1 0 0;0 1 0]]) isa MultiChannelPSF{Float64}
+        @test MultiChannelPSF(;channels=[scalar], transmission=[1//2], z_offset=[0//1]) isa MultiChannelPSF{Float64}
+        @test MultiChannelPSF(;channels=[scalar], transmission=[big(1)]) isa MultiChannelPSF{Float64}
+    end
+
+    @testset "Container refuses channels carrying a photon split" begin
+        h, v = AnalyzerPSF(fixed; component=1), AnalyzerPSF(fixed; component=2)
+        @test_throws ArgumentError MultiChannelPSF(;channels=[h,v])
+        for p in (h, PlanePSF(h; dz=0.1), FourPiPSF(h,h),
+                  FourPiPSF(fixed,h), FourPiPSF(h,fixed),
+                  AnalyzerPSF(FourPiPSF(fixed,fixed); component=1))
+            @test_throws ArgumentError MultiChannelPSF(;channels=[p])
+        end
+        err = try MultiChannelPSF(;channels=[h,v]) catch e; e end
+        @test err isa ArgumentError
+        if err isa ArgumentError
+            @test occursin("AnalyzerPSF carries the photon split itself", err.msg)
+            @test occursin("SplinePSF scaled to unit integral", err.msg)
+            @test occursin("transmission", err.msg)
+        end
+        # Unit-integral spline channels are covered by the H/V forward-law test above.
+    end
+
     @testset "Nested I/O and import-only child" begin
         mktempdir() do dir
             file = joinpath(dir,"multichannel.h5")
@@ -316,8 +442,10 @@ end
             out = IOBuffer()
             @test success(pipeline(cmd;stdout=out))
             @test String(take!(out)) == "true"
-            wrappers = [PlanePSF(scalar;dz=0.1), AnalyzerPSF(rotating;component=1), FourPiPSF(scalar,scalar;phase=0.3)]
-            all_channels = [scalar,fixed,rotating,wrappers...,FourPiPSF(rotating,rotating;phase=0.4)]
+            wrappers = [PlanePSF(scalar;dz=0.1), AnalyzerPSF(rotating;component=1),
+                        FourPiPSF(scalar,scalar;phase=0.3),
+                        AnalyzerPSF(FourPiPSF(rotating,rotating;phase=0.4);component=1)]
+            all_channels = [scalar,fixed,rotating,wrappers[1],wrappers[3],FourPiPSF(rotating,rotating;phase=0.4)]
             heterogeneous = MultiChannelPSF(;channels=all_channels)
             save_psf(file,heterogeneous)
             restored = load_psf(file)
@@ -342,12 +470,14 @@ end
 
     @testset "Additive exports" begin
         # Hard-coded origin/main exports, including the calculate_* physics primitives.
-        original = [:Zernike,:ZernikeCoefficients,:zernikepolynomial,:radialpolynomial,:AbstractPSF,
-            :integrate_pixels,:amplitude,:integrate_pixels_amplitude,:save_psf,:load_psf,
-            :PupilFunction,:VectorPupilFunction,:pupil_at,:GaussianPSF,:AiryPSF,:ScalarPSF,:VectorPSF,:SplinePSF,
-            :AbstractCamera,:IdealCamera,:AbstractEmitter,:Emitter2D,:Emitter3D,:DipoleEmitter3D,:DipoleVector,
-            :calculate_pupil_field,:calculate_fresnel_coefficients,:calculate_wave_vectors,
-            :calculate_interface_fresnel,:calculate_axial_phase,:calculate_dipole_field_components,:calculate_apodization]
+        original = [:AbstractCamera,:AbstractEmitter,:AbstractPSF,:AiryPSF,:DipoleEmitter3D,:DipoleVector,
+            :Emitter2D,:Emitter3D,:GaussianPSF,:IdealCamera,:MicroscopePSFs,:PupilFunction,:ScalarPSF,
+            :SplinePSF,:VectorPSF,:VectorPupilFunction,:Zernike,:ZernikeCoefficients,:amplitude,
+            :calculate_apodization,:calculate_axial_phase,:calculate_dipole_field_components,
+            :calculate_fresnel_coefficients,:calculate_interface_fresnel,:calculate_pupil_field,
+            :calculate_wave_vectors,:get_pixel_centers,:get_pixel_size,:integrate_pixels,
+            :integrate_pixels_amplitude,:is_axis_aligned,:load_psf,:pupil_at,:radialpolynomial,
+            :save_psf,:zernikepolynomial]
         @test all(n -> n in names(MicroscopePSFs), original)
         @test all(n -> n in names(MicroscopePSFs), [:dipole_fields,:PlanePSF,:AnalyzerPSF,:FourPiPSF,:MultiChannelPSF,:channel_position])
     end

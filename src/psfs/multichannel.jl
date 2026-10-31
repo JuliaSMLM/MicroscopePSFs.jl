@@ -94,9 +94,16 @@ end
 amplitude(p::AnalyzerPSF, x::Real, y::Real, z::Real) = _single_dipole_amplitude(dipole_fields(p, x, y, z))
 
 _mirror_signs(::ScalarPSF) = (1,)
-_mirror_signs(p::VectorPSF) = length(p.vector_pupils) == 3 ? (1, 1, -1) : (1,)
+function _mirror_signs(p::VectorPSF)
+    count = length(p.vector_pupils)
+    count == 1 && return (1,)
+    count == 3 && return (1, 1, -1)
+    throw(ArgumentError("A 4Pi VectorPSF arm has $count pupils; use 1 fixed-dipole pupil or 3 rotating-dipole pupils"))
+end
 _mirror_signs(p::Union{PlanePSF,AnalyzerPSF}) = _mirror_signs(p.psf)
 _mirror_signs(p::AbstractPSF) = throw(ArgumentError("A 4Pi arm needs a complex field; replace $(typeof(p)) with a ScalarPSF or VectorPSF arm"))
+_arm_wavelength(p::Union{ScalarPSF,VectorPSF}) = p.λ
+_arm_wavelength(p::Union{PlanePSF,AnalyzerPSF}) = _arm_wavelength(p.psf)
 _vector_psf(::AbstractPSF) = nothing
 _vector_psf(p::VectorPSF) = p
 _vector_psf(p::Union{PlanePSF,AnalyzerPSF}) = _vector_psf(p.psf)
@@ -125,7 +132,8 @@ end
 Interfere two opposed objectives about a shared focal plane.
 
 # Arguments
-- `top, bottom`: Complex-field arms with equal dipole and component counts.
+- `top, bottom`: Complex-field arms with equal dipole and component counts
+  and the same wavelength within relative tolerance `sqrt(eps(T))`.
   A fixed bottom dipole must mirror the top: `DipoleVector(px, py, -pz)`.
   Vector arms require `n_medium ≥ NA` to avoid evanescent growth at negative z.
 - `phase`: Cavity phase in radians.
@@ -162,6 +170,9 @@ struct FourPiPSF{T, A <: AbstractPSF, B <: AbstractPSF} <: Abstract3DPSF{T}
             throw(ArgumentError("4Pi arms differ in dipole count or component count; use two scalar arms, two fixed vector arms, or two rotating vector arms"))
         _check_fourpi_vectors(top, bottom)
         T = promote_type(_psf_float(top), _psf_float(bottom))
+        λt, λb = _arm_wavelength(top), _arm_wavelength(bottom)
+        isapprox(λt, λb; rtol=sqrt(eps(T)), atol=zero(T)) ||
+            throw(ArgumentError("4Pi arms have different wavelengths λ=$λt and λ=$λb; use matching wavelengths for one optical frequency"))
         isfinite(phase) && isfinite(T(phase)) || throw(ArgumentError("phase must be finite; supply a finite cavity phase"))
         return new{T,A,B}(top, bottom, T(phase))
     end
@@ -175,6 +186,87 @@ function dipole_fields(p::FourPiPSF, x::Real, y::Real, z::Real)
 end
 (p::FourPiPSF)(x::Real, y::Real, z::Real) = sum(sum(abs2, E) for E in dipole_fields(p, x, y, z))
 amplitude(p::FourPiPSF, x::Real, y::Real, z::Real) = _single_dipole_amplitude(dipole_fields(p, x, y, z))
+
+_n_dipoles(p::VectorPSF) = length(p.vector_pupils)
+_n_dipoles(p::Union{PlanePSF,AnalyzerPSF}) = _n_dipoles(p.psf)
+_n_dipoles(p::FourPiPSF) = _n_dipoles(p.top)
+
+function _check_vector_amplitude_integration(psf, support)
+    support == Inf || throw(ArgumentError("Vector amplitude integration does not support finite support; omit support or use support=Inf"))
+    _n_dipoles(psf) > 1 && error("integrate_pixels_amplitude() not meaningful for multiple dipole orientations")
+end
+
+"""
+    integrate_pixels_amplitude(psf::Union{PlanePSF,AnalyzerPSF,FourPiPSF}, camera, emitter;
+                               support=Inf, sampling=2, threaded=true)
+    integrate_pixels_amplitude(psf::Union{PlanePSF,AnalyzerPSF,FourPiPSF}, camera, emitters;
+                               support=Inf, sampling=2, threaded=true)
+
+Integrate wrapper field amplitudes while preserving vector polarization components.
+
+# Arguments
+- `psf`: A plane, analyzer, or 4Pi PSF with a single coherent dipole.
+- `camera`: Camera geometry defining pixel edges in microns.
+- `emitter` or `emitters`: One emitter or a vector of emitters, summed coherently.
+- `support`: Scalar wrappers retain the generic support options. Vector wrappers
+  require `Inf`, as for `VectorPSF` integration without a support keyword.
+- `sampling`: Subpixel samples per dimension (default 2).
+- `threaded`: Enable threaded integration (default true).
+
+# Returns
+A complex `[y, x, pol]` array for vector fields, with components `Ex` and `Ey`.
+Scalar wrappers retain the generic complex matrix. Several incoherent dipoles
+throw the same error as `VectorPSF` amplitude integration.
+
+# Examples
+```julia
+p = PlanePSF(VectorPSF(1.2, 0.68, DipoleVector(1.0, 0.0, 0.0)); dz=0.1)
+camera = IdealCamera(4, 4, 0.1)
+fields = integrate_pixels_amplitude(p, camera, Emitter3D(0.2, 0.2, 0.0, 1.0))
+```
+"""
+function integrate_pixels_amplitude(
+    psf::Union{PlanePSF,AnalyzerPSF,FourPiPSF}, camera::AbstractCamera,
+    emitter::AbstractEmitter;
+    support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf,
+    sampling::Integer=2, threaded::Bool=true
+)
+    if _n_components(psf) != 2
+        return invoke(integrate_pixels_amplitude,
+            Tuple{AbstractPSF,AbstractCamera,AbstractEmitter}, psf, camera, emitter;
+            support=support, sampling=sampling, threaded=threaded)
+    end
+    _check_vector_amplitude_integration(psf, support)
+    return _integrate_pixels_generic(psf, camera.pixel_edges_x, camera.pixel_edges_y,
+        emitter, amplitude, Complex{typeof(emitter.photons)}, (2,);
+        sampling=sampling, threaded=threaded)
+end
+
+function integrate_pixels_amplitude(
+    psf::Union{PlanePSF,AnalyzerPSF,FourPiPSF}, camera::AbstractCamera,
+    emitters::Vector{<:AbstractEmitter};
+    support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf,
+    sampling::Integer=2, threaded::Bool=true
+)
+    if _n_components(psf) != 2
+        return invoke(integrate_pixels_amplitude,
+            Tuple{AbstractPSF,AbstractCamera,Vector{<:AbstractEmitter}}, psf, camera, emitters;
+            support=support, sampling=sampling, threaded=threaded)
+    end
+    _check_vector_amplitude_integration(psf, support)
+    T = isempty(emitters) ? Complex{Float64} : Complex{typeof(first(emitters).photons)}
+    result = zeros(T, length(camera.pixel_edges_y)-1, length(camera.pixel_edges_x)-1, 2)
+    for emitter in emitters
+        result .+= _integrate_pixels_generic(psf, camera.pixel_edges_x, camera.pixel_edges_y,
+            emitter, amplitude, T, (2,); sampling=sampling, threaded=threaded)
+    end
+    return result
+end
+
+_carries_split(::AbstractPSF) = false
+_carries_split(::AnalyzerPSF) = true
+_carries_split(p::PlanePSF) = _carries_split(p.psf)
+_carries_split(p::FourPiPSF) = _carries_split(p.top) || _carries_split(p.bottom)
 
 """
     MultiChannelPSF(; channels, registration=nothing, transmission=nothing,
@@ -198,12 +290,14 @@ handle its channels explicitly.
 
 # Returns
 A `MultiChannelPSF{T,P}` with channel element type narrowed when homogeneous.
-`T` is the promoted float type of supplied numeric arrays, or `Float64` when
-all are defaulted. All numeric entries must be finite. Each channel integrates
+`T` is the promoted float type of supplied numeric arrays, restricted to
+`Float32` or `Float64`; integer and rational inputs promote to `Float64`,
+as do all-default inputs. All numeric entries must be finite. Each channel integrates
 to one alone (4Pi phase channels on average over the fringe); this cannot be
-checked by the constructor. Raw `AnalyzerPSF` channels carry their own split
-and must be normalized before use here. See [`channel_position`](@ref) for
-the forward law.
+checked by the constructor. Raw `AnalyzerPSF` channels and wrappers carrying
+their photon split are refused: tabulate them into a `SplinePSF` scaled to unit
+integral and put the split in `transmission`. See [`channel_position`](@ref)
+for the forward law.
 
 # Examples
 ```julia
@@ -224,6 +318,7 @@ struct MultiChannelPSF{T <: AbstractFloat, P <: AbstractPSF}
         N = length(ch)
         N > 0 || throw(ArgumentError("No channels supplied; provide at least one PSF"))
         all(p -> p isa AbstractPSF, ch) || throw(ArgumentError("Every channel must be an AbstractPSF; replace invalid channels with PSFs"))
+        any(_carries_split, ch) && throw(ArgumentError("An AnalyzerPSF carries the photon split itself; tabulate it into a SplinePSF scaled to unit integral and put the split in transmission"))
         for (name, values) in (("registration", registration), ("transmission", transmission), ("z_offset", z_offset))
             isnothing(values) || length(values) == N || throw(ArgumentError("$name length must match channels; provide $N entries"))
         end
@@ -238,11 +333,12 @@ struct MultiChannelPSF{T <: AbstractFloat, P <: AbstractPSF}
             entries = is_registration ? Iterators.flatten(values) : values
             for v in entries
                 v isa Real && isfinite(v) || throw(ArgumentError("Channel numeric values must be finite real numbers; replace non-finite or non-real values"))
-                V = typeof(float(v))
+                V = v isa Union{Integer,Rational} ? Float64 : typeof(float(v))
                 numeric_type = isnothing(numeric_type) ? V : promote_type(numeric_type, V)
             end
         end
         T = isnothing(numeric_type) ? Float64 : numeric_type
+        T in (Float32, Float64) || throw(ArgumentError("Channel numeric type $T cannot be saved; pass Float32 or Float64 values"))
         reg = isnothing(registration) ? [T[1 0 0; 0 1 0] for _ in 1:N] : [Matrix{T}(r) for r in registration]
         tr = isnothing(transmission) ? fill(one(T) / N, N) : Vector{T}(transmission)
         dz = isnothing(z_offset) ? zeros(T, N) : Vector{T}(z_offset)
@@ -278,8 +374,10 @@ Map an emitter from the reference camera frame into channel `i`.
 
 where `N` is the emitter's total photons and the integrated emitter has unit
 photons. Each channel must integrate to one alone, with 4Pi phase channels
-normalized on average over the fringe. The constructor cannot check this;
-raw `AnalyzerPSF` channels do not meet it because they carry the split themselves.
+normalized on average over the fringe. The constructor cannot check arbitrary
+channel normalization; it refuses raw `AnalyzerPSF` channels and wrappers carrying
+their photon split. Tabulate these into a `SplinePSF` scaled to unit integral
+and put the split in `transmission`.
 
 # Examples
 ```julia

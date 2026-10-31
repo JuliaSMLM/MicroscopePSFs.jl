@@ -28,8 +28,10 @@ Each channel must integrate to one alone. For 4Pi phase channels this means
 unit energy **on average over the fringe**, rather than at every emitter z.
 Transmission is a nonnegative fraction of one total photon budget, with sum
 at most one. The constructor cannot check the channel normalization. In
-particular, raw H/V `AnalyzerPSF`s carry the polarization split themselves;
-normalize them alone before assigning transmission fractions in a container.
+particular, raw H/V `AnalyzerPSF`s carry the polarization split themselves and
+are refused, including through `PlanePSF` and either arm of `FourPiPSF`.
+Tabulate these channels into a `SplinePSF` scaled to unit integral and put
+the split in `transmission`.
 
 ## Dual focal plane
 
