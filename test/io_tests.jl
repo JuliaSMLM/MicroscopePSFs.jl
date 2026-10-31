@@ -248,7 +248,8 @@
             filename = temp_file("bad_type.h5")
             try
                 save_psf(filename, spline)
-                for bad in ("OtherModule.SplinePSF", "NotAPSFType", "MicroscopePSFs.save_psf")
+                for bad in (
+                    "OtherModule.SplinePSF", "NotAPSFType", "MicroscopePSFs.save_psf")
                     set_psf_type!(filename, bad)
                     @test_throws ArgumentError load_psf(filename)
                 end
@@ -258,8 +259,8 @@
         end
 
         @testset "Round trip from a session that only imports MicroscopePSFs" begin
-            # Main here has `using MicroscopePSFs`, which hides the bug: type names print bare.
-            # A child process with only `import MicroscopePSFs` prints them module-qualified.
+            # `using MicroscopePSFs` hides the bug: type names print bare.
+            # An import-only child prints them module-qualified.
             filename = temp_file("import_only.h5")
             script = """
                 import MicroscopePSFs
@@ -270,7 +271,8 @@
                 loaded = MicroscopePSFs.load_psf(ARGS[1])
                 print(loaded(0.1, 0.2) == psf(0.1, 0.2))
                 """
-            cmd = `$(Base.julia_cmd()) --startup-file=no --project=$(Base.active_project()) -e $script $filename`
+            cmd = `$(Base.julia_cmd()) --startup-file=no
+                   --project=$(Base.active_project()) -e $script $filename`
             try
                 out = IOBuffer()
                 @test success(pipeline(cmd; stdout=out))

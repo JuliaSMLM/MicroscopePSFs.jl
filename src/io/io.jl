@@ -37,7 +37,8 @@ function save_psf(filename::String, object; metadata::Dict=Dict())
         attrs["io_version"] = string(IO_VERSION)
         
         # Store the bare type name without module or parameters. `string(typeof(object))`
-        # would qualify it as "MicroscopePSFs.X" whenever Main has not run `using MicroscopePSFs`.
+        # would qualify it as "MicroscopePSFs.X" whenever Main has not run
+        # `using MicroscopePSFs`.
         attrs["psf_type"] = String(nameof(typeof(object)))
         
         attrs["creation_date"] = string(Dates.now())
@@ -108,15 +109,19 @@ end
 """
     _resolve_psf_type(type_str::AbstractString) -> Type
 
-Map a stored `psf_type` attribute to a MicroscopePSFs type. Accepts the bare name (`"SplinePSF"`)
-and the `MicroscopePSFs.`-qualified name that versions 0.5.0-0.5.6 wrote when the saving session
-had not run `using MicroscopePSFs`. Any other name throws an `ArgumentError`.
+Map a stored `psf_type` attribute to a MicroscopePSFs type. Accepts the bare name
+(`"SplinePSF"`) and the `MicroscopePSFs.`-qualified name that versions 0.5.0-0.5.6
+wrote when the saving session had not run `using MicroscopePSFs`. Any other name
+throws an `ArgumentError`.
 """
 function _resolve_psf_type(type_str::AbstractString)
     name = chopprefix(type_str, "MicroscopePSFs.")
     sym = Symbol(name)
-    if occursin('.', name) || !isdefined(MicroscopePSFs, sym) || !(getfield(MicroscopePSFs, sym) isa Type)
-        throw(ArgumentError("Unrecognized psf_type \"$type_str\" in PSF file: expected a MicroscopePSFs type name such as \"SplinePSF\""))
+    if occursin('.', name) || !isdefined(MicroscopePSFs, sym) ||
+        !(getfield(MicroscopePSFs, sym) isa Type)
+        throw(ArgumentError(
+            "Unrecognized psf_type \"$type_str\" in PSF file: " *
+            "expected a MicroscopePSFs type name such as \"SplinePSF\""))
     end
     return getfield(MicroscopePSFs, sym)
 end

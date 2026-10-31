@@ -128,9 +128,9 @@ the mirror is already in its orientation, so its remaining field sign is +1.
 The constructor compares normalized dipoles, including dipoles constructed
 with same-typed arguments that did not normalize automatically.
 
-The existing `VectorPSF` convention has `pz` opposite to emitter z. Thus a
-code dipole `DipoleVector(1.0, 0, 1.0)` matches lab orientation `[1, 0, -1]/√2`.
-The mirror rule holds in either frame:
+Emitter z and dipole z share one frame, with +z pointing into the sample,
+away from the objective. A code dipole `DipoleVector(1.0, 0, 1.0)` matches
+lab orientation `[1, 0, 1]/√2`. The opposed-objective mirror rule still applies:
 
 ```julia
 using MicroscopePSFs

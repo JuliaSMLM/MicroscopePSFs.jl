@@ -91,7 +91,9 @@ intensity = sum(sum(abs2, E) for E in fields)
 ```
 """
 function dipole_fields(psf::AbstractPSF, x::Real, y::Real, z::Real)
-    throw(ArgumentError("$(typeof(psf)) stores intensity or has no complex field; use a ScalarPSF or VectorPSF with phase information"))
+    throw(ArgumentError(
+        "$(typeof(psf)) stores intensity or has no complex field; " *
+        "use a ScalarPSF or VectorPSF with phase information"))
 end
 
 # """

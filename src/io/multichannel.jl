@@ -14,7 +14,8 @@ function _save_psf_impl(file::_H5Parent, p::AnalyzerPSF)
     _io_save_child(file, "psf", p.psf)
 end
 function _load_psf_impl(file::_H5Parent, ::Type{AnalyzerPSF})
-    return AnalyzerPSF(_io_load_child(file, "psf"); component=read(file["parameters/component"]))
+    return AnalyzerPSF(_io_load_child(file, "psf");
+                       component=read(file["parameters/component"]))
 end
 
 function _save_psf_impl(file::_H5Parent, p::FourPiPSF)
@@ -49,7 +50,9 @@ function _load_psf_impl(file::_H5Parent, ::Type{MultiChannelPSF})
     params = file["parameters"]
     N = read(params["n_channels"])
     registration = read(params["registration"])
-    size(registration) == (2, 3, N) || throw(ArgumentError("Stored registration must have size (2, 3, n_channels); repair the registration dataset"))
+    size(registration) == (2, 3, N) || throw(ArgumentError(
+        "Stored registration must have size (2, 3, n_channels); " *
+        "repair the registration dataset"))
     return MultiChannelPSF(;
         channels=[_io_load_child(file["channels"], "channel_$i") for i in 1:N],
         registration=[registration[:, :, i] for i in 1:N],

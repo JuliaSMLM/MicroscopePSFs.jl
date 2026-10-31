@@ -411,6 +411,7 @@ polarization split: normalize them alone before assigning transmission.
 Vector 4Pi arms require `n_medium ≥ NA`. `phase` is the cavity phase;
 polarization-specific phases use
 `AnalyzerPSF(FourPiPSF(top, bottom; phase=φ); component=c)` per channel.
-The existing vector frame has `pz` opposite emitter z; its mirror rule is
-unchanged by that convention. Splines hold intensity only and cannot enter
+Emitter z and dipole z share one frame, with +z pointing into the sample,
+away from the objective. The opposed-objective mirror rule still applies.
+Splines hold intensity only and cannot enter
 coherent sums. All new wrappers and the container support recursive HDF5 I/O.
