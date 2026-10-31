@@ -62,7 +62,7 @@ let
                 for threaded in (false, true)
                     actual = integrate_pixels(psf, camera, emitter;
                         sampling=sampling, threaded=threaded)
-                    @test actual == expected
+                    @test isequal(actual, expected)
                 end
             end
         end
