@@ -93,6 +93,30 @@ end
         @test calculate_dipole_field_components(
             0.0+0im, 0.6+0im, 0.8+0im, DipoleVector(0.0, 0.0, 1.0),
             1.0+0im, 1.0+0im) == (0.6+0im, 0.0+0im)
+
+        @testset "Complex-angle dipole far field" begin
+            n_medium = 1.33
+            ϕ = 0.7
+            p = normalize([1.0, 0.3, 0.7])
+            dipole = DipoleVector(p...)
+            Tp, Ts = 1.2+0.3im, 0.8-0.2im
+            for λkr in (1.36, 1.0)
+                s = complex(λkr / n_medium)
+                c = sqrt(complex(1 - s^2))
+                q = [s*cos(ϕ), s*sin(ϕ), -c]
+                # Analytic continuation uses transpose products, without conjugation.
+                E = p - (transpose(p) * q) * q
+                ep = [c*cos(ϕ), c*sin(ϕ), s]
+                es = [-sin(ϕ), cos(ϕ), 0]
+                Ep, Es = transpose(ep) * E, transpose(es) * E
+                expected = (Tp*Ep*cos(ϕ) - Ts*Es*sin(ϕ),
+                            Tp*Ep*sin(ϕ) + Ts*Es*cos(ϕ))
+                Ex, Ey = calculate_dipole_field_components(
+                    complex(ϕ), s, c, dipole, Tp, Ts)
+                @test Ex ≈ expected[1] rtol=1e-12
+                @test Ey ≈ expected[2] rtol=1e-12
+            end
+        end
     end
 
     @testset "dipole_fields" begin
