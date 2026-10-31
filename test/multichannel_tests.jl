@@ -102,7 +102,8 @@ end
             Tp, Ts = 1.2+0.3im, 0.8-0.2im
             for λkr in (1.36, 1.0)
                 s = complex(λkr / n_medium)
-                c = sqrt(complex(1 - s^2))
+                # A real radicand selects the complex-root branch production uses.
+                c = sqrt(complex(1 - (λkr / n_medium)^2))
                 q = [s*cos(ϕ), s*sin(ϕ), -c]
                 # Analytic continuation uses transpose products, without conjugation.
                 E = p - (transpose(p) * q) * q
