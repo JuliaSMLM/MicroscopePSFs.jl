@@ -6,11 +6,11 @@ Handles saving and loading of complex pupil field data and Zernike coefficients.
 """
 
 """
-    _save_psf_impl(file::HDF5.File, psf::ScalarPSF)
+    _save_psf_impl(file::_H5Parent, psf::ScalarPSF)
 
 Save a ScalarPSF to an HDF5 file, including pupil function and any Zernike coefficients.
 """
-function _save_psf_impl(file::HDF5.File, psf::ScalarPSF)
+function _save_psf_impl(file::_H5Parent, psf::ScalarPSF)
     # Save basic parameters
     params = create_group(file, "parameters")
     params["na"] = psf.nₐ
@@ -28,11 +28,11 @@ function _save_psf_impl(file::HDF5.File, psf::ScalarPSF)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{ScalarPSF}) 
+    _load_psf_impl(file::_H5Parent, ::Type{ScalarPSF})
 
 Load a ScalarPSF from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{ScalarPSF}) 
+function _load_psf_impl(file::_H5Parent, ::Type{ScalarPSF})
     # Load parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda", "n"])

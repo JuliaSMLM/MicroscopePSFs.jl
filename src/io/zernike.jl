@@ -7,11 +7,11 @@ used to represent pupil aberrations.
 """
 
 """
-    _save_psf_impl(file::HDF5.File, zc::ZernikeCoefficients)
+    _save_psf_impl(file::_H5Parent, zc::ZernikeCoefficients)
 
 Save ZernikeCoefficients to an HDF5 file, storing magnitude and phase arrays.
 """
-function _save_psf_impl(file::HDF5.File, zc::ZernikeCoefficients)
+function _save_psf_impl(file::_H5Parent, zc::ZernikeCoefficients)
     # Create data group
     data = create_group(file, "data")
     
@@ -35,11 +35,11 @@ function _save_psf_impl(file::HDF5.File, zc::ZernikeCoefficients)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{ZernikeCoefficients}) 
+    _load_psf_impl(file::_H5Parent, ::Type{ZernikeCoefficients})
 
 Load ZernikeCoefficients from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{ZernikeCoefficients}) 
+function _load_psf_impl(file::_H5Parent, ::Type{ZernikeCoefficients})
     # Load magnitude and phase arrays
     data = file["data"]
     _io_check_required_fields(data, ["magnitude", "phase"])

@@ -122,3 +122,17 @@ psf_aberrated = VectorPSF(
 3. **Speed**: Significantly slower than other PSF models, especially with fine grid sizes
 
 For standard usage patterns, camera integration, and comparison with other PSF types, see the [PSF Overview](overview.md).
+
+## Complex fields and the dipole frame
+
+`dipole_fields(psf, x, y, z)` returns one `[Ex, Ey]` complex vector per mutually
+incoherent dipole: one for a fixed orientation or three in x, y, z order for a
+rotating dipole. Intensity is `sum(sum(abs2, E) for E in dipole_fields(...))`.
+For a fixed dipole its only entry equals `amplitude`; rotating dipoles have
+no single coherent amplitude.
+
+The existing `pz` convention points opposite to emitter z. Consequently,
+`DipoleVector(1.0, 0, 1.0)` matches lab dipole `[1, 0, -1]/√2`. Opposed
+objectives still mirror `pz`: construct the bottom fixed dipole as
+`DipoleVector(px, py, -pz)`. See [Multi-channel PSFs](multichannel.md) for
+analyzers, the 4Pi mirror rule, and photon normalization.

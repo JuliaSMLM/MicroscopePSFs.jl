@@ -1,7 +1,7 @@
 # src/io/vector3d.jl
 
 """
-    _save_psf_impl(file::HDF5.File, psf::VectorPSF)
+    _save_psf_impl(file::_H5Parent, psf::VectorPSF)
 
 Save a VectorPSF to an HDF5 file, including all optical parameters,
 dipole orientation, and vector pupil fields.
@@ -10,7 +10,7 @@ dipole orientation, and vector pupil fields.
 - `file`: Open HDF5 file handle
 - `psf`: VectorPSF to save
 """
-function _save_psf_impl(file::HDF5.File, psf::VectorPSF)
+function _save_psf_impl(file::_H5Parent, psf::VectorPSF)
     # Save optical parameters
     params = create_group(file, "parameters")
     params["na"] = psf.nₐ
@@ -57,7 +57,7 @@ function _save_psf_impl(file::HDF5.File, psf::VectorPSF)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{VectorPSF}) 
+    _load_psf_impl(file::_H5Parent, ::Type{VectorPSF})
 
 Load a VectorPSF from an HDF5 file, reconstructing all components.
 
@@ -68,7 +68,7 @@ Load a VectorPSF from an HDF5 file, reconstructing all components.
 # Returns
 - VectorPSF reconstructed from stored data
 """
-function _load_psf_impl(file::HDF5.File, ::Type{VectorPSF}) 
+function _load_psf_impl(file::_H5Parent, ::Type{VectorPSF})
     # Load optical parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda", "n_medium",

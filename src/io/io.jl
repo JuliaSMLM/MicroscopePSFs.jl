@@ -12,6 +12,7 @@ Key functions:
 """
 
 # Constants
+const _H5Parent = Union{HDF5.File, HDF5.Group}
 const IO_VERSION = v"1.0.0"  # Version of the I/O system
 const MIN_SUPPORTED_VERSION = v"1.0.0"  # Minimum supported version
 
@@ -132,11 +133,11 @@ function _check_version_compatibility(file_version::String)
 end
 
 # Default error implementation
-function _save_psf_impl(file::HDF5.File, psf::AbstractPSF)
+function _save_psf_impl(file::_H5Parent, psf::AbstractPSF)
     error("Saving not implemented for PSF type $(typeof(psf))")
 end
 
-function _load_psf_impl(file::HDF5.File, ::Type{T}) where {T <: AbstractPSF}
+function _load_psf_impl(file::_H5Parent, ::Type{T}) where {T <: AbstractPSF}
     error("Loading not implemented for PSF type $T")
 end
 
@@ -152,3 +153,4 @@ include("spline.jl")
 include("vector3d.jl")
 include("pupil.jl")
 include("zernike.jl")
+include("multichannel.jl")

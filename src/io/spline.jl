@@ -7,12 +7,12 @@ and interpolation parameters needed to reconstruct the spline interpolant.
 """
 
 """
-    _save_psf_impl(file::HDF5.File, psf::SplinePSF)
+    _save_psf_impl(file::_H5Parent, psf::SplinePSF)
 
 Save a SplinePSF to an HDF5 file, including the original grid data
 used to create the spline interpolation.
 """
-function _save_psf_impl(file::HDF5.File, psf::SplinePSF)
+function _save_psf_impl(file::_H5Parent, psf::SplinePSF)
     # Store parameters
     params = create_group(file, "parameters")
     
@@ -38,11 +38,11 @@ function _save_psf_impl(file::HDF5.File, psf::SplinePSF)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{SplinePSF})
+    _load_psf_impl(file::_H5Parent, ::Type{SplinePSF})
 
 Load a SplinePSF from an HDF5 file, reconstructing it using the standard constructor.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{SplinePSF})
+function _load_psf_impl(file::_H5Parent, ::Type{SplinePSF})
     # Load parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["interp_order", "dimensions"])

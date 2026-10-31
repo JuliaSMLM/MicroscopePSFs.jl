@@ -106,6 +106,8 @@ end
 # Note: The specialized integration function has been removed since
 # the generic function in integration.jl now automatically handles z-coordinates
 
+dipole_fields(psf::ScalarPSF, x::Real, y::Real, z::Real) = [[amplitude(psf, x, y, z)]]
+
 function Base.show(io::IO, psf::ScalarPSF)
     print(io, "ScalarPSF(NA=$(psf.nₐ), λ=$(psf.λ)μm, n=$(psf.n))")
     if !isnothing(psf.zernike_coeffs)

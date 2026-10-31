@@ -46,6 +46,10 @@ using HDF5
         include("thread_tests.jl")
     end
     
+    @testset "Multi-channel PSFs" begin
+        include("multichannel_tests.jl")
+    end
+
     # I/O functionality tests
     @testset "I/O Functions" begin
         include("io_tests.jl")

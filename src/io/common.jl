@@ -110,3 +110,16 @@ function _io_check_required_fields(group, fields)
         end
     end
 end
+# Store complete PSFs recursively without changing any existing root layout.
+function _io_save_child(parent::_H5Parent, name, object)
+    child = create_group(parent, name)
+    attributes(child)["psf_type"] = String(nameof(typeof(object)))
+    _save_psf_impl(child, object)
+    return nothing
+end
+
+function _io_load_child(parent::_H5Parent, name)
+    child = parent[name]
+    object_type = _resolve_psf_type(read(attributes(child)["psf_type"]))
+    return _load_psf_impl(child, object_type)
+end
