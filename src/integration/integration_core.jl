@@ -151,6 +151,30 @@ function _integrate_pixels_core!(
         throw(ArgumentError("Unsupported result array type: $(typeof(result))"))
     end
     
+    function integrate_subsamples(ix, iy, xs, ys, area_factor)
+        # Get first value to determine return type and initialize sum properly
+        x_psf = xs[1] - emitter_x
+        y_psf = ys[1] - emitter_y
+        first_val = func(x_psf, y_psf)
+
+        if first_val isa Number
+            # Scalar case
+            pixel_sum = zero(typeof(first_val))
+            for x in xs, y in ys
+                pixel_sum += func(x - emitter_x, y - emitter_y)
+            end
+            result[iy, ix] = pixel_sum * area_factor
+        else
+            # Vector case - initialize sum with correct dimensions
+            pixel_sum = zeros(eltype(first_val), length(first_val))
+            for x in xs, y in ys
+                pixel_sum .+= func(x - emitter_x, y - emitter_y)
+            end
+            # Store each component scaled by area
+            result[iy, ix, :] .= pixel_sum .* area_factor
+        end
+    end
+
     # Define a nested function to process a single pixel
     function process_pixel(ix, iy)
         x_start = pixel_edges_x[ix]
@@ -185,30 +209,20 @@ function _integrate_pixels_core!(
             dy_sample = dy / sampling
             area_factor = dx_sample * dy_sample
             
-            # Subsampling points
-            xs = range(x_start + dx_sample/2, x_end - dx_sample/2, length=sampling)
-            ys = range(y_start + dy_sample/2, y_end - dy_sample/2, length=sampling)
-            
-            # Get first value to determine return type and initialize sum properly
-            x_psf = xs[1] - emitter_x
-            y_psf = ys[1] - emitter_y
-            first_val = func(x_psf, y_psf)
-            
-            if first_val isa Number
-                # Scalar case
-                pixel_sum = zero(typeof(first_val))
-                for x in xs, y in ys
-                    pixel_sum += func(x - emitter_x, y - emitter_y)
-                end
-                result[iy, ix] = pixel_sum * area_factor
+            x_first = x_start + dx_sample/2
+            x_last = x_end - dx_sample/2
+            y_first = y_start + dy_sample/2
+            y_last = y_end - dy_sample/2
+
+            if sampling == 2
+                # A two-point range is exactly its end points at none of its cost.
+                integrate_subsamples(ix, iy, (x_first, x_last), (y_first, y_last),
+                    area_factor)
             else
-                # Vector case - initialize sum with correct dimensions
-                pixel_sum = zeros(eltype(first_val), length(first_val))
-                for x in xs, y in ys
-                    pixel_sum .+= func(x - emitter_x, y - emitter_y)
-                end
-                # Store each component scaled by area
-                result[iy, ix, :] .= pixel_sum .* area_factor
+                # Interior range points differ from plain arithmetic by an ulp.
+                xs = range(x_first, x_last, length=sampling)
+                ys = range(y_first, y_last, length=sampling)
+                integrate_subsamples(ix, iy, xs, ys, area_factor)
             end
         end
     end
