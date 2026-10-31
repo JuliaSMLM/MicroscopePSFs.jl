@@ -104,6 +104,7 @@ _mirror_signs(p::Union{PlanePSF,AnalyzerPSF}) = _mirror_signs(p.psf)
 _mirror_signs(p::AbstractPSF) = throw(ArgumentError("A 4Pi arm needs a complex field; replace $(typeof(p)) with a ScalarPSF or VectorPSF arm"))
 _arm_wavelength(p::Union{ScalarPSF,VectorPSF}) = p.λ
 _arm_wavelength(p::Union{PlanePSF,AnalyzerPSF}) = _arm_wavelength(p.psf)
+_arm_tolerance(top, bottom) = sqrt(max(eps(_psf_float(top)), eps(_psf_float(bottom))))
 _vector_psf(::AbstractPSF) = nothing
 _vector_psf(p::VectorPSF) = p
 _vector_psf(p::Union{PlanePSF,AnalyzerPSF}) = _vector_psf(p.psf)
@@ -119,7 +120,7 @@ function _check_fourpi_vectors(top, bottom)
         pb = [b.dipole.px, b.dipole.py, b.dipole.pz]
         # Same-typed DipoleVector arguments can bypass its normalizing factory.
         na, nb = norm(pa), norm(pb)
-        τ = sqrt(eps(promote_type(_psf_float(a), _psf_float(b))))
+        τ = _arm_tolerance(top, bottom)
         if !(isfinite(na) && isfinite(nb) && na > 0 && nb > 0 && isapprox(pa / na, pb / nb; atol=τ, rtol=τ))
             throw(ArgumentError("Fixed 4Pi dipoles must be mirrored; build the bottom arm with DipoleVector(px, py, -pz) from the top dipole"))
         end
@@ -133,7 +134,7 @@ Interfere two opposed objectives about a shared focal plane.
 
 # Arguments
 - `top, bottom`: Complex-field arms with equal dipole and component counts
-  and the same wavelength within relative tolerance `sqrt(eps(T))`.
+  and the same wavelength within relative tolerance `sqrt(eps(T))` of the coarser arm type.
   A fixed bottom dipole must mirror the top: `DipoleVector(px, py, -pz)`.
   Vector arms require `n_medium ≥ NA` to avoid evanescent growth at negative z.
 - `phase`: Cavity phase in radians.
@@ -171,7 +172,7 @@ struct FourPiPSF{T, A <: AbstractPSF, B <: AbstractPSF} <: Abstract3DPSF{T}
         _check_fourpi_vectors(top, bottom)
         T = promote_type(_psf_float(top), _psf_float(bottom))
         λt, λb = _arm_wavelength(top), _arm_wavelength(bottom)
-        isapprox(λt, λb; rtol=sqrt(eps(T)), atol=zero(T)) ||
+        isapprox(λt, λb; rtol=_arm_tolerance(top, bottom), atol=zero(T)) ||
             throw(ArgumentError("4Pi arms have different wavelengths λ=$λt and λ=$λb; use matching wavelengths for one optical frequency"))
         isfinite(phase) && isfinite(T(phase)) || throw(ArgumentError("phase must be finite; supply a finite cavity phase"))
         return new{T,A,B}(top, bottom, T(phase))

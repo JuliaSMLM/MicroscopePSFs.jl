@@ -299,6 +299,40 @@ end
         @test FourPiPSF(scalar, ScalarPSF(1.1, λ, n)) isa FourPiPSF
     end
 
+    @testset "4Pi tolerates mixed arm precision" begin
+        scalar32 = ScalarPSF(1.2f0, 0.66f0, 1.33f0; pupil_data=ones(ComplexF32,16,16))
+        scalar64 = ScalarPSF(1.2, 0.66, 1.33; pupil_data=ones(ComplexF64,16,16))
+        @test scalar32 isa ScalarPSF{Float32}
+        @test FourPiPSF(scalar32, scalar64) isa FourPiPSF{Float64}
+        @test FourPiPSF(scalar64, scalar32) isa FourPiPSF{Float64}
+        @test FourPiPSF(PlanePSF(scalar32; dz=0.1), scalar64) isa FourPiPSF{Float64}
+        @test_throws ArgumentError FourPiPSF(
+            ScalarPSF(1.2f0, 0.68f0, 1.33f0; pupil_data=ones(ComplexF32,16,16)),
+            ScalarPSF(1.2, 0.80, 1.33; pupil_data=ones(ComplexF64,16,16)))
+
+        # Preserve physical fields in Float32 pupils; the vector factory allocates Float64 pupils.
+        function float32_arm(p::VectorPSF)
+            nₐ, λ, nₘ, n꜀, nᵢ = Float32.((p.nₐ,p.λ,p.n_medium,p.n_coverslip,p.n_immersion))
+            pupils = [VectorPupilFunction(nₐ,λ,nₘ,n꜀,nᵢ,
+                PupilFunction(nₐ,λ,nₘ,ComplexF32.(v.Ex.field)),
+                PupilFunction(nₐ,λ,nₘ,ComplexF32.(v.Ey.field))) for v in p.vector_pupils]
+            d = p.dipole
+            return VectorPSF{Float32}(nₐ,λ,nₘ,n꜀,nᵢ,
+                DipoleVector(Float32(d.px),Float32(d.py),Float32(d.pz)),
+                Float32(p.z_stage),pupils,nothing,nothing)
+        end
+        # Exactly representable wavelength isolates the dipole tolerance from the wavelength check.
+        arm(d) = VectorPSF(1.2, 0.5, d; n_medium=n,n_coverslip=n,n_immersion=n,grid_size=16)
+        for (px,py,pz) in ((0.2,0.4,0.66), (1.0,2.0,3.0), (0.91,0.32,0.17))
+            top32 = float32_arm(arm(DipoleVector(px,py,pz)))
+            bottom64 = arm(DipoleVector(px,py,-pz))
+            @test FourPiPSF(top32, bottom64) isa FourPiPSF{Float64}
+            @test FourPiPSF(bottom64, top32) isa FourPiPSF{Float64}
+            @test FourPiPSF(PlanePSF(top32; dz=0.1), AnalyzerPSF(bottom64; component=1)) isa FourPiPSF{Float64}
+            @test_throws ArgumentError FourPiPSF(top32, arm(DipoleVector(px,py,pz)))
+        end
+    end
+
     @testset "Analyzer over 4Pi" begin
         p = FourPiPSF(rotating, rotating; phase=0.4)
         h, v = AnalyzerPSF(p; component=1), AnalyzerPSF(p; component=2)
@@ -444,7 +478,8 @@ end
             @test String(take!(out)) == "true"
             wrappers = [PlanePSF(scalar;dz=0.1), AnalyzerPSF(rotating;component=1),
                         FourPiPSF(scalar,scalar;phase=0.3),
-                        AnalyzerPSF(FourPiPSF(rotating,rotating;phase=0.4);component=1)]
+                        AnalyzerPSF(FourPiPSF(rotating,rotating;phase=0.4);component=1),
+                        PlanePSF(AnalyzerPSF(rotating;component=1);dz=0.1)]
             all_channels = [scalar,fixed,rotating,wrappers[1],wrappers[3],FourPiPSF(rotating,rotating;phase=0.4)]
             heterogeneous = MultiChannelPSF(;channels=all_channels)
             save_psf(file,heterogeneous)
