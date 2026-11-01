@@ -145,10 +145,10 @@ Membrane-normal dipoles appear shifted laterally toward the cell edge on
 both sides of focus, with larger shifts farther from focus. This statement
 does not depend on a z-axis or defocus sign convention.
 
-Versions before 0.5.8 had the axial term with the wrong sign, so a fixed
+Versions before 0.5.7 had the axial term with the wrong sign, so a fixed
 dipole with both in-plane and axial components came out mirrored in `pz`.
 Pure x, y, and z dipoles and the rotating dipole had correct intensities.
-The `amplitude` and `dipole_fields` of a pure z dipole change sign in 0.5.8.
+The `amplitude` and `dipole_fields` of a pure z dipole change sign in 0.5.7.
 For a rotating dipole, `dipole_fields(psf, x, y, z)[3]` and
 `pupil_at(psf, z)[3]` also change sign, with intensities unchanged.
 
