@@ -368,7 +368,7 @@ axial_intensity = [psf(0.0, 0.0, zi) for zi in z_range]
 
 ## Multi-channel PSFs
 
-These additions preserve the existing PSF interface. All distances are microns.
+These types use the standard PSF interface. All distances are microns.
 Each wrapper below is a complete 3D PSF; `MultiChannelPSF` is a separate
 container and deliberately does not subtype `AbstractPSF`.
 

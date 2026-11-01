@@ -98,63 +98,12 @@ function load_psf(filename::String)
         try
             # Dispatch to appropriate load implementation
             result = _load_psf_impl(file, object_type)
-            if VersionNumber(file_version) < v"1.1.0" &&
-                !(result isa VectorPupilFunction &&
-                  haskey(attrs, "axial_sign_convention"))
-                _mark_legacy_pupils!(result)
-            end
-            if _has_legacy_pupils(result)
-                @warn "This file holds vector pupil fields whose axial dipole sign " *
-                      "cannot be confirmed (file format below 1.1.0, or pupils saved " *
-                      "as legacy). Mixed-dipole fields and coherent interference " *
-                      "depend on it. Stored fields are preserved; rebuild the PSF " *
-                      "from its parameters to obtain current fields."
-            end
             
             return result
         catch e
             error("Failed to load object of type $type_str: $e")
         end
     end
-end
-
-# Files below format 1.1.0 carry no axial-sign marker, so their sign cannot be confirmed.
-_mark_legacy_pupils!(::Any) = nothing
-function _mark_legacy_pupils!(p::VectorPupilFunction)
-    p.axial_sign_convention = :legacy
-    return nothing
-end
-function _mark_legacy_pupils!(p::VectorPSF)
-    if length(p.vector_pupils) > 1 || !iszero(p.dipole.pz)
-        for pupil in p.vector_pupils
-            pupil.axial_sign_convention = :legacy
-        end
-    end
-    return nothing
-end
-_mark_legacy_pupils!(p::Union{PlanePSF,AnalyzerPSF}) = _mark_legacy_pupils!(p.psf)
-function _mark_legacy_pupils!(p::FourPiPSF)
-    _mark_legacy_pupils!(p.top)
-    _mark_legacy_pupils!(p.bottom)
-    return nothing
-end
-function _mark_legacy_pupils!(p::MultiChannelPSF)
-    foreach(_mark_legacy_pupils!, p.channels)
-    return nothing
-end
-
-# Aggregate at the root so all nested legacy pupils produce one warning per file.
-_has_legacy_pupils(::Any) = false
-_has_legacy_pupils(p::VectorPupilFunction) = p.axial_sign_convention == :legacy
-_has_legacy_pupils(p::VectorPSF) = any(_has_legacy_pupils, p.vector_pupils)
-_has_legacy_pupils(p::Union{PlanePSF,AnalyzerPSF}) = _has_legacy_pupils(p.psf)
-_has_legacy_pupils(p::FourPiPSF) = _has_legacy_pupils(p.top) || _has_legacy_pupils(p.bottom)
-_has_legacy_pupils(p::MultiChannelPSF) = any(_has_legacy_pupils, p.channels)
-
-function _io_axial_sign_convention(group::_H5Parent)
-    attrs = attributes(group)
-    return haskey(attrs, "axial_sign_convention") ?
-        Symbol(read(attrs["axial_sign_convention"])) : :current
 end
 
 """

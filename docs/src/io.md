@@ -39,31 +39,6 @@ Load a PSF or related object from an HDF5 file.
 **Returns**
 - The loaded object with its original type (PSF, ZernikeCoefficients, PupilFunction, etc.)
 
-## Vector pupil convention
-
-Saved files have `io_version = "1.1.0"`. Files of version 1.0.0 and later load,
-and a file without a version is read as 1.0.0. Each saved vector pupil group has
-an `axial_sign_convention` attribute, `"current"` or `"legacy"`, which records the
-convention of its stored fields independently of the file version; saving a
-`:legacy` pupil keeps it `"legacy"`.
-
-A file below version 1.1.0 has no such attribute. A vector PSF loaded from one
-with a nonzero fixed dipole z component or a rotating dipole, including vectors
-nested inside wrappers and containers, and any standalone vector pupil, is marked
-`:legacy`: its axial dipole sign cannot be confirmed from the file, and
-mixed-dipole fields and coherent interference depend on it. Loading a file that
-holds any `:legacy` pupil emits one warning for the whole file. Loading keeps the
-stored fields exactly; rebuild the PSF from its optical, dipole, and aberration
-parameters to obtain `:current` fields.
-
-In memory, `VectorPupilFunction.axial_sign_convention` is `:current` or `:legacy`.
-The seven-argument pupil constructor defaults to `:current` and accepts the
-`axial_sign_convention` keyword. `copy`, `pupil_at`, and `apply_defocus!` keep it;
-`fill_vector_pupils!` and `update_pupils!` recompute the fields and set `:current`.
-A `FourPiPSF` warns at construction if its arms carry different conventions,
-since their interference then has an inconsistent axial sign; evaluation
-rechecks after arm mutation and warns once (`maxlog=1`).
-
 ## Basic Usage
 
 ```julia
@@ -178,10 +153,9 @@ Current I/O version: v1.1.0
 ## Multi-channel and wrapper layout
 
 `save_psf` and `load_psf` also support `PlanePSF`, `AnalyzerPSF`, `FourPiPSF`,
-and `MultiChannelPSF`, at the root or recursively in child groups. Root metadata
-keywords work as before. The existing types keep their dataset layout.
-`IO_VERSION` is `1.1.0`. No PSFLearning or Reactant
-import is needed to load and evaluate a container.
+and `MultiChannelPSF`, at the root or recursively in child groups, with the same
+root metadata keywords as any PSF. No PSFLearning or Reactant import is needed
+to load and evaluate a container.
 
 A container has root attribute `psf_type = "MultiChannelPSF"` and this layout
 (the registration size is in Julia dimension order):

@@ -172,9 +172,6 @@ rotating x, y, z dipoles and `(1,)` for fixed mirrored dipoles or scalar arms.
 Dipole intensities add incoherently. `amplitude` returns a bare scalar for
 scalar arms, `[Ex, Ey]` for one vector dipole, and errors for rotating dipoles.
 
-Arms with different stored axial sign conventions emit a warning: their
-coherent interference has an inconsistent axial sign. Rebuild both from parameters.
-Evaluation rechecks the conventions after arm mutation and warns once (`maxlog=1`).
 Arms of unit energy give a channel of unit energy averaged over the fringe.
 `p(φ) + p(φ + π) == top(x,y,z) + bottom(x,y,-z)` always holds
 (up to rounding). Polarization-dependent cavity
@@ -191,9 +188,8 @@ struct FourPiPSF{T, A <: AbstractPSF, B <: AbstractPSF} <: Abstract3DPSF{T}
     top::A
     bottom::B
     phase::T
-    # The loader aggregates convention warnings once for the complete file.
-    function FourPiPSF(top::A, bottom::B, phase::Real, ::Val{warn_convention}) where {
-        A <: AbstractPSF,B <: AbstractPSF,warn_convention}
+    function FourPiPSF(top::A, bottom::B; phase::Real=0) where {
+        A <: AbstractPSF,B <: AbstractPSF}
         st, sb = _mirror_signs(top), _mirror_signs(bottom)
         length(st) == length(sb) && _n_components(top) == _n_components(bottom) ||
             throw(ArgumentError(
@@ -208,38 +204,11 @@ struct FourPiPSF{T, A <: AbstractPSF, B <: AbstractPSF} <: Abstract3DPSF{T}
                 "use matching wavelengths for one optical frequency"))
         isfinite(phase) && isfinite(T(phase)) || throw(ArgumentError(
             "phase must be finite; supply a finite cavity phase"))
-        warn_convention && _warn_fourpi_conventions(top, bottom)
         return new{T,A,B}(top, bottom, T(phase))
     end
 end
-FourPiPSF(top::AbstractPSF, bottom::AbstractPSF; phase::Real=0) =
-    FourPiPSF(top, bottom, phase, Val(true))
-
-const _FOURPI_CONVENTION_WARNING =
-    "4Pi arms have different axial sign conventions; coherent interference " *
-    "has an inconsistent axial sign. Rebuild both arms from their parameters."
-
-@inline function _fourpi_conventions_differ(top, bottom)
-    a, b = _vector_psf(top), _vector_psf(bottom)
-    (isnothing(a) || isnothing(b)) && return false
-    for i in eachindex(a.vector_pupils, b.vector_pupils)
-        a.vector_pupils[i].axial_sign_convention !=
-            b.vector_pupils[i].axial_sign_convention && return true
-    end
-    return false
-end
-
-function _warn_fourpi_conventions(top, bottom)
-    if _fourpi_conventions_differ(top, bottom)
-        @warn _FOURPI_CONVENTION_WARNING
-    end
-    return nothing
-end
 _n_components(p::FourPiPSF) = _n_components(p.top)
 function dipole_fields(p::FourPiPSF, x::Real, y::Real, z::Real)
-    if _fourpi_conventions_differ(p.top, p.bottom)
-        @warn _FOURPI_CONVENTION_WARNING maxlog=1
-    end
     Et = dipole_fields(p.top, x, y, z)
     Eb = dipole_fields(p.bottom, x, y, -z)
     s = _mirror_signs(p.bottom)

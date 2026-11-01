@@ -38,8 +38,6 @@ function _save_psf_impl(file::_H5Parent, psf::VectorPSF)
     # Save each pupil
     for (i, pupil) in enumerate(psf.vector_pupils)
         pupil_group = create_group(data, "pupil_$i")
-        attributes(pupil_group)["axial_sign_convention"] =
-            String(pupil.axial_sign_convention)
         
         # Save Ex field
         pupil_ex = create_group(pupil_group, "pupil_ex")
@@ -62,9 +60,7 @@ end
     _load_psf_impl(file::_H5Parent, ::Type{VectorPSF})
 
 Load a VectorPSF from an HDF5 file, reconstructing all components.
-Each pupil retains its stored axial sign convention. The root loader marks pupils
-from files without an axial-sign marker as `:legacy`.
-Stored fields are preserved exactly; rebuild from parameters to change conventions.
+Stored pupil fields are preserved exactly.
 
 # Arguments
 - `file`: Open HDF5 file handle
@@ -121,8 +117,7 @@ function _load_psf_impl(file::_H5Parent, ::Type{VectorPSF})
         Ex = PupilFunction(nₐ, λ, n_medium, ex_field)
         Ey = PupilFunction(nₐ, λ, n_medium, ey_field)
         vector_pupils[i] = VectorPupilFunction(
-            nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey;
-            axial_sign_convention=_io_axial_sign_convention(pupil_group))
+            nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
     end
     
     # Load base pupil if available

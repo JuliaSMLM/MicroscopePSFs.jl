@@ -171,22 +171,3 @@ reprinting Lew, Backlund, and Moerner, [*Nano Letters* **13**, 3967 (2013)](http
 Membrane-normal dipoles appear shifted laterally toward the cell edge on
 both sides of focus, with larger shifts farther from focus. This statement
 does not depend on a z-axis or defocus sign convention.
-
-### Axial sign convention of stored fields
-
-Each `VectorPupilFunction` records the axial sign convention of its stored fields
-in `axial_sign_convention`. `:current` marks fields computed with the sign above;
-`:legacy` marks fields that may carry the opposite axial dipole sign. The
-seven-argument constructor accepts it as a keyword, defaulting to `:current`.
-`copy`, `pupil_at`, and `apply_defocus!` keep it; `fill_vector_pupils!` and
-`update_pupils!` recompute the fields and set `:current`.
-
-Saved files store the convention for each pupil. A file below format version 1.1.0
-has no such marker, so a vector PSF loaded from it with a nonzero dipole z
-component or a rotating dipole, and any standalone vector pupil, is marked
-`:legacy`. Loading a file that holds a `:legacy` pupil warns once per file.
-Loading keeps the stored fields exactly; rebuilding the PSF from its optical,
-dipole, and aberration parameters gives `:current` fields. A `FourPiPSF` whose
-arms carry different conventions warns at construction and once at evaluation
-(`maxlog=1`), since its interference term depends on the axial sign. See
-[I/O Functionality](../io.md) for the file format.
