@@ -98,7 +98,9 @@ function load_psf(filename::String)
         try
             # Dispatch to appropriate load implementation
             result = _load_psf_impl(file, object_type)
-            if VersionNumber(file_version) < v"1.1.0"
+            if VersionNumber(file_version) < v"1.1.0" &&
+                !(result isa VectorPupilFunction &&
+                  haskey(attrs, "axial_sign_convention"))
                 _mark_legacy_pupils!(result)
             end
             if _has_legacy_pupils(result)
@@ -119,6 +121,10 @@ end
 
 # Old files cannot distinguish old fields from unmarked development builds.
 _mark_legacy_pupils!(::Any) = nothing
+function _mark_legacy_pupils!(p::VectorPupilFunction)
+    p.axial_sign_convention = :legacy
+    return nothing
+end
 function _mark_legacy_pupils!(p::VectorPSF)
     if length(p.vector_pupils) > 1 || !iszero(p.dipole.pz)
         for pupil in p.vector_pupils

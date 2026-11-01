@@ -35,9 +35,11 @@ function calculate_wave_vectors(kr2::Real, λ::Real,
 end
 
 function _check_vector_aperture(nₐ::Real, n_medium::Real, n_coverslip::Real)
-    n_medium == n_coverslip && nₐ >= n_medium && throw(ArgumentError(
-        "This pupil collects at 90 degrees in the sample, which no objective does; " *
-        "use NA below n_medium"))
+    limit = oftype(float(n_medium), 0.995) * n_medium
+    n_medium == n_coverslip && nₐ > limit && throw(ArgumentError(
+        "Use NA <= 0.995 * n_medium when n_medium == n_coverslip: " *
+        "the apodization diverges at grazing angles in an index-matched sample, " *
+        "so grid sampling fails near 90 degrees; real objectives stay below this bound"))
     return nothing
 end
 

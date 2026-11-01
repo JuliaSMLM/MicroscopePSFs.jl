@@ -222,7 +222,7 @@ end
             @test DipoleVector(args...) isa DipoleVector{Float64}
         end
         for T in (Float32, Float64, BigFloat)
-            d = DipoleVector{T}(2,3,6)
+            d = DipoleVector{T}(T(2),T(3),T(6))
             @test d isa DipoleVector{T}
             @test sum(abs2, components(d)) ≈ 1
             @test DipoleEmitter3D{T}(1, 2, 0, 3, d) isa DipoleEmitter3D{T}

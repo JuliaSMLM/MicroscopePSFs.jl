@@ -11,4 +11,7 @@ for (name, orientation) in (("tilted", (0.6, 0.0, 0.8)),
     psf = VectorPSF(1.2, 0.68, dipole...; n_medium=1.33, n_coverslip=1.33,
         n_immersion=1.33, grid_size=16, base_zernike=ZernikeCoefficients(6))
     save_psf(joinpath(ARGS[2], "vector-v056-$name.h5"), psf)
+    if name == "tilted"
+        save_psf(joinpath(ARGS[2], "vector-v056-standalone.h5"), only(psf.vector_pupils))
+    end
 end

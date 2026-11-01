@@ -30,25 +30,25 @@ end
             @test error isa ArgumentError
             if error isa ArgumentError
                 @test occursin("90 degrees", error.msg)
-                @test occursin("no objective", error.msg)
-                @test occursin("NA below n_medium", error.msg)
+                @test occursin("real objectives", error.msg)
+                @test occursin("0.995 * n_medium", error.msg)
             end
         end
         vp = VectorPupilFunction(1.33, 0.68, 1.33, 1.33, 1.52, 33)
         @test_throws ArgumentError M.fill_vector_pupils!(vp, only(fixed))
         @test_throws ArgumentError M.fill_vector_pupils!(vp, only(fixed); normalize=false)
         for args in ((), fixed)
-            values = Float64[]
-            for N in (32, 64, 128)
-                a = VectorPSF(prevfloat(1.33), 0.68, args...; optics..., grid_size=N)
-                b = VectorPSF(prevfloat(prevfloat(1.33)), 0.68, args...;
+            for N in (32,33,64,65,128,129,255,256)
+                limit = 0.995 * optics.n_medium
+                a = VectorPSF(limit, 0.68, args...; optics..., grid_size=N)
+                b = VectorPSF(prevfloat(limit), 0.68, args...;
                     optics..., grid_size=N)
                 @test a(0.1, -0.2, 0.3) ≈ b(0.1, -0.2, 0.3) rtol=1e-10
                 @test review_vector_energy(a) ≈ 1
                 @test review_vector_energy(b) ≈ 1
-                push!(values, a(0.1, -0.2, 0.3))
+                @test_throws ArgumentError VectorPSF(nextfloat(limit), 0.68, args...;
+                    optics..., grid_size=N)
             end
-            @test (maximum(values)-minimum(values)) / maximum(values) < 0.1
         end
     end
 
@@ -180,7 +180,7 @@ end
             @test_throws ArgumentError DipoleEmitter3D(1., 1., 0., 1., c...)
         end
         @test_throws ArgumentError DipoleVector(1., Float32(Inf), 0)
-        @test_throws ArgumentError DipoleVector{Float32}(floatmax(Float64), 0, 0)
+        @test DipoleVector{Float32}(floatmax(Float64), 0, 0).px === 1f0
         z = DipoleVector(0., 0., 0.)
         @test (z.px, z.py, z.pz) == (0., 0., 0.)
         @test DipoleVector{Int}(1, 0, 0) isa DipoleVector{Int}

@@ -6,7 +6,9 @@ import SMLMData: AbstractEmitter
     DipoleVector{T<:Real}
 
 A normalized 3D dipole orientation. Every constructor normalizes nonzero inputs.
-All components must be finite and remain finite after conversion to the requested type.
+All input components must be finite. Floating-point inputs normalize in their
+own promoted precision before conversion to the requested type. Conversion must
+preserve a finite, nonzero direction for nonzero inputs.
 The zero vector is allowed for rotating-PSF metadata; fixed dipoles must be nonzero.
 The untyped factory promotes integers and rationals to floating point.
 `DipoleVector{T}(px, py, pz)` retains `T`. Integer and rational types require
@@ -30,15 +32,16 @@ struct DipoleVector{T<:Real}
             x, y, z = _exact_dipole_components(T, px, py, pz)
             return new{T}(x, y, z)
         end
-        x, y, z = float(convert(T, px)), float(convert(T, py)), float(convert(T, pz))
-        all(isfinite, (x, y, z)) || throw(ArgumentError(
-            "Dipole components must remain finite after conversion; " *
-            "use representable finite components"))
+        x, y, z = float.(promote(px, py, pz))
         scale = max(abs(x), abs(y), abs(z))
-        iszero(scale) && return new{T}(x, y, z)
+        iszero(scale) && return new{T}(T(x), T(y), T(z))
         x, y, z = x / scale, y / scale, z / scale
         magnitude = sqrt(x^2 + y^2 + z^2)
-        return new{T}(x / magnitude, y / magnitude, z / magnitude)
+        normalized = T.((x / magnitude, y / magnitude, z / magnitude))
+        all(isfinite, normalized) && !all(iszero, normalized) || throw(ArgumentError(
+            "Normalized dipole conversion must preserve a finite nonzero direction; " *
+            "use a wider floating-point type or the untyped DipoleVector(px, py, pz)"))
+        return new{T}(normalized...)
     end
 end
 

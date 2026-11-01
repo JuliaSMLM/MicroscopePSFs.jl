@@ -11,8 +11,16 @@
                 grid_size::Integer=128)
 
 Create a vector PSF using either a pupil-based or Zernike-based approach.
-When `n_medium == n_coverslip`, use `nₐ < n_medium`: a pupil collecting at
-90 degrees in the sample is not a physical objective aperture.
+When `n_medium == n_coverslip`, use `nₐ <= 0.995 * n_medium`. Apodization
+diverges at grazing angles, so grid sampling fails near 90 degrees; real objectives
+stay below this bound.
+
+The pupil grid sets accuracy at high NA. For `NA/n_medium = 0.982`, matched
+indices 1.518 and wavelength 0.68 microns, rotating-dipole intensity errors over
+four sample points were about 9.1%, 3.5%, 1.0%, and 0.31% at grid sizes 32, 64,
+128, and 256. These are measured discretization errors, not universal bounds.
+Use `grid_size >= 128` at high NA; 128 is the default. See the VectorPSF guide
+for the measurement points and fixed-dipole results.
 
 # Arguments
 - `nₐ`: Numerical aperture
@@ -100,8 +108,16 @@ end
 
 Create a vector PSF with a rotating dipole, modeled as an incoherent sum of 
 x, y, and z dipole orientations.
-When `n_medium == n_coverslip`, use `nₐ < n_medium` to avoid collecting at
-90 degrees in the sample.
+When `n_medium == n_coverslip`, use `nₐ <= 0.995 * n_medium` because
+apodization diverges at grazing angles and grid sampling fails near 90 degrees.
+Real objectives stay below this bound.
+
+The pupil grid sets accuracy at high NA. For `NA/n_medium = 0.982`, matched
+indices 1.518 and wavelength 0.68 microns, rotating-dipole intensity errors over
+four sample points were about 9.1%, 3.5%, 1.0%, and 0.31% at grid sizes 32, 64,
+128, and 256. These are measured discretization errors, not universal bounds.
+Use `grid_size >= 128` at high NA; 128 is the default. See the VectorPSF guide
+for the measurement points and fixed-dipole results.
 
 # Arguments
 - `nₐ`: Numerical aperture

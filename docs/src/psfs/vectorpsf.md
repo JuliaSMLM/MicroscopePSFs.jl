@@ -46,6 +46,33 @@ VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
 - `z_stage`: Distance the sample stage was moved (μm) (default: 0.0)
 - `grid_size`: Size of grid for pupil function (default: 128)
 
+## Pupil sampling and high-NA accuracy
+
+The pupil grid sets intensity accuracy at high NA. Use `grid_size >= 128` at
+high NA; 128 is the default. Ordinary discretization error decreases as the grid
+is refined, but depends on dipole orientation, position, wavelength, and indices.
+
+An independent angular quadrature for `NA / n_medium = 0.982`, all indices 1.518,
+wavelength 0.68 microns, and zero stage displacement gave these maximum relative
+intensity errors over `(0,0,0)`, `(0.1,-0.2,0.3)`, `(0.2,0.1,0)`, and `(0,0,0.3)`
+in microns. The fixed dipole was `(0.6,0,0.8)`. These measurements are examples,
+not universal error bounds.
+
+| `grid_size` | Rotating dipole | Fixed dipole |
+|---:|---:|---:|
+| 32 | 9.11% | 10.73% |
+| 64 | 3.52% | 4.11% |
+| 128 | 0.98% | 1.14% |
+| 256 | 0.31% | 0.36% |
+
+When `n_medium == n_coverslip`, construction and pupil refilling require
+`NA <= 0.995 * n_medium`. The apodization diverges at grazing angles in an
+index-matched sample, so grid sampling fails near 90 degrees. Real objectives
+stay below this bound. The bound excludes catastrophic near-grazing sampling;
+it does not promise a particular discretization accuracy for a coarse grid.
+With a higher-index coverslip, Fresnel transmission cancels the medium-grazing
+singularity, so this matched-index bound does not apply.
+
 ## Dipole Orientation Options
 
 The VectorPSF supports both fixed and rotating dipole orientations:
@@ -163,9 +190,11 @@ Rebuild it from its parameters to be sure.
 Each `VectorPupilFunction` records its stored fields' `axial_sign_convention` as
 `:legacy` or `:current`; the seven-argument constructor defaults to `:current`
 and accepts that keyword. Unmarked pre-1.1.0 axial or rotating vector PSFs are
-conservatively marked `:legacy` on load. Saving writes the convention per pupil,
+conservatively marked `:legacy` on load. Unmarked standalone vector pupils from
+these formats are also marked `:legacy`. Saving writes the convention per pupil,
 so re-saving legacy fields in format 1.1.0 still warns on the next load, once per
 file even inside wrappers and containers. `copy`, `pupil_at`, and `apply_defocus!`
 preserve the convention. Refilling with `fill_vector_pupils!` or `update_pupils!`
 recomputes the fields and sets `:current`. A `FourPiPSF` warns at construction
 when its arms carry different conventions because the interference sign is wrong.
+Evaluation rechecks after arm mutation and warns once (`maxlog=1`).

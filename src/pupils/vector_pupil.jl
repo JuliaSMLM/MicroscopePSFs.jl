@@ -161,9 +161,10 @@ base aberrations, and proper apodization.
 
 This pre-calculates all position-independent factors of the pupil function.
 Recomputed fields use `axial_sign_convention = :current`.
-When `n_medium == n_coverslip`, `nₐ` must be below `n_medium`; no objective
-collects at 90 degrees in the sample. For a higher-index coverslip, the finite
-medium-grazing limit is evaluated by combining Fresnel transmission and apodization.
+When `n_medium == n_coverslip`, use `nₐ <= 0.995 * n_medium`: apodization
+diverges at grazing angles and grid sampling fails near 90 degrees. Real objectives
+stay below this bound. For a higher-index coverslip, the finite medium-grazing
+limit is evaluated by combining Fresnel transmission and apodization.
 
 # Arguments
 - `vpupil`: Vector pupil function to fill

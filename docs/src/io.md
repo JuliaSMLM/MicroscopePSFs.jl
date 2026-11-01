@@ -49,8 +49,10 @@ Re-saving legacy fields preserves `"legacy"`, even in a format 1.1.0 file.
 
 Loading a file below version 1.1.0 with a nonzero fixed dipole z component or a
 rotating dipole emits one warning for the entire file, including vectors nested
-inside wrappers and containers. Loading any pupil marked `"legacy"` also emits
-this warning, once per file. Files without a version are treated as 1.0.0.
+inside wrappers and containers. Unmarked standalone vector pupils from these
+versions are also conservatively marked `:legacy` and warn on load and re-save.
+Loading any pupil marked `"legacy"` also emits this warning, once per file.
+Files without a version are treated as 1.0.0.
 An unmarked file was written by 0.5.6 or earlier, which
 used the old axial dipole sign, or by an unreleased 0.5.7 development build.
 Some such development builds wrote the corrected sign with format 1.0.0;
@@ -65,7 +67,8 @@ The seven-argument pupil constructor defaults to `:current` and accepts the
 `axial_sign_convention` keyword. `copy`, `pupil_at`, and `apply_defocus!` preserve
 it. `fill_vector_pupils!` and `update_pupils!` recompute fields and set `:current`.
 A `FourPiPSF` warns at construction if its arms carry different conventions,
-since their coherent interference then has an inconsistent axial sign.
+since their coherent interference then has an inconsistent axial sign. Evaluation
+rechecks the conventions after arm mutation and warns once (`maxlog=1`).
 
 ## Basic Usage
 
