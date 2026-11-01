@@ -62,8 +62,8 @@ end
     _load_psf_impl(file::_H5Parent, ::Type{VectorPSF})
 
 Load a VectorPSF from an HDF5 file, reconstructing all components.
-Each pupil retains its stored axial sign convention. The root loader also
-checks the file format version for unmarked legacy axial dipole signs.
+Each pupil retains its stored axial sign convention. The root loader marks pupils
+from files without an axial-sign marker as `:legacy`.
 Stored fields are preserved exactly; rebuild from parameters to change conventions.
 
 # Arguments

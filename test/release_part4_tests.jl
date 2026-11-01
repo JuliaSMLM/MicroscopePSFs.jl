@@ -40,10 +40,8 @@ end
 @testset "0.5.7 pupil provenance and typed dipoles" verbose=true begin
     M = MicroscopePSFs
     warn = Base.CoreLogging.Warn
-    message = Regex(raw"no axial-sign marker.*0\.5\.6 or earlier.*" *
-        raw"old axial dipole sign.*unreleased 0\.5\.7 development build.*" *
-        raw"cannot be told from the file.*fields are preserved.*" *
-        raw"rebuild.*parameters to be sure")
+    message = Regex(raw"axial dipole sign cannot be confirmed.*" *
+        raw"Stored fields are preserved.*rebuild.*parameters")
     mismatch = r"4Pi arms have different axial sign conventions.*interference.*Rebuild"
     fixture(name) = joinpath(@__DIR__, "fixtures", "vector-v056-$name.h5")
     vector(args...) = VectorPSF(1.2, 0.68, args...; grid_size=16,

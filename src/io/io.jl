@@ -104,12 +104,11 @@ function load_psf(filename::String)
                 _mark_legacy_pupils!(result)
             end
             if _has_legacy_pupils(result)
-                @warn "This file has no axial-sign marker. It was written by 0.5.6 or " *
-                      "earlier, which used the old axial dipole sign, or by an " *
-                      "unreleased 0.5.7 development build; which one cannot be told " *
-                      "from the file. Mixed-dipole fields and coherent interference " *
-                      "may be affected. Stored fields are preserved; rebuild it from " *
-                      "its parameters to be sure."
+                @warn "This file holds vector pupil fields whose axial dipole sign " *
+                      "cannot be confirmed (file format below 1.1.0, or pupils saved " *
+                      "as legacy). Mixed-dipole fields and coherent interference " *
+                      "depend on it. Stored fields are preserved; rebuild the PSF " *
+                      "from its parameters to obtain current fields."
             end
             
             return result
@@ -119,7 +118,7 @@ function load_psf(filename::String)
     end
 end
 
-# Old files cannot distinguish old fields from unmarked development builds.
+# Files below format 1.1.0 carry no axial-sign marker, so their sign cannot be confirmed.
 _mark_legacy_pupils!(::Any) = nothing
 function _mark_legacy_pupils!(p::VectorPupilFunction)
     p.axial_sign_convention = :legacy
@@ -162,9 +161,8 @@ end
     _resolve_psf_type(type_str::AbstractString) -> Type
 
 Map a stored `psf_type` attribute to a MicroscopePSFs type. Accepts the bare name
-(`"SplinePSF"`) and the `MicroscopePSFs.`-qualified name that versions 0.5.0-0.5.6
-wrote when the saving session had not run `using MicroscopePSFs`. Any other name
-throws an `ArgumentError`.
+(`"SplinePSF"`) and the `MicroscopePSFs.`-qualified name found in some saved files.
+Any other name throws an `ArgumentError`.
 """
 function _resolve_psf_type(type_str::AbstractString)
     name = chopprefix(type_str, "MicroscopePSFs.")

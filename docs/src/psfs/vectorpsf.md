@@ -160,7 +160,7 @@ no single coherent amplitude.
 
 Emitter z and dipole z share one frame: +z points from the coverslip into
 the sample, away from the objective. `DipoleVector(1.0, 0, 1.0)` matches
-lab dipole `[1, 0, 1]/√2`. Opposed objectives still mirror `pz`: construct the
+lab dipole `[1, 0, 1]/√2`. Opposed objectives mirror `pz`: construct the
 bottom fixed dipole as
 `DipoleVector(px, py, -pz)`. See [Multi-channel PSFs](multichannel.md) for
 analyzers, the 4Pi mirror rule, and photon normalization.
@@ -172,29 +172,21 @@ Membrane-normal dipoles appear shifted laterally toward the cell edge on
 both sides of focus, with larger shifts farther from focus. This statement
 does not depend on a z-axis or defocus sign convention.
 
-Versions 0.5.6 and earlier had the axial term with the wrong sign, so a fixed
-dipole with both in-plane and axial components came out mirrored in `pz`.
-Pure x, y, and z dipoles and the rotating dipole had correct intensities.
-The `amplitude` and `dipole_fields` of a pure z dipole change sign in 0.5.7.
-For a rotating dipole, `dipole_fields(psf, x, y, z)[3]` and
-`pupil_at(psf, z)[3]` also change sign, with intensities unchanged.
+### Axial sign convention of stored fields
 
-A `VectorPSF` file stores filled pupils. A file below format version 1.1.0 has
-no axial-sign marker. It was written by 0.5.6 or earlier, which used the old
-axial dipole sign, or by an unreleased 0.5.7 development build. Some such
-development builds wrote the corrected sign with format 1.0.0; which one wrote
-the file cannot be told from the file. Mixed-dipole fields and coherent
-interference can be affected. Loading preserves the stored fields exactly.
-Rebuild it from its parameters to be sure.
+Each `VectorPupilFunction` records the axial sign convention of its stored fields
+in `axial_sign_convention`. `:current` marks fields computed with the sign above;
+`:legacy` marks fields that may carry the opposite axial dipole sign. The
+seven-argument constructor accepts it as a keyword, defaulting to `:current`.
+`copy`, `pupil_at`, and `apply_defocus!` keep it; `fill_vector_pupils!` and
+`update_pupils!` recompute the fields and set `:current`.
 
-Each `VectorPupilFunction` records its stored fields' `axial_sign_convention` as
-`:legacy` or `:current`; the seven-argument constructor defaults to `:current`
-and accepts that keyword. Unmarked pre-1.1.0 axial or rotating vector PSFs are
-conservatively marked `:legacy` on load. Unmarked standalone vector pupils from
-these formats are also marked `:legacy`. Saving writes the convention per pupil,
-so re-saving legacy fields in format 1.1.0 still warns on the next load, once per
-file even inside wrappers and containers. `copy`, `pupil_at`, and `apply_defocus!`
-preserve the convention. Refilling with `fill_vector_pupils!` or `update_pupils!`
-recomputes the fields and sets `:current`. A `FourPiPSF` warns at construction
-when its arms carry different conventions because the interference sign is wrong.
-Evaluation rechecks after arm mutation and warns once (`maxlog=1`).
+Saved files store the convention for each pupil. A file below format version 1.1.0
+has no such marker, so a vector PSF loaded from it with a nonzero dipole z
+component or a rotating dipole, and any standalone vector pupil, is marked
+`:legacy`. Loading a file that holds a `:legacy` pupil warns once per file.
+Loading keeps the stored fields exactly; rebuilding the PSF from its optical,
+dipole, and aberration parameters gives `:current` fields. A `FourPiPSF` whose
+arms carry different conventions warns at construction and once at evaluation
+(`maxlog=1`), since its interference term depends on the axial sign. See
+[I/O Functionality](../io.md) for the file format.

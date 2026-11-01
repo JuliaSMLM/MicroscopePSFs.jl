@@ -6,9 +6,10 @@
 Vector pupil function storing Ex,Ey field components as PupilFunctions.
 
 The seven-argument constructor accepts `axial_sign_convention=:current`.
-Use `:legacy` for fields with the old or unmarked axial dipole sign; `:current`
-means fields recomputed with the corrected sign. Copying and defocusing preserve
-this convention. Refilling recomputes the fields and sets it to `:current`.
+`:current` marks fields computed with this package's axial dipole sign; `:legacy`
+marks fields that may carry the opposite sign, such as fields loaded from a file
+without a sign marker. Copying and defocusing keep the convention; refilling
+recomputes the fields and sets `:current`.
 
 # Fields
 - `nₐ::T`: Numerical aperture

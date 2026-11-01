@@ -137,7 +137,7 @@ compares the mirrored directions within the coarser arm's precision.
 
 Emitter z and dipole z share one frame, with +z pointing into the sample,
 away from the objective. A code dipole `DipoleVector(1.0, 0, 1.0)` matches
-lab orientation `[1, 0, 1]/√2`. The opposed-objective mirror rule still applies:
+lab orientation `[1, 0, 1]/√2`. The opposed-objective mirror rule applies:
 
 ```julia
 using MicroscopePSFs

@@ -412,6 +412,6 @@ Vector 4Pi arms require `n_medium ≥ NA`. `phase` is the cavity phase;
 polarization-specific phases use
 `AnalyzerPSF(FourPiPSF(top, bottom; phase=φ); component=c)` per channel.
 Emitter z and dipole z share one frame, with +z pointing into the sample,
-away from the objective. The opposed-objective mirror rule still applies.
+away from the objective. The opposed-objective mirror rule applies.
 Splines hold intensity only and cannot enter
-coherent sums. All new wrappers and the container support recursive HDF5 I/O.
+coherent sums. All wrappers and the container support recursive HDF5 I/O.

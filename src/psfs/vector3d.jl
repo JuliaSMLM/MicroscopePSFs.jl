@@ -232,7 +232,6 @@ function _calculate_field_amplitude(
     x::Real, y::Real, z::Real)
     
     # Initialize result vector [Ex, Ey]
-    # Fixed: Don't use the type constructor in this way
     T = promote_type(real(eltype(pupil.Ex.field)), typeof(x), typeof(y), typeof(z))
     result = zeros(Complex{T}, 2)
 

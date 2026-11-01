@@ -41,34 +41,28 @@ Load a PSF or related object from an HDF5 file.
 
 ## Vector pupil convention
 
-Starting with the 0.5.7 release, saved files have `io_version = "1.1.0"`.
-The minimum supported file version remains 1.0.0. Each saved vector pupil group
-also has an `axial_sign_convention` attribute (`"legacy"` or `"current"`). This
-records the convention of its stored fields independently of the file version.
-Re-saving legacy fields preserves `"legacy"`, even in a format 1.1.0 file.
+Saved files have `io_version = "1.1.0"`. Files of version 1.0.0 and later load,
+and a file without a version is read as 1.0.0. Each saved vector pupil group has
+an `axial_sign_convention` attribute, `"current"` or `"legacy"`, which records the
+convention of its stored fields independently of the file version; saving a
+`:legacy` pupil keeps it `"legacy"`.
 
-Loading a file below version 1.1.0 with a nonzero fixed dipole z component or a
-rotating dipole emits one warning for the entire file, including vectors nested
-inside wrappers and containers. Unmarked standalone vector pupils from these
-versions are also conservatively marked `:legacy` and warn on load and re-save.
-Loading any pupil marked `"legacy"` also emits this warning, once per file.
-Files without a version are treated as 1.0.0.
-An unmarked file was written by 0.5.6 or earlier, which
-used the old axial dipole sign, or by an unreleased 0.5.7 development build.
-Some such development builds wrote the corrected sign with format 1.0.0;
-which one wrote the file cannot be told from the file. Mixed-dipole fields
-and coherent interference can be affected. Loading preserves the stored fields
-exactly. Rebuild it from its optical, dipole, and aberration parameters to be sure.
+A file below version 1.1.0 has no such attribute. A vector PSF loaded from one
+with a nonzero fixed dipole z component or a rotating dipole, including vectors
+nested inside wrappers and containers, and any standalone vector pupil, is marked
+`:legacy`: its axial dipole sign cannot be confirmed from the file, and
+mixed-dipole fields and coherent interference depend on it. Loading a file that
+holds any `:legacy` pupil emits one warning for the whole file. Loading keeps the
+stored fields exactly; rebuild the PSF from its optical, dipole, and aberration
+parameters to obtain `:current` fields.
 
-In memory, `VectorPupilFunction.axial_sign_convention` is `:legacy` or `:current`.
-An unmarked pre-1.1.0 vector PSF with an axial component is conservatively marked
-`:legacy`, including unreleased development files whose sign cannot be determined.
+In memory, `VectorPupilFunction.axial_sign_convention` is `:current` or `:legacy`.
 The seven-argument pupil constructor defaults to `:current` and accepts the
-`axial_sign_convention` keyword. `copy`, `pupil_at`, and `apply_defocus!` preserve
-it. `fill_vector_pupils!` and `update_pupils!` recompute fields and set `:current`.
+`axial_sign_convention` keyword. `copy`, `pupil_at`, and `apply_defocus!` keep it;
+`fill_vector_pupils!` and `update_pupils!` recompute the fields and set `:current`.
 A `FourPiPSF` warns at construction if its arms carry different conventions,
-since their coherent interference then has an inconsistent axial sign. Evaluation
-rechecks the conventions after arm mutation and warns once (`maxlog=1`).
+since their interference then has an inconsistent axial sign; evaluation
+rechecks after arm mutation and warns once (`maxlog=1`).
 
 ## Basic Usage
 
@@ -176,7 +170,8 @@ This format is designed to be portable and future-proof.
 
 ## Version Compatibility
 
-The I/O system uses versioning to ensure forward and backward compatibility. Files created with newer versions of MicroscopePSFs.jl may not be readable by older versions.
+Loading requires file format version 1.0.0 or later. Files with a major format
+version above 1 load with a warning that some features may not be supported.
 
 Current I/O version: v1.1.0
 

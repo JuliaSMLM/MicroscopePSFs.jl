@@ -24,7 +24,7 @@ Automatically uses z-coordinate if both PSF and emitter support it.
   Set to false when using with automatic differentiation frameworks
 
 # Returns
-- The `result` array, now filled with integrated intensities scaled by emitter.photons
+- The `result` array, filled with integrated intensities scaled by emitter.photons
 
 # Notes
 - Array is indexed as [y,x] with [1,1] at top-left pixel
@@ -87,7 +87,7 @@ Integrate PSF intensity over camera pixels using camera object, storing the resu
 - `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
-- The `result` array, now filled with integrated intensities
+- The `result` array, filled with integrated intensities
 """
 function integrate_pixels!(
     result::AbstractMatrix{T},
@@ -133,7 +133,7 @@ Automatically uses z-coordinate if both PSF and emitter support it.
 - `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
-- The `result` array, now filled with integrated complex amplitudes
+- The `result` array, filled with integrated complex amplitudes
 
 # Notes
 - Array is indexed as [y,x] with [1,1] at top-left pixel
@@ -194,7 +194,7 @@ Integrate PSF complex amplitude over camera pixels using camera object, storing 
 - `threaded`: Whether to use multi-threading for integration (default: true)
 
 # Returns
-- The `result` array, now filled with integrated complex amplitudes
+- The `result` array, filled with integrated complex amplitudes
 
 This returns a unit-photon field: emitter photons are ignored. Squaring a
 pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`

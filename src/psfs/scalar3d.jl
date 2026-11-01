@@ -103,8 +103,7 @@ function (psf::ScalarPSF)(x::Real, y::Real, z::Real)
     return abs2(amplitude(psf, x, y, z))
 end
 
-# Note: The specialized integration function has been removed since
-# the generic function in integration.jl now automatically handles z-coordinates
+# Generic pixel integration handles z-coordinates for scalar PSFs.
 
 dipole_fields(psf::ScalarPSF, x::Real, y::Real, z::Real) = [[amplitude(psf, x, y, z)]]
 

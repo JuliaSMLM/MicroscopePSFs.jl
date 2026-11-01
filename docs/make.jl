@@ -32,7 +32,7 @@ makedocs(;
         "Examples" => "examples.md",
         "API Reference" => "api.md",
     ],
-    doctest = false,  # Disable doctests for now
+    doctest = false,  # Doctests are disabled.
     checkdocs = :none,  # Don't throw errors for missing docstrings
     warnonly = [:missing_docs, :docs_block, :autodocs_block, :cross_references],  # Only warn for these error types
 )

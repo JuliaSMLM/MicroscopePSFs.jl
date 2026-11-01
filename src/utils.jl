@@ -4,15 +4,12 @@
     is_axis_aligned(camera::AbstractCamera)
 
 Check if camera pixel grid is aligned with coordinate axes.
-Currently assumes IdealCamera is always axis-aligned.
+Assumes IdealCamera is always axis-aligned.
 
 Returns `true` if the camera grid is aligned with the coordinate axes.
 """
 function is_axis_aligned(camera::AbstractCamera)
-    return true  # For now, assume ideal camera is axis-aligned
-    # Later we might want to check for rotated cameras:
-    # - Check if x edges vary only in x
-    # - Check if y edges vary only in y
+    return true  # IdealCamera is assumed to be axis-aligned.
 end
 
 """
