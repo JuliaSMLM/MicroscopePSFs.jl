@@ -123,6 +123,9 @@ end
 
 Calculate vectorial field components for a dipole orientation.
 
+Emitter z and dipole z share one frame: +z points from the coverslip into
+the sample, away from the objective.
+
 # Arguments
 - `ϕ`: Azimuthal angle in pupil plane
 - `sinθ`: Sine of polar angle
@@ -138,7 +141,7 @@ function calculate_dipole_field_components(ϕ::Complex, sinθ::Complex, cosθ::C
     dipole::DipoleVector, Tp::Complex, Ts::Complex)
     # Compute the vectorial field components based on the dipole orientation
     # For a dipole, the field has both transverse and longitudinal components
-    Eθ = (Tp * (dipole.px * cos(ϕ) + dipole.py * sin(ϕ)) * cosθ -
+    Eθ = (Tp * (dipole.px * cos(ϕ) + dipole.py * sin(ϕ)) * cosθ +
           Tp * dipole.pz * sinθ)
     Eϕ = Ts * (-dipole.px * sin(ϕ) + dipole.py * cos(ϕ))
 

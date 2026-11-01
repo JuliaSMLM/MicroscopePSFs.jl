@@ -25,6 +25,7 @@ makedocs(;
             "ScalarPSF" => "psfs/scalarpsf.md",
             "VectorPSF" => "psfs/vectorpsf.md",
             "SplinePSF" => "psfs/splinepsf.md",
+            "Multi-channel PSFs" => "psfs/multichannel.md",
         ],
         "Zernike Polynomials" => "zernike.md",
         "I/O Functionality" => "io.md",

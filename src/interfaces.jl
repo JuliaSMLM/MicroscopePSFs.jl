@@ -67,6 +67,35 @@ function amplitude(psf::AbstractPSF, x::Real, y::Real, z::Real)
     error("3D amplitude calculation not implemented for $(typeof(psf))")
 end
 
+"""
+    dipole_fields(psf::AbstractPSF, x, y, z)
+
+Return the complex field components for each mutually incoherent dipole.
+
+# Arguments
+- `psf`: A PSF with a complex field, such as `ScalarPSF` or `VectorPSF`.
+- `x, y, z`: Position relative to focus, in microns.
+
+# Returns
+A vector of component vectors: one `[E]` for a scalar field, one `[Ex, Ey]`
+for a fixed vector dipole, or three `[Ex, Ey]` vectors in x, y, z dipole order
+for a rotating dipole. Intensity is `sum(sum(abs2, E) for E in dipole_fields(...))`.
+Intensity-only PSFs, including `SplinePSF`, throw `ArgumentError`: their
+square-root amplitude has no phase and cannot enter an interference sum.
+
+# Examples
+```julia
+psf = ScalarPSF(1.2, 0.68, 1.33)
+fields = dipole_fields(psf, 0.1, 0.0, 0.2)
+intensity = sum(sum(abs2, E) for E in fields)
+```
+"""
+function dipole_fields(psf::AbstractPSF, x::Real, y::Real, z::Real)
+    throw(ArgumentError(
+        "$(typeof(psf)) stores intensity or has no complex field; " *
+        "use a ScalarPSF or VectorPSF with phase information"))
+end
+
 # """
 #     integrate_pixels(
 #         psf::AbstractPSF, 

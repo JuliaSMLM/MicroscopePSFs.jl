@@ -311,6 +311,13 @@ function (psf::VectorPSF)(x::Real, y::Real, z::Real)
     end
 end
 
+# The public docstring is on the generic function in src/interfaces.jl.
+function dipole_fields(psf::VectorPSF, x::Real, y::Real, z::Real)
+    return [_calculate_field_amplitude(v, psf.nₐ, psf.λ, psf.n_medium,
+        psf.n_coverslip, psf.n_immersion, psf.z_stage, x, y, z)
+        for v in psf.vector_pupils]
+end
+
 """
     pupil_at(psf::VectorPSF, z::Real; z_stage::Real=psf.z_stage)
 

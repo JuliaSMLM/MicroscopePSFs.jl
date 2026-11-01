@@ -148,3 +148,53 @@ This format is designed to be portable and future-proof.
 The I/O system uses versioning to ensure forward and backward compatibility. Files created with newer versions of MicroscopePSFs.jl may not be readable by older versions.
 
 Current I/O version: v1.0.0
+
+## Multi-channel and wrapper layout
+
+`save_psf` and `load_psf` also support `PlanePSF`, `AnalyzerPSF`, `FourPiPSF`,
+and `MultiChannelPSF`, at the root or recursively in child groups. Root metadata
+keywords work as before. The existing types keep their exact dataset and
+attribute layout, and `IO_VERSION` remains `1.0.0`. No PSFLearning or Reactant
+import is needed to load and evaluate a container.
+
+A container has root attribute `psf_type = "MultiChannelPSF"` and this layout
+(the registration size is in Julia dimension order):
+
+```text
+parameters/
+    n_channels
+    reference
+    transmission         # length N
+    z_offset             # length N
+    registration         # size (2, 3, N)
+channels/
+    channel_1/           # attribute psf_type, then the channel's own layout
+    ...
+    channel_N/
+```
+
+Each wrapper stores its scalar parameter and complete child PSFs:
+
+| Type | Parameter dataset | Child groups |
+|:-----|:------------------|:-------------|
+| `PlanePSF` | `parameters/dz` | `psf` |
+| `AnalyzerPSF` | `parameters/component` | `psf` |
+| `FourPiPSF` | `parameters/phase` | `top`, `bottom` |
+
+Every child group has a bare type-name `psf_type` attribute. Loading uses the
+public constructors, enforcing the mirror, field, registration, and photon
+fraction requirements. Homogeneous channel types are narrowed, so a saved
+collection of matching splines reloads with a concrete spline element type.
+
+```julia
+using MicroscopePSFs
+
+p = ScalarPSF(1.2, 0.68, 1.33)
+mc = MultiChannelPSF(; channels=[p, PlanePSF(p; dz=0.2)])
+mktempdir() do dir
+    file = joinpath(dir, "channels.h5")
+    save_psf(file, mc; metadata=Dict("description" => "Dual plane"))
+    restored = load_psf(file)
+    restored.channels[2](0.0, 0.0, 0.1)
+end
+```

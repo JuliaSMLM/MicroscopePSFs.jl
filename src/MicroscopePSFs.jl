@@ -62,6 +62,7 @@ export GaussianPSF, AiryPSF
 export ScalarPSF
 export VectorPSF
 export SplinePSF
+export dipole_fields, PlanePSF, AnalyzerPSF, FourPiPSF, MultiChannelPSF, channel_position
 
 # Re-export from SMLMData
 export AbstractCamera, IdealCamera
@@ -98,6 +99,7 @@ include("psfs/airy2d.jl")
 include("psfs/scalar3d.jl")
 include("psfs/vector3d.jl")
 include("psfs/spline_psf.jl")
+include("psfs/multichannel.jl")
 
 # I/O functions
 include("io/io.jl")

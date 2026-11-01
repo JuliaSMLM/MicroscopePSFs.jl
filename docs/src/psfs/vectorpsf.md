@@ -122,3 +122,36 @@ psf_aberrated = VectorPSF(
 3. **Speed**: Significantly slower than other PSF models, especially with fine grid sizes
 
 For standard usage patterns, camera integration, and comparison with other PSF types, see the [PSF Overview](overview.md).
+
+## Complex fields and the dipole frame
+
+`dipole_fields(psf, x, y, z)` returns one `[Ex, Ey]` complex vector per mutually
+incoherent dipole: one for a fixed orientation or three in x, y, z order for a
+rotating dipole. Intensity is `sum(sum(abs2, E) for E in dipole_fields(...))`.
+For a fixed dipole its only entry equals `amplitude`; rotating dipoles have
+no single coherent amplitude.
+
+Emitter z and dipole z share one frame: +z points from the coverslip into
+the sample, away from the objective. `DipoleVector(1.0, 0, 1.0)` matches
+lab dipole `[1, 0, 1]/√2`. Opposed objectives still mirror `pz`: construct the
+bottom fixed dipole as
+`DipoleVector(px, py, -pz)`. See [Multi-channel PSFs](multichannel.md) for
+analyzers, the 4Pi mirror rule, and photon normalization.
+
+The sign is anchored by Backlund, Lew, Backer, Sahl, and Moerner,
+*ChemPhysChem* **15**, 587 (2014), [Figure 3D](https://pmc.ncbi.nlm.nih.gov/articles/PMC3992256/#F3),
+reprinting Lew, Backlund, and Moerner, [*Nano Letters* **13**, 3967 (2013)](https://doi.org/10.1021/nl304359p).
+Membrane-normal dipoles appear shifted laterally toward the cell edge on
+both sides of focus, with larger shifts farther from focus. This statement
+does not depend on a z-axis or defocus sign convention.
+
+Versions before 0.5.7 had the axial term with the wrong sign, so a fixed
+dipole with both in-plane and axial components came out mirrored in `pz`.
+Pure x, y, and z dipoles and the rotating dipole had correct intensities.
+The `amplitude` and `dipole_fields` of a pure z dipole change sign in 0.5.7.
+For a rotating dipole, `dipole_fields(psf, x, y, z)[3]` and
+`pupil_at(psf, z)[3]` also change sign, with intensities unchanged.
+
+A `VectorPSF` file stores filled pupils. A tilted fixed dipole saved by an
+earlier version keeps the old sign when loaded, and the file does not record
+which sign it holds. Rebuild it from its parameters.

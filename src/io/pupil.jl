@@ -8,11 +8,11 @@ These represent the complex field in the pupil plane of the microscope.
 # ---- PupilFunction ----
 
 """
-    _save_psf_impl(file::HDF5.File, pupil::PupilFunction)
+    _save_psf_impl(file::_H5Parent, pupil::PupilFunction)
 
 Save a PupilFunction to an HDF5 file, including physical parameters and complex field.
 """
-function _save_psf_impl(file::HDF5.File, pupil::PupilFunction)
+function _save_psf_impl(file::_H5Parent, pupil::PupilFunction)
     # Save basic parameters
     params = create_group(file, "parameters")
     params["na"] = pupil.nₐ
@@ -30,11 +30,11 @@ function _save_psf_impl(file::HDF5.File, pupil::PupilFunction)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{PupilFunction})
+    _load_psf_impl(file::_H5Parent, ::Type{PupilFunction})
 
 Load a PupilFunction from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{PupilFunction})
+function _load_psf_impl(file::_H5Parent, ::Type{PupilFunction})
     # Load parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda", "n"])
@@ -54,12 +54,12 @@ end
 # ---- VectorPupilFunction ----
 
 """
-    _save_psf_impl(file::HDF5.File, pupil::VectorPupilFunction)
+    _save_psf_impl(file::_H5Parent, pupil::VectorPupilFunction)
 
 Save a VectorPupilFunction to an HDF5 file, including all physical parameters
 and both Ex and Ey field components.
 """
-function _save_psf_impl(file::HDF5.File, pupil::VectorPupilFunction)
+function _save_psf_impl(file::_H5Parent, pupil::VectorPupilFunction)
     # Save parameters
     params = create_group(file, "parameters")
     params["na"] = pupil.nₐ
@@ -83,11 +83,11 @@ function _save_psf_impl(file::HDF5.File, pupil::VectorPupilFunction)
 end
 
 """
-    _load_psf_impl(file::HDF5.File, ::Type{VectorPupilFunction})
+    _load_psf_impl(file::_H5Parent, ::Type{VectorPupilFunction})
 
 Load a VectorPupilFunction from an HDF5 file.
 """
-function _load_psf_impl(file::HDF5.File, ::Type{VectorPupilFunction})
+function _load_psf_impl(file::_H5Parent, ::Type{VectorPupilFunction})
     # Load parameters
     params = file["parameters"]
     _io_check_required_fields(params, ["na", "lambda", "n_medium", 

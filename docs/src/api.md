@@ -26,6 +26,16 @@ ScalarPSF
 VectorPSF
 ```
 
+#### Multi-channel Models
+
+```@docs
+PlanePSF
+AnalyzerPSF
+FourPiPSF
+MultiChannelPSF
+channel_position
+```
+
 #### PSF Acceleration
 
 ```@docs
@@ -36,6 +46,7 @@ SplinePSF
 
 ```@docs
 amplitude
+dipole_fields
 integrate_pixels
 integrate_pixels_amplitude
 ```

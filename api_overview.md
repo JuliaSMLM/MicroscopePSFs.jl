@@ -365,3 +365,53 @@ axial_intensity = [psf(0.0, 0.0, zi) for zi in z_range]
 - For `VectorPSF`, the dipole vector is automatically normalized
 - Support regions should be chosen carefully - too small truncates the PSF, too large wastes computation
 - When using splines, ensure the interpolation range covers all possible emitter positions
+
+## Multi-channel PSFs
+
+These additions preserve the existing PSF interface. All distances are microns.
+Each wrapper below is a complete 3D PSF; `MultiChannelPSF` is a separate
+container and deliberately does not subtype `AbstractPSF`.
+
+```julia
+using MicroscopePSFs
+
+s = ScalarPSF(1.2, 0.68, 1.33)
+v = VectorPSF(1.2, 0.68; n_medium=1.33, n_coverslip=1.33, n_immersion=1.33)
+
+# One complex component vector per incoherent dipole, in x/y/z order if rotating.
+fields = dipole_fields(v, 0.1, 0.0, 0.2)
+intensity = sum(sum(abs2, E) for E in fields)
+
+# Emitter-side high-NA defocus: evaluates s at z + dz.
+plane = PlanePSF(s; dz=0.2)
+
+# Camera polarization: 1 passes Ex/H, 2 passes Ey/V. Not renormalized.
+h = AnalyzerPSF(v; component=1)
+
+# Opposed objectives, bottom at -z, axial rotating-dipole mirror sign included.
+# Fixed vector arms must instead use bottom DipoleVector(px, py, -pz).
+fourpi = FourPiPSF(s, s; phase=0.3)
+
+# Each channel normalized alone; transmission splits the emitter's total photons.
+mc = MultiChannelPSF(; channels=[s, plane], transmission=[0.5, 0.5])
+
+# Absolute camera coordinates, not pixels; registration is forward [A t].
+pos = channel_position(mc, 2, 1.0, 2.0, 0.1)
+```
+
+The forward law is `expected image i = N * mc.transmission[i] *
+integrate_pixels(mc.channels[i], camera_i, unit-photon emitter at
+channel_position(mc, i, x, y, z))`. Registration is in absolute camera
+microns, so it survives crops; `z_offset[i]` adds to z with the same sign as
+`PlanePSF.dz`. The reference transform is identity with zero axial offset.
+
+Channel PSFs must integrate to one alone, with 4Pi phase channels normalized
+on average over the fringe. Raw `AnalyzerPSF` channels already carry the
+polarization split: normalize them alone before assigning transmission.
+Vector 4Pi arms require `n_medium ≥ NA`. `phase` is the cavity phase;
+polarization-specific phases use
+`AnalyzerPSF(FourPiPSF(top, bottom; phase=φ); component=c)` per channel.
+Emitter z and dipole z share one frame, with +z pointing into the sample,
+away from the objective. The opposed-objective mirror rule still applies.
+Splines hold intensity only and cannot enter
+coherent sums. All new wrappers and the container support recursive HDF5 I/O.

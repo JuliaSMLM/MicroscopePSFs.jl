@@ -56,7 +56,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v3
         with:
-          version: '1'
+          # Pinned: Enzyme 0.13.216 crashes on Julia 1.13.3 in docs/src/examples.md (AssertionError: mi2 !== nothing).
+          # Back to '1' once those Enzyme blocks build there.
+          version: '1.12'
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-docdeploy@v1

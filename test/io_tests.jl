@@ -217,4 +217,70 @@
             @warn "Skipping VectorPSF tests: $e"
         end
     end
+
+    @testset "Stored type name" begin
+        gauss = GaussianPSF(0.15)
+        x_range = y_range = range(-1.0, 1.0, length=21)
+        spline = SplinePSF([gauss(x, y) for y in y_range, x in x_range], x_range, y_range)
+
+        # Overwrite the psf_type attribute of a saved file
+        function set_psf_type!(filename, type_str)
+            h5open(filename, "r+") do file
+                HDF5.delete_attribute(file, "psf_type")
+                attributes(file)["psf_type"] = type_str
+            end
+        end
+
+        @testset "Module-qualified name from v0.5.0-0.5.6 loads" begin
+            filename = temp_file("qualified_type.h5")
+            try
+                save_psf(filename, spline)
+                set_psf_type!(filename, "MicroscopePSFs.SplinePSF")
+                loaded = load_psf(filename)
+                @test loaded isa SplinePSF
+                @test isapprox(loaded(0.1, 0.2), spline(0.1, 0.2), atol=1e-10)
+            finally
+                isfile(filename) && rm(filename)
+            end
+        end
+
+        @testset "Other names are refused" begin
+            filename = temp_file("bad_type.h5")
+            try
+                save_psf(filename, spline)
+                for bad in (
+                    "OtherModule.SplinePSF", "NotAPSFType", "MicroscopePSFs.save_psf")
+                    set_psf_type!(filename, bad)
+                    @test_throws ArgumentError load_psf(filename)
+                end
+            finally
+                isfile(filename) && rm(filename)
+            end
+        end
+
+        @testset "Round trip from a session that only imports MicroscopePSFs" begin
+            # `using MicroscopePSFs` hides the bug: type names print bare.
+            # An import-only child prints them module-qualified.
+            filename = temp_file("import_only.h5")
+            script = """
+                import MicroscopePSFs
+                gauss = MicroscopePSFs.GaussianPSF(0.15)
+                r = range(-1.0, 1.0, length=21)
+                psf = MicroscopePSFs.SplinePSF([gauss(x, y) for y in r, x in r], r, r)
+                MicroscopePSFs.save_psf(ARGS[1], psf)
+                loaded = MicroscopePSFs.load_psf(ARGS[1])
+                print(loaded(0.1, 0.2) == psf(0.1, 0.2))
+                """
+            cmd = `$(Base.julia_cmd()) --startup-file=no
+                   --project=$(Base.active_project()) -e $script $filename`
+            try
+                out = IOBuffer()
+                @test success(pipeline(cmd; stdout=out))
+                @test String(take!(out)) == "true"
+                @test h5open(f -> read(attributes(f)["psf_type"]), filename) == "SplinePSF"
+            finally
+                isfile(filename) && rm(filename)
+            end
+        end
+    end
 end

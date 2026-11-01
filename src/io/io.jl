@@ -12,6 +12,7 @@ Key functions:
 """
 
 # Constants
+const _H5Parent = Union{HDF5.File, HDF5.Group}
 const IO_VERSION = v"1.0.0"  # Version of the I/O system
 const MIN_SUPPORTED_VERSION = v"1.0.0"  # Minimum supported version
 
@@ -35,9 +36,10 @@ function save_psf(filename::String, object; metadata::Dict=Dict())
         attrs = attributes(file)
         attrs["io_version"] = string(IO_VERSION)
         
-        # Extract just the base type name without parameters
-        base_type_name = split(string(typeof(object)), "{")[1]
-        attrs["psf_type"] = base_type_name
+        # Store the bare type name without module or parameters. `string(typeof(object))`
+        # would qualify it as "MicroscopePSFs.X" whenever Main has not run
+        # `using MicroscopePSFs`.
+        attrs["psf_type"] = String(nameof(typeof(object)))
         
         attrs["creation_date"] = string(Dates.now())
         
@@ -91,10 +93,9 @@ function load_psf(filename::String)
         type_str = read(attrs["psf_type"])
         @info "Loading PSF of type $(type_str)"
         
+        object_type = _resolve_psf_type(type_str)
+
         try
-            # Get the actual type from the module
-            object_type = getfield(MicroscopePSFs, Symbol(type_str))
-            
             # Dispatch to appropriate load implementation
             result = _load_psf_impl(file, object_type)
             
@@ -103,6 +104,26 @@ function load_psf(filename::String)
             error("Failed to load object of type $type_str: $e")
         end
     end
+end
+
+"""
+    _resolve_psf_type(type_str::AbstractString) -> Type
+
+Map a stored `psf_type` attribute to a MicroscopePSFs type. Accepts the bare name
+(`"SplinePSF"`) and the `MicroscopePSFs.`-qualified name that versions 0.5.0-0.5.6
+wrote when the saving session had not run `using MicroscopePSFs`. Any other name
+throws an `ArgumentError`.
+"""
+function _resolve_psf_type(type_str::AbstractString)
+    name = chopprefix(type_str, "MicroscopePSFs.")
+    sym = Symbol(name)
+    if occursin('.', name) || !isdefined(MicroscopePSFs, sym) ||
+        !(getfield(MicroscopePSFs, sym) isa Type)
+        throw(ArgumentError(
+            "Unrecognized psf_type \"$type_str\" in PSF file: " *
+            "expected a MicroscopePSFs type name such as \"SplinePSF\""))
+    end
+    return getfield(MicroscopePSFs, sym)
 end
 
 # Version compatibility check
@@ -117,11 +138,11 @@ function _check_version_compatibility(file_version::String)
 end
 
 # Default error implementation
-function _save_psf_impl(file::HDF5.File, psf::AbstractPSF)
+function _save_psf_impl(file::_H5Parent, psf::AbstractPSF)
     error("Saving not implemented for PSF type $(typeof(psf))")
 end
 
-function _load_psf_impl(file::HDF5.File, ::Type{T}) where {T <: AbstractPSF}
+function _load_psf_impl(file::_H5Parent, ::Type{T}) where {T <: AbstractPSF}
     error("Loading not implemented for PSF type $T")
 end
 
@@ -137,3 +158,4 @@ include("spline.jl")
 include("vector3d.jl")
 include("pupil.jl")
 include("zernike.jl")
+include("multichannel.jl")
