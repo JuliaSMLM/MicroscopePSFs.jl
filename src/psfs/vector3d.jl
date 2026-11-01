@@ -38,6 +38,7 @@ function VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     z_stage::Real=zero(float(nₐ)),
     grid_size::Integer=128)
 
+    _require_fixed_dipole(dipole)
     T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
         typeof(n_coverslip), typeof(n_immersion), typeof(z_stage),
         typeof(dipole.px),
@@ -460,6 +461,10 @@ Uses the flexible core integration function that handles vector returns.
 
 # Returns
 - The `result` array, filled with integrated complex amplitudes for each polarization
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude!(
     result::AbstractArray{Complex{T},3},
@@ -495,6 +500,10 @@ Specialized version of amplitude integration for VectorPSF that preserves polari
 # Returns
 - 3D array of integrated complex amplitudes with dimensions [y, x, pol]
   where pol index 1 = Ex and pol index 2 = Ey
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude(
     psf::VectorPSF,
@@ -532,6 +541,10 @@ Special version for VectorPSF that preserves polarization components.
 
 # Notes
 - Results are the coherent sum of individual emitter field contributions
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude(
     psf::VectorPSF,

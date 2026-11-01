@@ -500,6 +500,10 @@ Integrate PSF amplitude (complex) over camera pixels.
 
 # Notes
 - For 3D SplinePSFs (when z_range is defined), requires an emitter with a z-coordinate
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude(
     psf::SplinePSF,

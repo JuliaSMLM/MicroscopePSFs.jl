@@ -101,12 +101,15 @@ Calculate total axial phase from defocus.
 - `z`: Emitter position relative to the coverslip (depth above the coverslip in μm)
 - `z_stage`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm)
 - `kz_medium`: z-component of wave vector in sample medium
-- `kz_coverslip`: z-component of wave vector in coverslip
+- `kz_coverslip`: z-component of wave vector in coverslip; ignored by this function
 - `kz_immersion`: z-component of wave vector in immersion medium
-- `coverslip_thickness`: Thickness of coverslip in mm (default: 0.17mm)
+- `coverslip_thickness`: Coverslip thickness in mm (default 0.17); ignored
 
 # Returns
-- Defocus phase
+- Defocus phase `kz_medium * z - kz_immersion * z_stage`
+
+`kz_coverslip` and `coverslip_thickness` are ignored; this function models only
+emitter and stage defocus, without a coverslip-thickness phase contribution.
 
 """
 function calculate_axial_phase(z::Real, z_stage::Real, kz_medium::Complex,

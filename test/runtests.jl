@@ -56,6 +56,7 @@ using HDF5
 
     @testset "Release regressions" begin
         include("release_regression_tests.jl")
+        include("release_part2_tests.jl")
     end
 
     # I/O functionality tests

@@ -41,16 +41,19 @@ Load a PSF or related object from an HDF5 file.
 
 ## Vector pupil convention
 
-Starting with 0.5.7, every saved `VectorPSF` group, including nested arms and
-channels, has an `axial_sign_convention` attribute with value
-`positive_pz_dipole_projection_v1`. Positive dipole z contributes positively
-to the meridional field, as described in the vector PSF conventions.
+Starting with the 0.5.7 release, saved files have `io_version = "1.1.0"`.
+This version identifies the corrected axial dipole sign; no per-group marker
+is needed. The minimum supported file version remains 1.0.0.
 
-Loading an unmarked vector group with a nonzero fixed dipole z component or a
-rotating dipole emits a warning: the file predates 0.5.7 and its axial fields use
-the old sign. Mixed-dipole fields and coherent interference can be affected.
-Loading preserves the stored fields exactly. Rebuild the PSF from its optical,
-dipole, and aberration parameters to use the current convention.
+Loading a file below version 1.1.0 with a nonzero fixed dipole z component or a
+rotating dipole emits one warning for the entire file, including vectors nested
+inside wrappers and containers. Files without a version are treated as 1.0.0.
+The file has no axial-sign marker: it was written by 0.5.6 or earlier, which
+used the old axial dipole sign, or by an unreleased 0.5.7 development build.
+Some such development builds wrote the corrected sign with format 1.0.0;
+which one wrote the file cannot be told from the file. Mixed-dipole fields
+and coherent interference can be affected. Loading preserves the stored fields
+exactly. Rebuild it from its optical, dipole, and aberration parameters to be sure.
 
 ## Basic Usage
 
@@ -160,14 +163,14 @@ This format is designed to be portable and future-proof.
 
 The I/O system uses versioning to ensure forward and backward compatibility. Files created with newer versions of MicroscopePSFs.jl may not be readable by older versions.
 
-Current I/O version: v1.0.0
+Current I/O version: v1.1.0
 
 ## Multi-channel and wrapper layout
 
 `save_psf` and `load_psf` also support `PlanePSF`, `AnalyzerPSF`, `FourPiPSF`,
 and `MultiChannelPSF`, at the root or recursively in child groups. Root metadata
-keywords work as before. The existing types keep their exact dataset and
-attribute layout, and `IO_VERSION` remains `1.0.0`. No PSFLearning or Reactant
+keywords work as before. The existing types keep their dataset layout.
+`IO_VERSION` is `1.1.0`. No PSFLearning or Reactant
 import is needed to load and evaluate a container.
 
 A container has root attribute `psf_type = "MultiChannelPSF"` and this layout

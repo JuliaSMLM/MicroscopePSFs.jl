@@ -516,7 +516,8 @@ end
             @test_throws ArgumentError MultiChannelPSF(;kwargs...)
         end
         τ = sqrt(eps(Float64))
-        @test MultiChannelPSF(;channels=[scalar],transmission=[1+τ/2]) isa MultiChannelPSF
+        @test MultiChannelPSF(;channels=[scalar],
+            transmission=[1+4eps(Float64)]) isa MultiChannelPSF
         @test_throws ArgumentError MultiChannelPSF(;channels=[scalar],transmission=[1+2τ])
         @test MultiChannelPSF(;channels=[scalar],registration=[[1.0 0 τ/2;0 1 0]],
                              z_offset=[τ/2]) isa MultiChannelPSF

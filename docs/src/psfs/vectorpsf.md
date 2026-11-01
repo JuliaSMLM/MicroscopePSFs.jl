@@ -145,13 +145,17 @@ Membrane-normal dipoles appear shifted laterally toward the cell edge on
 both sides of focus, with larger shifts farther from focus. This statement
 does not depend on a z-axis or defocus sign convention.
 
-Versions before 0.5.7 had the axial term with the wrong sign, so a fixed
+Versions 0.5.6 and earlier had the axial term with the wrong sign, so a fixed
 dipole with both in-plane and axial components came out mirrored in `pz`.
 Pure x, y, and z dipoles and the rotating dipole had correct intensities.
 The `amplitude` and `dipole_fields` of a pure z dipole change sign in 0.5.7.
 For a rotating dipole, `dipole_fields(psf, x, y, z)[3]` and
 `pupil_at(psf, z)[3]` also change sign, with intensities unchanged.
 
-A `VectorPSF` file stores filled pupils. A tilted fixed dipole saved by an
-earlier version keeps the old sign when loaded, and the file does not record
-which sign it holds. Rebuild it from its parameters.
+A `VectorPSF` file stores filled pupils. A file below format version 1.1.0 has
+no axial-sign marker. It was written by 0.5.6 or earlier, which used the old
+axial dipole sign, or by an unreleased 0.5.7 development build. Some such
+development builds wrote the corrected sign with format 1.0.0; which one wrote
+the file cannot be told from the file. Mixed-dipole fields and coherent
+interference can be affected. Loading preserves the stored fields exactly.
+Rebuild it from its parameters to be sure.

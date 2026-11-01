@@ -137,6 +137,10 @@ Automatically uses z-coordinate if both PSF and emitter support it.
 
 # Notes
 - Array is indexed as [y,x] with [1,1] at top-left pixel
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude!(
     result::AbstractArray{Complex{T}},
@@ -191,6 +195,10 @@ Integrate PSF complex amplitude over camera pixels using camera object, storing 
 
 # Returns
 - The `result` array, now filled with integrated complex amplitudes
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude!(
     result::AbstractArray{Complex{T}},
@@ -375,8 +383,8 @@ end
 Integrate PSF complex amplitude over camera pixels with optional support region optimization.
 
 For each pixel in the specified region, numerically integrates the PSF amplitude using the specified
-sampling density. Unlike intensity integration, returns unnormalized complex amplitudes
-which can be used for coherent calculations.
+sampling density. Returns a unit-photon field: emitter photons are ignored.
+Squaring a pixel-integrated field is not pixel-integrated intensity.
 Automatically handles z-coordinate if both PSF and emitter support it.
 
 # Arguments
@@ -398,7 +406,7 @@ Automatically handles z-coordinate if both PSF and emitter support it.
 # Notes
 - For coherent calculations, use this function instead of `integrate_pixels`
 - Return type is complex to support PSFs with phase information
-- To get intensity from amplitude: `abs2.(integrate_pixels_amplitude(...))`
+- For pixel-integrated intensity, use `integrate_pixels`.
 
 See also: [`integrate_pixels`](@ref), [`AbstractPSF`](@ref)
 """
@@ -481,6 +489,10 @@ This version takes a camera object instead of explicit pixel edges.
 - Array indices start at [1,1] for top-left pixel
 
 See also: [`integrate_pixels`](@ref), [`AbstractPSF`](@ref)
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude(
     psf::AbstractPSF,

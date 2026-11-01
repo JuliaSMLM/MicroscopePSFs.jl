@@ -94,7 +94,12 @@ pixels = integrate_pixels(psf, camera, emitters, support=0.5)
 pixels = integrate_pixels(psf, camera, emitters, threaded=false)
 ```
 
-For incoherent emitters (typical fluorescence), intensities are summed. For coherent simulations, use `integrate_pixels_amplitude`.
+For incoherent emitters (typical fluorescence), intensities are summed using
+`integrate_pixels`. `integrate_pixels_amplitude` returns a unit-photon field:
+emitter photons are ignored, including when summing several emitters.
+Squaring a pixel-integrated field is not pixel-integrated intensity. Pixel
+integration and squared magnitude do not commute; use `integrate_pixels` for
+photon-count images.
 
 ## Working with PSFs
 

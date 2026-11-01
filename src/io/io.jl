@@ -13,7 +13,7 @@ Key functions:
 
 # Constants
 const _H5Parent = Union{HDF5.File, HDF5.Group}
-const IO_VERSION = v"1.0.0"  # Version of the I/O system
+const IO_VERSION = v"1.1.0"  # Version of the I/O system
 const MIN_SUPPORTED_VERSION = v"1.0.0"  # Minimum supported version
 
 # Main interface functions
@@ -85,9 +85,9 @@ function load_psf(filename::String)
     h5open(filename, "r") do file
         # Check version compatibility
         attrs = attributes(file)
-        if haskey(attrs, "io_version")
-            _check_version_compatibility(read(attrs["io_version"]))
-        end
+        file_version = haskey(attrs, "io_version") ?
+            read(attrs["io_version"]) : string(MIN_SUPPORTED_VERSION)
+        _check_version_compatibility(file_version)
         
         # Read object type as a base type name
         type_str = read(attrs["psf_type"])
@@ -98,6 +98,14 @@ function load_psf(filename::String)
         try
             # Dispatch to appropriate load implementation
             result = _load_psf_impl(file, object_type)
+            if VersionNumber(file_version) < v"1.1.0" && _has_axial_dipole(result)
+                @warn "This file has no axial-sign marker. It was written by 0.5.6 or " *
+                      "earlier, which used the old axial dipole sign, or by an " *
+                      "unreleased 0.5.7 development build; which one cannot be told " *
+                      "from the file. Mixed-dipole fields and coherent interference " *
+                      "may be affected. Stored fields are preserved; rebuild it from " *
+                      "its parameters to be sure."
+            end
             
             return result
         catch e
@@ -105,6 +113,13 @@ function load_psf(filename::String)
         end
     end
 end
+
+# Inspect the complete loaded object once so nested vector groups produce one warning.
+_has_axial_dipole(::Any) = false
+_has_axial_dipole(p::VectorPSF) = length(p.vector_pupils) > 1 || !iszero(p.dipole.pz)
+_has_axial_dipole(p::Union{PlanePSF,AnalyzerPSF}) = _has_axial_dipole(p.psf)
+_has_axial_dipole(p::FourPiPSF) = _has_axial_dipole(p.top) || _has_axial_dipole(p.bottom)
+_has_axial_dipole(p::MultiChannelPSF) = any(_has_axial_dipole, p.channels)
 
 """
     _resolve_psf_type(type_str::AbstractString) -> Type

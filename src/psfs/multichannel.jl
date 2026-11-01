@@ -85,7 +85,7 @@ _n_components(p::AnalyzerPSF) = _n_components(p.psf)
 (p::AnalyzerPSF)(x::Real, y::Real, z::Real) =
     sum(abs2(E[p.component]) for E in dipole_fields(p.psf, x, y, z))
 function dipole_fields(p::AnalyzerPSF, x::Real, y::Real, z::Real)
-    fields = dipole_fields(p.psf, x, y, z)
+    fields = map(copy, dipole_fields(p.psf, x, y, z))
     for E in fields
         E[3 - p.component] = zero(eltype(E))
     end
@@ -138,7 +138,7 @@ function _check_fourpi_vectors(top, bottom)
     if !isnothing(a) && !isnothing(b) && length(a.vector_pupils) == 1
         pa = [a.dipole.px, a.dipole.py, -a.dipole.pz]
         pb = [b.dipole.px, b.dipole.py, b.dipole.pz]
-        # Same-typed DipoleVector arguments can bypass its normalizing factory.
+        # Compare directions within the coarser arm's precision.
         na, nb = norm(pa), norm(pb)
         τ = _arm_tolerance(top, bottom)
         if !(isfinite(na) && isfinite(nb) && na > 0 && nb > 0 &&
@@ -252,6 +252,9 @@ Integrate wrapper field amplitudes while preserving vector polarization componen
 A complex `[y, x, pol]` array for vector fields, with components `Ex` and `Ey`.
 Scalar wrappers retain the generic complex matrix. Several incoherent dipoles
 throw the same error as `VectorPSF` amplitude integration.
+These are unit-photon fields: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 
 # Examples
 ```julia
@@ -306,7 +309,8 @@ handle its channels explicitly.
   camera coordinates in microns to channel coordinates: `[xᵢ,yᵢ] = A*[x,y]+t`.
   Defaults to identity; absolute coordinates keep registration valid after crops.
 - `transmission`: Nonnegative fractions of the emitter's total photons; their
-  sum must not exceed one. Defaults to equal splitting.
+  sum must not exceed one beyond summation rounding. Defaults to equal splitting.
+  A 4Pi port uses its fringe-average share: 0.5 for each of two complementary ports.
 - `z_offset`: Per-channel emitter z shifts in microns, with the `PlanePSF.dz`
   sign convention. Defaults to zero.
 - `reference`: Reference channel index (default 1), whose registration and z
@@ -322,6 +326,12 @@ checked by the constructor. Raw `AnalyzerPSF` channels and wrappers carrying
 their photon split are refused: tabulate them into a `SplinePSF` scaled to unit
 integral and put the split in `transmission`. See [`channel_position`](@ref)
 for the forward law.
+
+For 4Pi channels, fitted photons are the fringe-average total. A single 4Pi
+channel at transmission 1 can predict up to twice that count at the fringe peak.
+If transmissions sum below 1, photons mean photons before those losses.
+Learned containers carry axial offsets in `z_offset`; `PlanePSF` is for building
+model channels. Apply each offset once, so it is never applied twice.
 
 # Examples
 ```julia
@@ -353,6 +363,9 @@ struct MultiChannelPSF{T <: AbstractFloat, P <: AbstractPSF}
             isnothing(values) || length(values) == N || throw(ArgumentError(
                 "$name length must match channels; provide $N entries"))
         end
+        registration = isnothing(registration) ? nothing : collect(registration)
+        transmission = isnothing(transmission) ? nothing : collect(transmission)
+        z_offset = isnothing(z_offset) ? nothing : collect(z_offset)
         if !isnothing(registration)
             all(r -> r isa AbstractMatrix && size(r) == (2, 3), registration) ||
                 throw(ArgumentError(
@@ -386,7 +399,7 @@ struct MultiChannelPSF{T <: AbstractFloat, P <: AbstractPSF}
         all(t -> t >= 0, tr) || throw(ArgumentError(
             "transmission must be nonnegative; supply photon fractions ≥ 0"))
         τ = sqrt(eps(T))
-        sum(tr) <= one(T) + τ || throw(ArgumentError(
+        sum(tr) <= one(T) + 8N * eps(T) || throw(ArgumentError(
             "transmission sums to more than one; supply fractions of one total " *
             "photon budget, and normalize analyzer channels alone"))
         reference isa Integer && 1 <= reference <= N || throw(ArgumentError(
@@ -424,6 +437,13 @@ normalized on average over the fringe. The constructor cannot check arbitrary
 channel normalization; it refuses raw `AnalyzerPSF` channels and wrappers carrying
 their photon split. Tabulate these into a `SplinePSF` scaled to unit integral
 and put the split in `transmission`.
+
+For a 4Pi port, transmission is its fringe-average share, 0.5 for each of two
+complementary ports. Fitted photons are the fringe-average total; a single 4Pi
+channel at transmission 1 predicts up to twice that count at the fringe peak.
+When transmissions sum below 1, photons mean photons before those losses.
+Learned containers carry axial offsets in `z_offset`. Use `PlanePSF` for building
+model channels, and never apply the same offset twice.
 
 # Examples
 ```julia

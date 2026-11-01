@@ -2,7 +2,6 @@ using Test, MicroscopePSFs, HDF5
 
 @testset "0.5.7 review regressions" verbose=true begin
     M = MicroscopePSFs
-    warn = Base.CoreLogging.Warn
     energy(vp) = (sum(abs2, vp.Ex.field) + sum(abs2, vp.Ey.field)) *
                  M.kpixelsize(vp)^2
     vector(args...; kwargs...) = VectorPSF(1.2, 0.68, args...;
@@ -94,52 +93,6 @@ using Test, MicroscopePSFs, HDF5
                 DipoleVector(p.dipole.px, p.dipole.py, -p.dipole.pz);
                 n_medium=1.33, n_coverslip=1.33, n_immersion=1.33, grid_size=33)
             @test isfinite(FourPiPSF(p, bottom)(points[2]...))
-        end
-    end
-
-    @testset "I6 vector axial convention persistence" begin
-        for p in (vector(DipoleVector(1.0, 0.0, 0.0)),
-                  vector(DipoleVector(0.0, 0.0, 1.0)), vector())
-            mktempdir() do dir
-                path = joinpath(dir, "vector.h5")
-                save_psf(path, p)
-                h5open(path, "r+") do f
-                    @test haskey(attributes(f), "axial_sign_convention")
-                    if haskey(attributes(f), "axial_sign_convention")
-                        @test read(attributes(f)["axial_sign_convention"]) ==
-                              "positive_pz_dipole_projection_v1"
-                        HDF5.delete_attribute(f, "axial_sign_convention")
-                    end
-                end
-                affected = length(p.vector_pupils) > 1 || !iszero(p.dipole.pz)
-                loaded = if affected
-                    message = r"before 0\.5\.7.*axial.*rebuild.*parameters"
-                    @test_logs (:warn, message) min_level=warn load_psf(path)
-                else
-                    @test_logs min_level=warn load_psf(path)
-                end
-                for (a, b) in zip(p.vector_pupils, loaded.vector_pupils)
-                    @test a.Ex.field == b.Ex.field
-                    @test a.Ey.field == b.Ey.field
-                end
-                bottom = length(p.vector_pupils) == 1 ?
-                    vector(DipoleVector(p.dipole.px, p.dipole.py, -p.dipole.pz)) : p
-                cavity = FourPiPSF(p, bottom)
-                save_psf(path, PlanePSF(AnalyzerPSF(cavity; component=1); dz=0.1))
-                h5open(path, "r") do f
-                    for name in ("psf/psf/top", "psf/psf/bottom")
-                        @test haskey(attributes(f[name]), "axial_sign_convention")
-                    end
-                end
-                @test_logs min_level=warn load_psf(path)
-                if affected
-                    h5open(path, "r+") do f
-                        HDF5.delete_attribute(f["psf/psf/top"], "axial_sign_convention")
-                    end
-                    message = r"before 0\.5\.7.*axial.*rebuild.*parameters"
-                    @test_logs (:warn, message) min_level=warn load_psf(path)
-                end
-            end
         end
     end
 
