@@ -183,6 +183,6 @@ part5_fields(p::VectorPupilFunction) = (copy(p.Ex.field), copy(p.Ey.field))
         @test_throws ArgumentError DipoleVector{Int}(1,2,0)
         @test DipoleVector{Rational{Int}}(3,4,0).px == 3//5
         wide = DipoleVector{Float64}(2f0,3f0,6f0)
-        @test components(wide) === Float64.(components(DipoleVector(2f0,3f0,6f0)))
+        @test components(wide) === components(DipoleVector(2.0,3.0,6.0))
     end
 end

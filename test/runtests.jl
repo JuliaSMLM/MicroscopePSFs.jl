@@ -60,6 +60,7 @@ using HDF5
         include("release_part3_tests.jl")
         include("release_part4_tests.jl")
         include("release_part5_tests.jl")
+        include("dipole_precision_tests.jl")
     end
 
     # I/O functionality tests
