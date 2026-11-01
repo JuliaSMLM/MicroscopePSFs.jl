@@ -83,15 +83,17 @@ using Test, MicroscopePSFs, HDF5
     @testset "I5 grazing angle samples" begin
         for args in [(), (DipoleVector(1.0, 0.0, 0.0),),
                      (DipoleVector(0.0, 0.0, 1.0),)]
-            p = VectorPSF(1.33, 0.68, args...; n_medium=1.33,
+            @test_throws ArgumentError VectorPSF(1.33, 0.68, args...; n_medium=1.33,
                 n_coverslip=1.33, n_immersion=1.33, grid_size=33)
+            p = VectorPSF(1.33, 0.68, args...; n_medium=1.33,
+                n_coverslip=1.52, n_immersion=1.52, grid_size=33)
             @test all(v -> all(isfinite, v.Ex.field) && all(isfinite, v.Ey.field),
                       p.vector_pupils)
             @test sum(energy, p.vector_pupils) ≈ 1
             @test all(x -> isfinite(p(x...)), points)
             bottom = isempty(args) ? p : VectorPSF(1.33, 0.68,
                 DipoleVector(p.dipole.px, p.dipole.py, -p.dipole.pz);
-                n_medium=1.33, n_coverslip=1.33, n_immersion=1.33, grid_size=33)
+                n_medium=1.33, n_coverslip=1.52, n_immersion=1.52, grid_size=33)
             @test isfinite(FourPiPSF(p, bottom)(points[2]...))
         end
     end

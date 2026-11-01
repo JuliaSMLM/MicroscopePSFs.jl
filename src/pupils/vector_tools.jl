@@ -34,6 +34,31 @@ function calculate_wave_vectors(kr2::Real, λ::Real,
     return kz_medium, kz_coverslip, kz_immersion
 end
 
+function _check_vector_aperture(nₐ::Real, n_medium::Real, n_coverslip::Real)
+    n_medium == n_coverslip && nₐ >= n_medium && throw(ArgumentError(
+        "This pupil collects at 90 degrees in the sample, which no objective does; " *
+        "use NA below n_medium"))
+    return nothing
+end
+
+# Cancel the medium Fresnel numerator against apodization before evaluation.
+# Tp_mc*A = 2*nm*sqrt(ci)/(nm*cc + nc*cm), and similarly for s polarization.
+function _apodized_fresnel_coefficients(kr2::Real, λ::Real,
+    n_medium::Real, n_coverslip::Real, n_immersion::Real)
+    cm = sqrt(complex(1 - kr2 * λ^2 / n_medium^2))
+    cc = sqrt(complex(1 - kr2 * λ^2 / n_coverslip^2))
+    ci = sqrt(complex(1 - kr2 * λ^2 / n_immersion^2))
+    numerator = 2 * n_medium * sqrt(ci)
+    Tp = numerator / (n_medium * cc + n_coverslip * cm)
+    Ts = numerator / (n_medium * cm + n_coverslip * cc)
+    # An index-matched second interface transmits identically, even at cc=ci=0.
+    if n_coverslip == n_immersion
+        return Tp, Ts
+    end
+    Tp_ci, Ts_ci = calculate_interface_fresnel(kr2, λ, n_coverslip, n_immersion)
+    return Tp * Tp_ci, Ts * Ts_ci
+end
+
 """
     calculate_interface_fresnel(kr2::Real, λ::Real, 
                               n1::Real, n2::Real)

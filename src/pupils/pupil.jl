@@ -82,9 +82,7 @@ function PupilFunction(nₐ::Real, λ::Real, n::Real,
     zc::ZernikeCoefficients;
     grid_size::Int=64)
     T = promote_type(typeof(nₐ), typeof(λ), typeof(n), eltype(zc.phase))
-    field = zeros(Complex{T}, grid_size, grid_size)
-
-    field .= Zernike._evaluate_pupil(zc, grid_size, T)
+    field = Zernike._evaluate_pupil(zc, grid_size, T)
 
     return PupilFunction(nₐ, λ, n, field)
 end

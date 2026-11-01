@@ -15,6 +15,8 @@ Compute the unnormalized radial component R_n^m(ρ) of the Zernike polynomial.
 - No normalization applied - returns the standard mathematical form
 """
 function radialpolynomial(n::Integer, m::Integer, ρ::Real)
+    # Use at least machine-width integers before subtraction, powers, or products.
+    n, m, _ = promote(n, m, 0)
     # Input validation
     n ≥ 0 || throw(ArgumentError("Radial order n must be non-negative"))
     m ≥ 0 || throw(ArgumentError("Azimuthal order m must be non-negative"))

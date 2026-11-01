@@ -11,6 +11,8 @@
                 grid_size::Integer=128)
 
 Create a vector PSF using either a pupil-based or Zernike-based approach.
+When `n_medium == n_coverslip`, use `nₐ < n_medium`: a pupil collecting at
+90 degrees in the sample is not a physical objective aperture.
 
 # Arguments
 - `nₐ`: Numerical aperture
@@ -46,6 +48,7 @@ function VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
         isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike))
     nₐ, λ, n_medium = T(nₐ), T(λ), T(n_medium)
     n_coverslip, n_immersion = T(n_coverslip), T(n_immersion)
+    _check_vector_aperture(nₐ, n_medium, n_coverslip)
 
     if !isnothing(base_pupil) && !(base_pupil isa PupilFunction{T})
         base_pupil = PupilFunction(nₐ, λ, n_medium, Complex{T}.(base_pupil.field))
@@ -97,6 +100,8 @@ end
 
 Create a vector PSF with a rotating dipole, modeled as an incoherent sum of 
 x, y, and z dipole orientations.
+When `n_medium == n_coverslip`, use `nₐ < n_medium` to avoid collecting at
+90 degrees in the sample.
 
 # Arguments
 - `nₐ`: Numerical aperture
@@ -133,6 +138,7 @@ function VectorPSF(nₐ::Real, λ::Real;
         isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike))
     nₐ, λ, n_medium = T(nₐ), T(λ), T(n_medium)
     n_coverslip, n_immersion = T(n_coverslip), T(n_immersion)
+    _check_vector_aperture(nₐ, n_medium, n_coverslip)
 
     if !isnothing(base_pupil) && !(base_pupil isa PupilFunction{T})
         base_pupil = PupilFunction(nₐ, λ, n_medium, Complex{T}.(base_pupil.field))
@@ -223,12 +229,8 @@ function _calculate_field_amplitude(
     # Integrate over pupil
     for i in 1:grid_size, j in 1:grid_size
         # Get k-space coordinates
-        kx = (i - center) * kpixel
-        ky = (j - center) * kpixel
-        kr2 = kx^2 + ky^2
-
-        # Skip points outside the pupil
-        kr2 > kmax_val^2 && continue
+        kx, ky, kr2, inside = _vector_pupil_sample(i, j, center, kpixel, kmax_val^2)
+        inside || continue
 
         # Get wave vectors in each medium
         kz_medium, kz_coverslip, kz_immersion = calculate_wave_vectors(
