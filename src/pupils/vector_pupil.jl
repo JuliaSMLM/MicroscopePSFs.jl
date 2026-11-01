@@ -60,9 +60,28 @@ Create a vector pupil function with empty field components.
 - `VectorPupilFunction` with zero-initialized field components
 """
 function VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real, n_coverslip::Real, n_immersion::Real, grid_size::Integer)
-    Ex = PupilFunction(nₐ, λ, n_medium, zeros(Complex{Float64}, grid_size, grid_size))
-    Ey = PupilFunction(nₐ, λ, n_medium, zeros(Complex{Float64}, grid_size, grid_size))
+    T = float(promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
+        typeof(n_coverslip), typeof(n_immersion)))
+    Ex = PupilFunction(nₐ, λ, n_medium, zeros(Complex{T}, grid_size, grid_size))
+    Ey = PupilFunction(nₐ, λ, n_medium, zeros(Complex{T}, grid_size, grid_size))
     VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
+end
+
+# Normalize all incoherent orientations together, preserving their relative weights.
+function _normalize_vector_pupils!(pupils)
+    total_energy = zero(typeof(first(pupils).nₐ))
+    for pupil in pupils
+        kpix² = kpixelsize(pupil)^2
+        total_energy += (sum(abs2, pupil.Ex.field) + sum(abs2, pupil.Ey.field)) * kpix²
+    end
+    isfinite(total_energy) && total_energy > 0 || throw(ArgumentError(
+        "Vector pupil energy must be finite and positive; supply finite nonzero fields"))
+    scale = 1 / sqrt(total_energy)
+    for pupil in pupils
+        pupil.Ex.field .*= scale
+        pupil.Ey.field .*= scale
+    end
+    return pupils
 end
 
 # Computed properties
@@ -90,6 +109,9 @@ Ensures total energy across both components equals 1.
 function normalize!(p::VectorPupilFunction)
     kpix² = kpixelsize(p)^2
     total_energy = (sum(abs2, p.Ex.field) + sum(abs2, p.Ey.field)) * kpix²
+    isfinite(total_energy) && total_energy > 0 || throw(ArgumentError(
+        "Vector pupil energy must be finite and positive; " *
+        "supply finite nonzero fields"))
     scale = 1/sqrt(total_energy)
     
     p.Ex.field .*= scale
@@ -126,6 +148,8 @@ function fill_vector_pupils!(vpupil::VectorPupilFunction,
     grid_size = size(vpupil.Ex.field, 1)
     xs = ys = range(-1, 1, length=grid_size)
     kmax = vpupil.nₐ/vpupil.λ
+    fill!(vpupil.Ex.field, 0)
+    fill!(vpupil.Ey.field, 0)
     
     for i in 1:grid_size, j in 1:grid_size
         x, y = xs[i], ys[j]
@@ -142,6 +166,9 @@ function fill_vector_pupils!(vpupil::VectorPupilFunction,
         sinθ = sqrt(complex(kr2 * vpupil.λ^2 / vpupil.n_medium^2))
         cosθ = sqrt(complex(1 - kr2 * vpupil.λ^2 / vpupil.n_medium^2))
         
+        # The grazing sample is singular and has zero integration measure.
+        iszero(cosθ) && continue
+
         # Calculate Fresnel coefficients for interfaces
         Tp, Ts = calculate_fresnel_coefficients(
             kr2, vpupil.λ, vpupil.n_medium, vpupil.n_coverslip, vpupil.n_immersion)

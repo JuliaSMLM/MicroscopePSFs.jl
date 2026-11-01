@@ -24,21 +24,20 @@ function radialpolynomial(n::Integer, m::Integer, ρ::Real)
     # Early return for points outside unit circle
     ρ > 1 && return zero(ρ)
     
-    result = zero(typeof(ρ))
-    
-    # Sum over k
-    for k in 0:((n-m)÷2)
-        # Correctly calculate the factorial (n-k)!
-        num = (-1)^k
-        for i in 1:(n-k)
-            num *= i
-        end
-        
-        den = factorial(k) * factorial((n+m)÷2 - k) * factorial((n-m)÷2 - k)
-        result += (num/den) * ρ^(n-2k)
+    # Jacobi recurrence avoids factorial overflow and cancellation in power sums.
+    r = float(ρ)
+    order = (n - m) ÷ 2
+    p0 = one(r)
+    order == 0 && return r^m
+    x = 2r^2 - 1
+    p1 = ((m + 2) * x - m) / 2
+    for k in 2:order
+        a = 2k * (k + m) * (2k + m - 2)
+        b = (2k + m - 1) * ((2k + m) * (2k + m - 2) * x - m^2)
+        c = 2 * (k - 1) * (k + m - 1) * (2k + m)
+        p0, p1 = p1, (b * p1 - c * p0) / a
     end
-    
-    return result
+    return r^m * p1
 end
 
 """
@@ -106,11 +105,17 @@ Generate complex pupil function from Zernike coefficients.
 # Notes
 - Output grid is normalized to unit circle
 - Points outside unit circle are set to zero
+- Amplitude is the sum of magnitude coefficients times their Zernike modes.
+  The default `mag[1] = 1` supplies the unit piston; no offset is added.
 - Phase is applied as exp(iϕ)
 - Uses Noll indexing throughout
 """
 function evaluate_pupil(coeffs::ZernikeCoefficients, grid_size::Integer)
-    T = eltype(coeffs.mag)
+    return _evaluate_pupil(coeffs, grid_size, eltype(coeffs.mag))
+end
+
+function _evaluate_pupil(coeffs::ZernikeCoefficients, grid_size::Integer,
+    ::Type{T}) where {T}
     pupil = zeros(Complex{T}, grid_size, grid_size)
     
     # Create normalized coordinate grid

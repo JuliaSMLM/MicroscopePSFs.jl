@@ -9,7 +9,7 @@ Represents a pupil function with physical parameters.
 - `nₐ`: Numerical aperture
 - `λ`: Wavelength in μm
 - `n`: Refractive index
-- `field`: Complex-valued pupil function array
+- `field`: Square complex field array with at least two samples per axis
 """
 struct PupilFunction{T<:AbstractFloat}
     nₐ::T
@@ -21,6 +21,10 @@ struct PupilFunction{T<:AbstractFloat}
         nₐ > 0 || throw(ArgumentError("Numerical aperture must be positive"))
         λ > 0 || throw(ArgumentError("Wavelength must be positive"))
         n > 0 || throw(ArgumentError("Refractive index must be positive"))
+        ndims(field) == 2 && size(field, 1) == size(field, 2) &&
+            size(field, 1) >= 2 || throw(ArgumentError(
+                "Pupil field must be square with at least two samples per axis; " *
+                "supply a square field"))
         T = promote_type(typeof(nₐ), typeof(λ), typeof(n), real(eltype(field)))
         new{T}(T(nₐ), T(λ), T(n), convert(Array{Complex{T}}, field))
     end
@@ -70,6 +74,9 @@ Create a PupilFunction from ZernikeCoefficients type.
 
 # Returns
 - `PupilFunction` with complex field computed from Zernike polynomials
+
+Amplitude is the sum of the magnitude coefficients times their Zernike modes.
+The default unit piston supplies the unaberrated amplitude; no offset is added.
 """
 function PupilFunction(nₐ::Real, λ::Real, n::Real,
     zc::ZernikeCoefficients;
@@ -77,89 +84,42 @@ function PupilFunction(nₐ::Real, λ::Real, n::Real,
     T = promote_type(typeof(nₐ), typeof(λ), typeof(n), eltype(zc.phase))
     field = zeros(Complex{T}, grid_size, grid_size)
 
-    # Generate normalized coordinate grid
-    xs = ys = range(-1, 1, length=grid_size)
-
-    # Maximum radial order from coefficient length
-    max_n = max_radial_order(length(zc.phase))
-
-    for i in 1:grid_size, j in 1:grid_size
-        x, y = xs[i], ys[j]
-        ρ = sqrt(x^2 + y^2)
-        if ρ > 1
-            continue
-        end
-        θ = atan(y, x)
-
-        # Initialize amplitude and phase at this point
-        amplitude = 1.0
-        total_phase = 0.0
-
-        # Accumulate amplitude aberrations
-        for n_rad in 0:max_n
-            for m in -n_rad:2:n_rad
-                idx = nl2noll(n_rad, m) 
-                if idx > length(zc.mag)
-                    continue
-                end
-
-                # Retrieve the amplitude coefficient
-                amp_coeff = zc.mag[idx]
-
-                # Skip negligible coefficients
-                if abs(amp_coeff) < 1e-10
-                    continue
-                end
-
-                # Evaluate Zernike polynomial
-                Z = zernikepolynomial(n_rad, m, ρ, θ)
-
-                # Accumulate amplitude contribution
-                amplitude += amp_coeff * Z
-            end
-        end
-
-        # Accumulate phase aberrations
-        for n_rad in 0:max_n
-            for m in -n_rad:2:n_rad
-                idx = nl2noll(n_rad, m)
-                if idx > length(zc.phase)
-                    continue
-                end
-
-                # Retrieve the phase coefficient (in radians)
-                phase_coeff = zc.phase[idx]
-
-                # Skip negligible coefficients
-                if abs(phase_coeff) < 1e-10
-                    continue
-                end
-  
-                # Evaluate Zernike polynomial
-                Z = zernikepolynomial(n_rad, m, ρ, θ)
-
-                # Accumulate phase contribution
-                total_phase += phase_coeff * Z
-            end
-        end
-
-        # Compute the complex field at this point
-        field[j, i] = amplitude * exp(im * total_phase)
-    end
+    field .= Zernike._evaluate_pupil(zc, grid_size, T)
 
     return PupilFunction(nₐ, λ, n, field)
 end
 
 
+# Energy uses exactly the same grid and strict aperture as amplitude evaluation.
+function _pupil_energy(p::PupilFunction{T}) where {T}
+    sz = size(p.field, 1)
+    kpix = kpixelsize(p)
+    center = (sz + 1) / 2
+    energy = zero(T)
+    for i in 1:sz, j in 1:sz
+        kx = kpix * (i - center)
+        ky = kpix * (j - center)
+        if kx^2 + ky^2 < kmax(p)^2
+            energy += abs2(p.field[j, i])
+        end
+    end
+    return energy * kpix^2
+end
+
 # Normalization
 """
     normalize!(p::PupilFunction)
 
-Normalize pupil function to unit energy using Parseval's theorem.
+Normalize to unit energy inside the strict circular aperture used by `amplitude`.
+The field must have finite positive energy there; zero fields may be stored but
+cannot be normalized. Samples outside the aperture do not contribute.
 """
 function normalize!(p::PupilFunction)
     # Energy normalization using Parseval's theorem
-    total_energy = sum(abs2, p.field) * kpixelsize(p)^2
+    total_energy = _pupil_energy(p)
+    isfinite(total_energy) && total_energy > 0 || throw(ArgumentError(
+        "Pupil energy must be finite and positive inside the aperture; " *
+        "supply a finite nonzero field"))
     p.field ./= sqrt(total_energy)
     return p
 end
@@ -246,4 +206,3 @@ function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
 
     return result * kpix^2
 end
-

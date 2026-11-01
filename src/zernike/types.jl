@@ -61,7 +61,18 @@ Base.length(zc::ZernikeCoefficients) = length(zc.mag)
 
 # Indexing methods
 Base.getindex(zc::ZernikeCoefficients, i::Integer) = (mag=zc.mag[i], phase=zc.phase[i])
-Base.setindex!(zc::ZernikeCoefficients, v::Real, i::Integer, field::Symbol) = setfield!(zc, field)[i] = v
+"""
+    setindex!(zc::ZernikeCoefficients, value::Real, i::Integer, field::Symbol)
+
+Assign a Noll-indexed coefficient with `zc[i, :phase] = value` or
+`zc[i, :mag] = value`. Phase coefficients are in radians. Returns `zc`.
+"""
+function Base.setindex!(zc::ZernikeCoefficients, v::Real, i::Integer, field::Symbol)
+    field in (:mag, :phase) || throw(ArgumentError(
+        "Coefficient field must be :mag or :phase; select one of these fields"))
+    getfield(zc, field)[i] = v
+    return zc
+end
 
 # Show methods for nice printing
 function Base.show(io::IO, zc::ZernikeCoefficients{T}) where T

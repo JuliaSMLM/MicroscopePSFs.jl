@@ -33,9 +33,16 @@ For detailed descriptions of each PSF type, see the [documentation](https://Juli
 All PSF types implement a consistent interface:
 
 ```julia
+using MicroscopePSFs
+psf = GaussianPSF(0.15)
+psf_3d = ScalarPSF(1.4, 0.532, 1.518)
+x, y, z = 0.1, 0.2, 0.3
+camera = IdealCamera(20, 20, 0.1)
+emitter = Emitter2D(1.0, 1.0, 1000.0)
+
 # Direct evaluation
 intensity = psf(x, y)       # 2D position (x,y in μm)
-intensity = psf(x, y, z)    # 3D position (3D PSFs only)
+intensity = psf_3d(x, y, z)    # 3D position (3D PSFs only)
 
 # Complex amplitude
 amp = amplitude(psf, x, y)  # Returns complex field amplitude
@@ -56,7 +63,7 @@ Pkg.add("MicroscopePSFs")
 ## Basic Usage
 
 ```julia
-using MicroscopePSFs, SMLMData
+using MicroscopePSFs
 
 # Create a PSF model
 psf = AiryPSF(1.4, 0.532)  # NA = 1.4, λ = 0.532μm (532nm)
@@ -79,9 +86,12 @@ pixels = integrate_pixels(psf, camera, emitter)
 ## Simulating a 3D PSF with Aberrations
 
 ```julia
+using MicroscopePSFs
+camera = IdealCamera(20, 20, 0.1)
+
 # Create a 3D PSF with aberrations
 zernike_coeffs = ZernikeCoefficients(15)        # Up to 15 Zernike terms
-zernike_coeffs[6] = 0.5                         # Add vertical astigmatism
+zernike_coeffs.phase[6] = 0.5                 # Vertical astigmatism in radians
 psf_3d = ScalarPSF(1.4, 0.532, 1.518; zernike_coeffs=zernike_coeffs)
 
 # Create 3D emitter

@@ -54,6 +54,10 @@ using HDF5
         include("multichannel_tests.jl")
     end
 
+    @testset "Release regressions" begin
+        include("release_regression_tests.jl")
+    end
+
     # I/O functionality tests
     @testset "I/O Functions" begin
         include("io_tests.jl")

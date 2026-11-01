@@ -112,7 +112,7 @@ end
 
 """
     integrate_pixels_amplitude!(
-        result::AbstractMatrix{Complex{T}},
+        result::AbstractArray{Complex{T}},
         psf::AbstractPSF,
         pixel_edges_x::AbstractVector,
         pixel_edges_y::AbstractVector,
@@ -139,7 +139,7 @@ Automatically uses z-coordinate if both PSF and emitter support it.
 - Array is indexed as [y,x] with [1,1] at top-left pixel
 """
 function integrate_pixels_amplitude!(
-    result::AbstractMatrix{Complex{T}},
+    result::AbstractArray{Complex{T}},
     psf::AbstractPSF,
     pixel_edges_x::AbstractVector,
     pixel_edges_y::AbstractVector,
@@ -148,6 +148,12 @@ function integrate_pixels_amplitude!(
     threaded::Bool=true
 ) where T <: Real
     
+    _check_amplitude_integration(psf, Inf)
+    expected = (length(pixel_edges_y) - 1, length(pixel_edges_x) - 1,
+        _amplitude_output_dims(psf)...)
+    size(result) == expected || throw(DimensionMismatch(
+        "Amplitude result must have size $expected; allocate the matching output shape"))
+
     # Use the amplitude function which already has methods for both 2D and 3D
     _integrate_pixels_generic!(
         result,
@@ -165,7 +171,7 @@ end
 
 """
     integrate_pixels_amplitude!(
-        result::AbstractMatrix{Complex{T}},
+        result::AbstractArray{Complex{T}},
         psf::AbstractPSF,
         camera::AbstractCamera,
         emitter::AbstractEmitter;
@@ -187,7 +193,7 @@ Integrate PSF complex amplitude over camera pixels using camera object, storing 
 - The `result` array, now filled with integrated complex amplitudes
 """
 function integrate_pixels_amplitude!(
-    result::AbstractMatrix{Complex{T}},
+    result::AbstractArray{Complex{T}},
     psf::AbstractPSF,
     camera::AbstractCamera,
     emitter::AbstractEmitter;
@@ -405,6 +411,8 @@ function integrate_pixels_amplitude(
     sampling::Integer=2,
     threaded::Bool=true
 )
+    _check_amplitude_integration(psf, support)
+    output_dims = _amplitude_output_dims(psf)
     T = Complex{typeof(emitter.photons)}
     
     # Get pixel indices for the support region
@@ -413,7 +421,7 @@ function integrate_pixels_amplitude(
     # Allocate result for the full domain
     nx_full = length(pixel_edges_x) - 1
     ny_full = length(pixel_edges_y) - 1
-    result_full = zeros(T, ny_full, nx_full)
+    result_full = zeros(T, ny_full, nx_full, output_dims...)
     
     # Check if ranges are empty (emitter too far from camera or support too small)
     if isempty(i_range) || isempty(j_range)
@@ -427,7 +435,8 @@ function integrate_pixels_amplitude(
     edges_y_view = view(pixel_edges_y, minimum(j_range):maximum(j_range)+1)
     
     # Create view of the result for the region
-    result_view = view(result_full, j_range, i_range)
+    result_view = view(result_full, j_range, i_range,
+        ntuple(_ -> Colon(), length(output_dims))...)
     
     # Call in-place function on the views
     integrate_pixels_amplitude!(

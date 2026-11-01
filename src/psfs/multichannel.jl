@@ -266,15 +266,8 @@ function integrate_pixels_amplitude(
     support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf,
     sampling::Integer=2, threaded::Bool=true
 )
-    if _n_components(psf) != 2
-        return invoke(integrate_pixels_amplitude,
-            Tuple{AbstractPSF,AbstractCamera,AbstractEmitter}, psf, camera, emitter;
-            support=support, sampling=sampling, threaded=threaded)
-    end
-    _check_vector_amplitude_integration(psf, support)
-    return _integrate_pixels_generic(psf, camera.pixel_edges_x, camera.pixel_edges_y,
-        emitter, amplitude, Complex{typeof(emitter.photons)}, (2,);
-        sampling=sampling, threaded=threaded)
+    return integrate_pixels_amplitude(psf, camera.pixel_edges_x, camera.pixel_edges_y,
+        emitter; support=support, sampling=sampling, threaded=threaded)
 end
 
 function integrate_pixels_amplitude(
@@ -283,24 +276,15 @@ function integrate_pixels_amplitude(
     support::Union{Real,Tuple{<:Real,<:Real,<:Real,<:Real}}=Inf,
     sampling::Integer=2, threaded::Bool=true
 )
-    if _n_components(psf) != 2
-        return invoke(integrate_pixels_amplitude,
-            Tuple{AbstractPSF,AbstractCamera,Vector{<:AbstractEmitter}},
-            psf, camera, emitters;
-            support=support, sampling=sampling, threaded=threaded)
-    end
-    _check_vector_amplitude_integration(psf, support)
-    T = isempty(emitters) ? Complex{Float64} : Complex{typeof(first(emitters).photons)}
-    result = zeros(T, length(camera.pixel_edges_y)-1, length(camera.pixel_edges_x)-1, 2)
-    buffer = similar(result)
-    for emitter in emitters
-        fill!(buffer, zero(T))
-        _integrate_pixels_generic!(buffer, psf,
-            camera.pixel_edges_x, camera.pixel_edges_y, emitter, amplitude;
-            sampling=sampling, threaded=threaded)
-        result .+= buffer
-    end
-    return result
+    return integrate_pixels_amplitude(psf, camera.pixel_edges_x, camera.pixel_edges_y,
+        emitters; support=support, sampling=sampling, threaded=threaded)
+end
+
+_amplitude_output_dims(p::Union{PlanePSF,AnalyzerPSF,FourPiPSF}) =
+    _n_components(p) == 2 ? (2,) : ()
+function _check_amplitude_integration(p::Union{PlanePSF,AnalyzerPSF,FourPiPSF}, support)
+    _n_components(p) == 2 && _check_vector_amplitude_integration(p, support)
+    return nothing
 end
 
 _carries_split(::AbstractPSF) = false

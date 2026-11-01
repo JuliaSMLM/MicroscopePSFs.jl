@@ -155,17 +155,11 @@ function integrate_pixels_amplitude(
     sampling::Integer=2,
     threaded::Bool=true
 )
-    # Return zeros if no emitters
-    isempty(emitters) && return zeros(Complex{Float64}, length(pixel_edges_y)-1, length(pixel_edges_x)-1)
-    
-    # Determine result type from first emitter
-    T = Complex{typeof(emitters[1].photons)}
-    
-    # Allocate result array for the full domain
-    nx = length(pixel_edges_x) - 1
-    ny = length(pixel_edges_y) - 1
-    result = zeros(T, ny, nx)
-    
+    _check_amplitude_integration(psf, support)
+    T = isempty(emitters) ? Complex{Float64} : Complex{typeof(first(emitters).photons)}
+    result = zeros(T, length(pixel_edges_y) - 1, length(pixel_edges_x) - 1,
+        _amplitude_output_dims(psf)...)
+
     # Process each emitter by calling the single emitter version and accumulating results
     for emitter in emitters
         # Get the contribution from this emitter

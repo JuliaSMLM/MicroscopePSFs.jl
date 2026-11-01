@@ -39,6 +39,19 @@ Load a PSF or related object from an HDF5 file.
 **Returns**
 - The loaded object with its original type (PSF, ZernikeCoefficients, PupilFunction, etc.)
 
+## Vector pupil convention
+
+Starting with 0.5.7, every saved `VectorPSF` group, including nested arms and
+channels, has an `axial_sign_convention` attribute with value
+`positive_pz_dipole_projection_v1`. Positive dipole z contributes positively
+to the meridional field, as described in the vector PSF conventions.
+
+Loading an unmarked vector group with a nonzero fixed dipole z component or a
+rotating dipole emits a warning: the file predates 0.5.7 and its axial fields use
+the old sign. Mixed-dipole fields and coherent interference can be affected.
+Loading preserves the stored fields exactly. Rebuild the PSF from its optical,
+dipole, and aberration parameters to use the current convention.
+
 ## Basic Usage
 
 ```julia

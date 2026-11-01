@@ -135,31 +135,29 @@
     end
     
     @testset "Vector PSF Threading" begin
-        try
-            # Create VectorPSF with dipole
-            dipole = DipoleVector(0.0, 0.0, 1.0)
-            psf = VectorPSF(na, λ, dipole, n_medium=n_medium)
-            
-            # Create dipole emitter
-            dipole_emitter = DipoleEmitter3D(1.0, 1.0, 0.0, 1000.0, 0.0, 0.0, 1.0)
-            
-            # Test intensity integration
-            result_threaded = integrate_pixels(psf, camera, dipole_emitter, threaded=true)
-            result_nonthreaded = integrate_pixels(psf, camera, dipole_emitter, threaded=false)
-            
-            # Results should be identical
-            @test size(result_threaded) == size(result_nonthreaded)
-            @test all(result_threaded .≈ result_nonthreaded)
-            
-            # Test amplitude integration
-            amp_threaded = integrate_pixels_amplitude(psf, camera, dipole_emitter, threaded=true)
-            amp_nonthreaded = integrate_pixels_amplitude(psf, camera, dipole_emitter, threaded=false)
-            
-            # Results should be identical
-            @test size(amp_threaded) == size(amp_nonthreaded)
-            @test all(amp_threaded .≈ amp_nonthreaded)
-        catch e
-            @info "Skipping VectorPSF threading tests: $e"
-        end
+        # Create VectorPSF with dipole
+        dipole = DipoleVector(0.0, 0.0, 1.0)
+        psf = VectorPSF(na, λ, dipole, n_medium=n_medium)
+
+        # Create dipole emitter
+        dipole_emitter = DipoleEmitter3D(1.0, 1.0, 0.0, 1000.0, 0.0, 0.0, 1.0)
+
+        # Test intensity integration
+        result_threaded = integrate_pixels(psf, camera, dipole_emitter, threaded=true)
+        result_nonthreaded = integrate_pixels(psf, camera, dipole_emitter, threaded=false)
+
+        # Results should be identical
+        @test size(result_threaded) == size(result_nonthreaded)
+        @test all(result_threaded .≈ result_nonthreaded)
+
+        # Test amplitude integration
+        amp_threaded = integrate_pixels_amplitude(psf, camera, dipole_emitter;
+            threaded=true)
+        amp_nonthreaded = integrate_pixels_amplitude(psf, camera, dipole_emitter;
+            threaded=false)
+
+        # Results should be identical
+        @test size(amp_threaded) == size(amp_nonthreaded)
+        @test all(amp_threaded .≈ amp_nonthreaded)
     end
 end

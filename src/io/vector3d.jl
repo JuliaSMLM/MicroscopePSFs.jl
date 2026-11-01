@@ -5,12 +5,14 @@
 
 Save a VectorPSF to an HDF5 file, including all optical parameters,
 dipole orientation, and vector pupil fields.
+The `axial_sign_convention` attribute identifies the positive-pz projection convention.
 
 # Arguments
 - `file`: Open HDF5 file handle
 - `psf`: VectorPSF to save
 """
 function _save_psf_impl(file::_H5Parent, psf::VectorPSF)
+    attributes(file)["axial_sign_convention"] = "positive_pz_dipole_projection_v1"
     # Save optical parameters
     params = create_group(file, "parameters")
     params["na"] = psf.nₐ
@@ -60,6 +62,8 @@ end
     _load_psf_impl(file::_H5Parent, ::Type{VectorPSF})
 
 Load a VectorPSF from an HDF5 file, reconstructing all components.
+Unmarked files with axial dipole components produce a legacy-convention warning.
+Stored fields are preserved exactly; rebuild from parameters to change conventions.
 
 # Arguments
 - `file`: Open HDF5 file handle
@@ -90,6 +94,13 @@ function _load_psf_impl(file::_H5Parent, ::Type{VectorPSF})
     py = read(dipole_group["py"])
     pz = read(dipole_group["pz"])
     dipole = DipoleVector(px, py, pz)
+    if !haskey(attributes(file), "axial_sign_convention") &&
+        (num_pupils > 1 || !iszero(pz))
+        @warn "VectorPSF file was written before 0.5.7; the axial dipole " *
+              "component uses the old sign, affecting mixed-dipole fields and " *
+              "coherent interference. Stored fields are preserved; rebuild " *
+              "the PSF from its parameters to use the current convention."
+    end
     
     # Load Zernike coefficients if available
     zernike_coeffs = _io_load_zernike_coeffs(file)
