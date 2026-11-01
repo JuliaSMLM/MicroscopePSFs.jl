@@ -159,3 +159,13 @@ development builds wrote the corrected sign with format 1.0.0; which one wrote
 the file cannot be told from the file. Mixed-dipole fields and coherent
 interference can be affected. Loading preserves the stored fields exactly.
 Rebuild it from its parameters to be sure.
+
+Each `VectorPupilFunction` records its stored fields' `axial_sign_convention` as
+`:legacy` or `:current`; the seven-argument constructor defaults to `:current`
+and accepts that keyword. Unmarked pre-1.1.0 axial or rotating vector PSFs are
+conservatively marked `:legacy` on load. Saving writes the convention per pupil,
+so re-saving legacy fields in format 1.1.0 still warns on the next load, once per
+file even inside wrappers and containers. `copy`, `pupil_at`, and `apply_defocus!`
+preserve the convention. Refilling with `fill_vector_pupils!` or `update_pupils!`
+recomputes the fields and sets `:current`. A `FourPiPSF` warns at construction
+when its arms carry different conventions because the interference sign is wrong.

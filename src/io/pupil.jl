@@ -60,6 +60,7 @@ Save a VectorPupilFunction to an HDF5 file, including all physical parameters
 and both Ex and Ey field components.
 """
 function _save_psf_impl(file::_H5Parent, pupil::VectorPupilFunction)
+    attributes(file)["axial_sign_convention"] = String(pupil.axial_sign_convention)
     # Save parameters
     params = create_group(file, "parameters")
     params["na"] = pupil.nₐ
@@ -112,5 +113,6 @@ function _load_psf_impl(file::_H5Parent, ::Type{VectorPupilFunction})
     Ey = PupilFunction(nₐ, λ, n_medium, ey_field)
     
     # Create and return the VectorPupilFunction
-    return VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
+    return VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey;
+        axial_sign_convention=_io_axial_sign_convention(file))
 end

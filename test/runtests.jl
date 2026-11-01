@@ -58,6 +58,7 @@ using HDF5
         include("release_regression_tests.jl")
         include("release_part2_tests.jl")
         include("release_part3_tests.jl")
+        include("release_part4_tests.jl")
     end
 
     # I/O functionality tests

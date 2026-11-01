@@ -8,7 +8,10 @@ import SMLMData: AbstractEmitter
 A normalized 3D dipole orientation. Every constructor normalizes nonzero inputs.
 All components must be finite and remain finite after conversion to the requested type.
 The zero vector is allowed for rotating-PSF metadata; fixed dipoles must be nonzero.
-Integer and rational component types promote to floating point for normalization.
+The untyped factory promotes integers and rationals to floating point.
+`DipoleVector{T}(px, py, pz)` retains `T`. Integer and rational types require
+exactly representable normalized components; otherwise use a floating-point type
+or the untyped `DipoleVector(px, py, pz)`. Integer types allow unit axes and zero.
 
 # Fields
 - `px::T`: x component of the dipole vector
@@ -23,21 +26,50 @@ struct DipoleVector{T<:Real}
     function DipoleVector{T}(px::Real, py::Real, pz::Real) where {T<:Real}
         all(isfinite, (px, py, pz)) || throw(ArgumentError(
             "Dipole components must be finite; supply finite orientation components"))
+        if T <: Union{Integer,Rational}
+            x, y, z = _exact_dipole_components(T, px, py, pz)
+            return new{T}(x, y, z)
+        end
         x, y, z = float(convert(T, px)), float(convert(T, py)), float(convert(T, pz))
         all(isfinite, (x, y, z)) || throw(ArgumentError(
             "Dipole components must remain finite after conversion; " *
             "use representable finite components"))
         scale = max(abs(x), abs(y), abs(z))
-        iszero(scale) && return new{typeof(x)}(x, y, z)
+        iszero(scale) && return new{T}(x, y, z)
         x, y, z = x / scale, y / scale, z / scale
         magnitude = sqrt(x^2 + y^2 + z^2)
-        return new{typeof(x / magnitude)}(x / magnitude, y / magnitude, z / magnitude)
+        return new{T}(x / magnitude, y / magnitude, z / magnitude)
     end
 end
 
 function DipoleVector(px::Real, py::Real, pz::Real)
-    T = promote_type(typeof(px), typeof(py), typeof(pz))
+    T = float(promote_type(typeof(px), typeof(py), typeof(pz)))
     return DipoleVector{T}(px, py, pz)
+end
+
+function _dipole_type_error(T)
+    return ArgumentError(
+        "Normalized dipole components are not exactly representable in $T; " *
+        "use a floating-point type or the untyped DipoleVector(px, py, pz)")
+end
+
+# Exact arithmetic distinguishes rational unit vectors from irrational directions.
+function _exact_dipole_components(::Type{T}, px, py, pz) where {T}
+    q = Rational{BigInt}.((px, py, pz))
+    norm² = sum(abs2, q)
+    iszero(norm²) && return (zero(T), zero(T), zero(T))
+    a, b = numerator(norm²), denominator(norm²)
+    na, nb = isqrt(a), isqrt(b)
+    na^2 == a && nb^2 == b || throw(_dipole_type_error(T))
+    normalized = q ./ (na // nb)
+    try
+        result = T.(normalized)
+        result == normalized || throw(_dipole_type_error(T))
+        return result
+    catch e
+        e isa InexactError || e isa OverflowError || rethrow()
+        throw(_dipole_type_error(T))
+    end
 end
 
 function _require_fixed_dipole(dipole::DipoleVector)
@@ -50,6 +82,11 @@ end
     DipoleEmitter3D{T} <: AbstractEmitter
 
 3D dipole emitter with position, orientation and optical properties.
+
+`DipoleEmitter3D{T}(x, y, z, photons, dipole)` retains `T` when its normalized
+orientation and scalar arguments are representable in `T`. Otherwise use a
+floating-point type or the untyped `DipoleEmitter3D(x, y, z, photons, dipole)`,
+which promotes integer and rational inputs to floating point.
 
 # Fields
 - `x::T`: x-coordinate in microns
@@ -67,10 +104,19 @@ mutable struct DipoleEmitter3D{T} <: AbstractEmitter
 
     function DipoleEmitter3D{T}(x::Real, y::Real, z::Real, photons::Real,
         dipole::DipoleVector) where {T<:Real}
-        orientation = _require_fixed_dipole(
-            DipoleVector{T}(dipole.px, dipole.py, dipole.pz))
-        U = typeof(orientation.px)
-        return new{U}(U(x), U(y), U(z), U(photons), orientation)
+        _require_fixed_dipole(dipole)
+        try
+            orientation = DipoleVector{T}(dipole.px, dipole.py, dipole.pz)
+            return new{T}(T(x), T(y), T(z), T(photons), orientation)
+        catch e
+            if e isa InexactError || e isa OverflowError || e isa ArgumentError
+                throw(ArgumentError(
+                    "Emitter values or normalized dipole cannot be represented in $T; " *
+                    "use a floating-point type or the untyped " *
+                    "DipoleEmitter3D(x, y, z, photons, dipole)"))
+            end
+            rethrow()
+        end
     end
 end
 
@@ -78,7 +124,8 @@ end
     DipoleEmitter3D(x::Real, y::Real, z::Real, photons::Real, dipole::DipoleVector)
 
 Create an emitter at `(x, y, z)` in microns with the given photon count and a
-normalized, nonzero dipole orientation. Numeric arguments promote together.
+normalized, nonzero dipole orientation. Numeric arguments promote together;
+integer and rational inputs promote to floating point.
 Returns a `DipoleEmitter3D`; use a nonzero `dipole` for a fixed emitter.
 
 # Examples
@@ -88,7 +135,8 @@ emitter = DipoleEmitter3D(1.0, 1.0, 0.0, 1000.0, DipoleVector(2.0, 0.0, 0.0))
 """
 function DipoleEmitter3D(x::Real, y::Real, z::Real, photons::Real,
     dipole::DipoleVector)
-    T = promote_type(typeof(x), typeof(y), typeof(z), typeof(photons), typeof(dipole.px))
+    T = float(promote_type(typeof(x), typeof(y), typeof(z), typeof(photons),
+        typeof(dipole.px)))
     return DipoleEmitter3D{T}(x, y, z, photons, dipole)
 end
 

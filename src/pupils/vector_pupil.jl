@@ -5,6 +5,11 @@
 
 Vector pupil function storing Ex,Ey field components as PupilFunctions.
 
+The seven-argument constructor accepts `axial_sign_convention=:current`.
+Use `:legacy` for fields with the old or unmarked axial dipole sign; `:current`
+means fields recomputed with the corrected sign. Copying and defocusing preserve
+this convention. Refilling recomputes the fields and sets it to `:current`.
+
 # Fields
 - `nₐ::T`: Numerical aperture
 - `λ::T`: Wavelength in μm
@@ -13,18 +18,23 @@ Vector pupil function storing Ex,Ey field components as PupilFunctions.
 - `n_immersion::T`: Refractive index of the immersion medium
 - `Ex::PupilFunction{T}`: x-component of electric field
 - `Ey::PupilFunction{T}`: y-component of electric field
+- `axial_sign_convention::Symbol`: `:legacy` or `:current` for the stored fields
 """
-struct VectorPupilFunction{T<:AbstractFloat}
-    nₐ::T
-    λ::T
-    n_medium::T
-    n_coverslip::T
-    n_immersion::T
-    Ex::PupilFunction{T}
-    Ey::PupilFunction{T}
+mutable struct VectorPupilFunction{T<:AbstractFloat}
+    const nₐ::T
+    const λ::T
+    const n_medium::T
+    const n_coverslip::T
+    const n_immersion::T
+    const Ex::PupilFunction{T}
+    const Ey::PupilFunction{T}
+    axial_sign_convention::Symbol
 
-    function VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real, n_coverslip::Real, n_immersion::Real,
-                               Ex::PupilFunction, Ey::PupilFunction)
+    function VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real,
+        n_coverslip::Real, n_immersion::Real, Ex::PupilFunction, Ey::PupilFunction;
+        axial_sign_convention::Symbol=:current)
+        axial_sign_convention in (:legacy, :current) || throw(ArgumentError(
+            "Unknown axial sign convention; use :legacy or :current"))
         # Validation
         nₐ > 0 || throw(ArgumentError("Numerical aperture must be positive"))
         λ > 0 || throw(ArgumentError("Wavelength must be positive"))
@@ -39,7 +49,8 @@ struct VectorPupilFunction{T<:AbstractFloat}
                         typeof(n_medium), typeof(n_coverslip), typeof(n_immersion),
                         real(eltype(Ex.field)), real(eltype(Ey.field)))
         
-        new{T}(T(nₐ), T(λ), T(n_medium), T(n_coverslip), T(n_immersion), Ex, Ey)
+        new{T}(T(nₐ), T(λ), T(n_medium), T(n_coverslip), T(n_immersion), Ex, Ey,
+            axial_sign_convention)
     end
 end
 
@@ -149,6 +160,7 @@ Fill vector pupil function with field components including dipole orientation,
 base aberrations, and proper apodization.
 
 This pre-calculates all position-independent factors of the pupil function.
+Recomputed fields use `axial_sign_convention = :current`.
 When `n_medium == n_coverslip`, `nₐ` must be below `n_medium`; no objective
 collects at 90 degrees in the sample. For a higher-index coverslip, the finite
 medium-grazing limit is evaluated by combining Fresnel transmission and apodization.
@@ -212,6 +224,7 @@ function fill_vector_pupils!(vpupil::VectorPupilFunction,
         normalize!(vpupil)
     end
     
+    vpupil.axial_sign_convention = :current
     return vpupil
 end
 
@@ -228,16 +241,18 @@ end
 """
     copy(vp::VectorPupilFunction)
 
-Return a deep copy of `vp` with independent `Ex` and `Ey` field arrays.
+Return a deep copy of `vp` with independent `Ex` and `Ey` field arrays,
+preserving the axial sign convention.
 """
 Base.copy(vp::VectorPupilFunction) = VectorPupilFunction(
     vp.nₐ, vp.λ, vp.n_medium, vp.n_coverslip, vp.n_immersion,
-    copy(vp.Ex), copy(vp.Ey))
+    copy(vp.Ex), copy(vp.Ey); axial_sign_convention=vp.axial_sign_convention)
 
 """
     apply_defocus!(vp::VectorPupilFunction, z::Real, z_stage::Real=zero(z))
 
 Apply the vectorial axial defocus phase to a `VectorPupilFunction` in place.
+The stored axial sign convention is preserved.
 
 The phase `exp(im·2π·(k_{z,medium}·z − k_{z,immersion}·z_stage))` is multiplied into
 both the `Ex` and `Ey` field components at every in-aperture sample, using the optical

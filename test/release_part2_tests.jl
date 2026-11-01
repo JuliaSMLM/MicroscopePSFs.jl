@@ -13,63 +13,9 @@ MicroscopePSFs.dipole_fields(p::CachedReviewPSF, x::Real, y::Real, z::Real) = p.
         n_medium=1.33, n_coverslip=1.33, n_immersion=1.33)
     scalar = ScalarPSF(1.2, 0.68, 1.33)
 
-    @testset "I6 file version identifies the axial sign" begin
+    @testset "I6 file format compatibility" begin
         @test M.IO_VERSION == v"1.1.0"
         @test M.MIN_SUPPORTED_VERSION == v"1.0.0"
-        transverse = vector(DipoleVector(1.0, 0.0, 0.0))
-        axial = vector(DipoleVector(0.0, 0.0, 1.0))
-        rotating = vector()
-        cavity = FourPiPSF(rotating, rotating)
-        channels = MultiChannelPSF(; channels=[PlanePSF(axial; dz=0.1), cavity])
-        fixtures = ((GaussianPSF(0.15), false), (scalar, false),
-            (transverse, false), (axial, true), (rotating, true),
-            (PlanePSF(AnalyzerPSF(cavity; component=1); dz=0.1), true),
-            (channels, true), (MultiChannelPSF(; channels=[scalar, transverse]), false))
-        function check_groups(group)
-            @test !haskey(attributes(group), "axial_sign_convention")
-            for name in keys(group)
-                child = group[name]
-                child isa HDF5.Group && check_groups(child)
-            end
-        end
-        fields(::Any) = Matrix{ComplexF64}[]
-        fields(p::VectorPSF) = [copy(f.field)
-            for v in p.vector_pupils for f in (v.Ex, v.Ey)]
-        fields(p::Union{PlanePSF,AnalyzerPSF}) = fields(p.psf)
-        fields(p::FourPiPSF) = vcat(fields(p.top), fields(p.bottom))
-        fields(p::MultiChannelPSF) = reduce(vcat, fields.(p.channels))
-        message = Regex(raw"no axial-sign marker.*0\.5\.6 or earlier.*" *
-            raw"old axial dipole sign.*unreleased 0\.5\.7 development build.*" *
-            raw"cannot be told from the file.*fields are preserved.*" *
-            raw"rebuild.*parameters to be sure")
-        for (p, affected) in fixtures
-            mktempdir() do dir
-                path = joinpath(dir, "convention.h5")
-                save_psf(path, p)
-                h5open(path, "r") do f
-                    @test read(attributes(f)["io_version"]) == "1.1.0"
-                    check_groups(f)
-                end
-                loaded = @test_logs min_level=warn load_psf(path)
-                @test fields(loaded) == fields(p)
-                h5open(path, "r+") do f
-                    HDF5.delete_attribute(f, "io_version")
-                    attributes(f)["io_version"] = "1.0.0"
-                end
-                loaded = if affected
-                    @test_logs (:warn, message) min_level=warn load_psf(path)
-                else
-                    @test_logs min_level=warn load_psf(path)
-                end
-                @test fields(loaded) == fields(p)
-                if affected
-                    h5open(path, "r+") do f
-                        HDF5.delete_attribute(f, "io_version")
-                    end
-                    @test_logs (:warn, message) min_level=warn load_psf(path)
-                end
-            end
-        end
         @test_logs min_level=warn M._check_version_compatibility("1.1.0")
     end
 

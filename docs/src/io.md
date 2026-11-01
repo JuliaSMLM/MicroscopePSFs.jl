@@ -42,18 +42,30 @@ Load a PSF or related object from an HDF5 file.
 ## Vector pupil convention
 
 Starting with the 0.5.7 release, saved files have `io_version = "1.1.0"`.
-This version identifies the corrected axial dipole sign; no per-group marker
-is needed. The minimum supported file version remains 1.0.0.
+The minimum supported file version remains 1.0.0. Each saved vector pupil group
+also has an `axial_sign_convention` attribute (`"legacy"` or `"current"`). This
+records the convention of its stored fields independently of the file version.
+Re-saving legacy fields preserves `"legacy"`, even in a format 1.1.0 file.
 
 Loading a file below version 1.1.0 with a nonzero fixed dipole z component or a
 rotating dipole emits one warning for the entire file, including vectors nested
-inside wrappers and containers. Files without a version are treated as 1.0.0.
-The file has no axial-sign marker: it was written by 0.5.6 or earlier, which
+inside wrappers and containers. Loading any pupil marked `"legacy"` also emits
+this warning, once per file. Files without a version are treated as 1.0.0.
+An unmarked file was written by 0.5.6 or earlier, which
 used the old axial dipole sign, or by an unreleased 0.5.7 development build.
 Some such development builds wrote the corrected sign with format 1.0.0;
 which one wrote the file cannot be told from the file. Mixed-dipole fields
 and coherent interference can be affected. Loading preserves the stored fields
 exactly. Rebuild it from its optical, dipole, and aberration parameters to be sure.
+
+In memory, `VectorPupilFunction.axial_sign_convention` is `:legacy` or `:current`.
+An unmarked pre-1.1.0 vector PSF with an axial component is conservatively marked
+`:legacy`, including unreleased development files whose sign cannot be determined.
+The seven-argument pupil constructor defaults to `:current` and accepts the
+`axial_sign_convention` keyword. `copy`, `pupil_at`, and `apply_defocus!` preserve
+it. `fill_vector_pupils!` and `update_pupils!` recompute fields and set `:current`.
+A `FourPiPSF` warns at construction if its arms carry different conventions,
+since their coherent interference then has an inconsistent axial sign.
 
 ## Basic Usage
 

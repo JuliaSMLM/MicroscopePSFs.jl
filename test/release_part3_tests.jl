@@ -183,7 +183,7 @@ end
         @test_throws ArgumentError DipoleVector{Float32}(floatmax(Float64), 0, 0)
         z = DipoleVector(0., 0., 0.)
         @test (z.px, z.py, z.pz) == (0., 0., 0.)
-        @test DipoleVector{Int}(1, 0, 0) isa DipoleVector{Float64}
+        @test DipoleVector{Int}(1, 0, 0) isa DipoleVector{Int}
     end
 
     @testset "Pupil coefficient construction keeps the evaluator matrix" begin
