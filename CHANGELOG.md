@@ -20,4 +20,5 @@ Changes a caller has to act on. Full notes for every version are on the
     pupil, which `ScalarPSF` and `VectorPSF` build from coefficients, phase aberrations on
     them are unchanged. Magnitude terms set on them now count at full size against the
     piston, where the added 1 used to halve them; to reproduce an earlier normalized
-    pupil, halve those terms. The raw `PupilFunction(zc)` field is half its earlier size.
+    pupil, halve those terms. To reproduce an earlier raw `PupilFunction(zc)` field, add 1
+    to `mag[1]` and change nothing else.
