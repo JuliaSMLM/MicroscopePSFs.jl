@@ -83,7 +83,8 @@ added, so unit amplitude needs `zc.mag[1] = 1`, which `ZernikeCoefficients(n)` s
 A caller holding offsets from unit amplitude must add 1 to `zc.mag[1]`: `1 + 0.06 Z₅` is
 `mag[1] = 1, mag[5] = 0.06`, while `mag[5] = 0.06` alone gives `0.06 Z₅` and no error.
 With every magnitude zero the field is zero, so a phase-only pupil also needs
-`mag[1] = 1`; `ScalarPSF` and `VectorPSF` refuse a zero field.
+`mag[1] = 1`; `ScalarPSF(...; zernike_coeffs)` and `VectorPSF(...; base_zernike)` refuse
+that field.
 """
 function PupilFunction(nₐ::Real, λ::Real, n::Real,
     zc::ZernikeCoefficients;
