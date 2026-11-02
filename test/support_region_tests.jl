@@ -161,12 +161,7 @@
         
         @test size(result_s1) == size(result_s2) == size(result_s4) == (ny, nx)
         
-        # Higher sampling should give more accurate results
-        # Sum should converge as sampling increases
-        sum_diff_21 = abs(sum(result_s2) - sum(result_s1))
-        sum_diff_42 = abs(sum(result_s4) - sum(result_s2))
-        
-        # The difference should decrease with higher sampling
-        @test sum_diff_42 < sum_diff_21
+        # Gaussian intensity integration is exact for every sampling density.
+        @test result_s1 == result_s2 == result_s4
     end
 end

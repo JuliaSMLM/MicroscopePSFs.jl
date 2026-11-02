@@ -70,7 +70,10 @@ Create a PupilFunction from ZernikeCoefficients type.
 - `zc`: ZernikeCoefficients containing amplitude and phase coefficients
 
 # Keyword Arguments
-- `grid_size`: Size of square sampling grid (default: 64)
+- `grid_size`: Size of square sampling grid (default: 64). The image field repeats
+  in x and y with period `L = (grid_size - 1) * λ / (2nₐ)` in microns. Keep render
+  `support` below `L/2` or the frame narrower than `L`. A larger grid widens `L`.
+  For `grid_size=128`, NA 1.4 and λ 0.6 microns, `L ≈ 27.21` microns.
 
 # Returns
 - `PupilFunction` with complex field computed from Zernike polynomials

@@ -54,7 +54,10 @@ Create a vector pupil function with empty field components.
 - `n_medium`: Sample medium refractive index
 - `n_coverslip`: Cover slip refractive index
 - `n_immersion`: Immersion medium refractive index
-- `grid_size`: Size of pupil grid (grid_size × grid_size)
+- `grid_size`: Size of pupil grid (grid_size × grid_size). The image field repeats
+  in x and y with period `L = (grid_size - 1) * λ / (2nₐ)` in microns. Keep render
+  `support` below `L/2` or the frame narrower than `L`. A larger grid widens `L`.
+  For `grid_size=128`, NA 1.4 and λ 0.6 microns, `L ≈ 27.21` microns.
 
 # Returns
 - `VectorPupilFunction` with zero-initialized field components

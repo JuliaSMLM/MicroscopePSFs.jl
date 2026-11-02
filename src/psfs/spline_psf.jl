@@ -420,6 +420,36 @@ end
 
 # --- Integration methods for pixel calculation ---
 
+function integrate_pixels!(
+        result::AbstractMatrix{T},
+        psf::SplinePSF,
+        pixel_edges_x::AbstractVector,
+        pixel_edges_y::AbstractVector,
+        emitter::AbstractEmitter;
+        sampling::Integer = 2,
+        threaded::Bool = true
+    ) where {T <: Real}
+    if supports_3d(psf)
+        has_z_coordinate(emitter) || throw(
+            ArgumentError(
+                "3D SplinePSF requires an emitter with a z-coordinate"
+            )
+        )
+        if isfinite(emitter.z) && (emitter.z < psf.z_min || emitter.z > psf.z_max)
+            message = "Emitter z=$(emitter.z) is outside SplinePSF z range " *
+                "[$(psf.z_min), $(psf.z_max)]; returning zero photon counts"
+            @warn message maxlog = 1
+        end
+    end
+    return invoke(
+        integrate_pixels!,
+        Tuple{
+            AbstractMatrix{T}, AbstractPSF, AbstractVector, AbstractVector, AbstractEmitter,
+        },
+        result, psf, pixel_edges_x, pixel_edges_y, emitter; sampling, threaded
+    )
+end
+
 """
     integrate_pixels(
         psf::SplinePSF,
@@ -448,6 +478,8 @@ Integrate PSF over camera pixels using interpolation.
 
 # Notes
 - For 3D SplinePSFs (when z_range is defined), requires an emitter with a z-coordinate
+- A finite emitter z outside the sampled range returns a zero image and warns once,
+  naming the range
 """
 function integrate_pixels(
     psf::SplinePSF,

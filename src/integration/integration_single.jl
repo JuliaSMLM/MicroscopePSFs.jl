@@ -13,6 +13,7 @@
 
 Integrate PSF intensity over camera pixels, storing the result in a pre-allocated matrix.
 Automatically uses z-coordinate if both PSF and emitter support it.
+GaussianPSF uses the exact product of erf differences for any `sampling`.
 
 # Arguments
 - `result`: Pre-allocated array where results will be stored
@@ -235,7 +236,8 @@ end
 Integrate PSF intensity over camera pixels with optional support region optimization.
 
 For each pixel in the specified region, numerically integrates the PSF intensity using the specified 
-sampling density. Physical coordinates are relative to camera with (0,0) at top-left corner.
+sampling density. GaussianPSF uses the exact product of erf differences for any
+`sampling`. Physical coordinates are relative to camera with (0,0) at top-left corner.
 Automatically handles z-coordinate if both PSF and emitter support it.
 
 # Arguments
@@ -331,6 +333,7 @@ end
 Integrate PSF intensity over camera pixels with optional support region optimization.
 
 This version takes a camera object instead of explicit pixel edges.
+GaussianPSF uses the exact product of erf differences for any `sampling`.
 
 # Arguments
 - `psf::AbstractPSF`: Point spread function to integrate
@@ -344,7 +347,7 @@ This version takes a camera object instead of explicit pixel edges.
 
 # Returns
 - Array of pixel values with dimensions [y, x] (matrix indexed [row,col])
-- Values are normalized to sum to 1
+- Values are photon counts: the PSF integral times `emitter.photons`
 - Array indices start at [1,1] for top-left pixel
 
 See also: [`integrate_pixels_amplitude`](@ref), [`AbstractPSF`](@ref)

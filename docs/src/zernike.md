@@ -8,7 +8,7 @@ This module uses the following conventions:
 
 - **Noll Indexing**: All functions use the Noll single-index scheme, starting from 1
 - **RMS Normalization**: Polynomials are normalized to have RMS = 1 over the unit circle
-- **Units**: Coefficients typically represent wavefront error in units of wavelength
+- **Units**: Phase coefficients represent RMS phase in radians
 
 ## Core Types
 
@@ -19,8 +19,8 @@ The `ZernikeCoefficients` type is the main container for Zernike polynomial coef
 zc = ZernikeCoefficients(15)
 
 # Access and modify directly using Noll indices
-zc.phase[4] = 0.5  # Add 0.5λ RMS of defocus
-zc.phase[11] = 0.2  # Add 0.2λ RMS of spherical aberration
+zc.phase[4] = 0.5  # Add 0.5 rad RMS of defocus
+zc.phase[11] = 0.2  # Add 0.2 rad RMS of spherical aberration
 ```
 
 ## Core Functions
@@ -131,8 +131,8 @@ The Zernike module is primarily used for representing aberrations in PSF models:
 zc = ZernikeCoefficients(15)
 
 # Add some aberrations
-zc.phase[4] = 0.5  # 0.5λ RMS of defocus
-zc.phase[11] = 0.2  # 0.2λ RMS of spherical aberration
+zc.phase[4] = 0.5  # 0.5 rad RMS of defocus
+zc.phase[11] = 0.2  # 0.2 rad RMS of spherical aberration
 
 # Create a ScalarPSF with these aberrations
 psf = ScalarPSF(1.4, 0.532, 1.518, coeffs=zc)

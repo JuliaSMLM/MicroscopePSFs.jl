@@ -40,12 +40,12 @@ let
         IdealCamera(collect(0.0:0.11:0.44), collect(0.0:0.09:0.27)),
         IdealCamera([-0.03, 0.07, 0.19, 0.34, 0.5], [-0.02, 0.09, 0.21, 0.37]),
     )
-    gaussian = GaussianPSF(0.15)
+    airy = AiryPSF(1.2, 0.68)
     scalar = ScalarPSF(1.2, 0.68, 1.33; pupil_data=ones(ComplexF64, 32, 32))
     vector = VectorPSF(1.2, 0.68, DipoleVector(0.6, 0.0, 0.8);
         n_medium=1.33, n_coverslip=1.33, n_immersion=1.33, grid_size=32)
     fixtures = (
-        (gaussian, Emitter2D(0.18, 0.14, 1.0)),
+        (airy, Emitter2D(0.18, 0.14, 1.0)),
         (scalar, Emitter3D(0.18, 0.14, 0.12, 1.0)),
         (vector, Emitter3D(0.18, 0.14, 0.12, 1.0)),
     )

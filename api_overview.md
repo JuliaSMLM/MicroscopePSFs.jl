@@ -101,12 +101,28 @@ psf_gauss = GaussianPSF(0.15)
 psf_airy = AiryPSF(1.4, 0.532)
 
 # 3D Scalar PSF: NA=1.4, λ=680nm, n=1.52 (oil immersion)
-psf_scalar = ScalarPSF(1.4, 0.680, 1.52)
+psf_scalar = ScalarPSF(1.4, 0.680, 1.52; grid_size=128)
 
 # Vector PSF with x-oriented dipole
 dipole = DipoleVector(1.0, 0.0, 0.0)  # x-dipole
 psf_vector = VectorPSF(1.4, 0.690, dipole; z_stage=0.0)
 ```
+
+Pupil PSF fields repeat in x and y with period
+`L = (grid_size - 1) * λ / (2nₐ)` in microns. Keep render `support` below `L/2`
+or use a frame narrower than `L`. A larger `grid_size` widens `L`.
+For NA 1.4, λ 0.6 microns, and grid 128, `L ≈ 27.21` microns.
+ScalarPSF and VectorPSF default to `grid_size=128`; ScalarPSF retains the grid
+of a supplied `pupil` or `pupil_data`. The scalar default takes about four times
+the evaluation time of grid 64; see the ScalarPSF guide for measured cases.
+
+Gaussian pixel integration uses exact erf differences for any `sampling`,
+including explicit pixel edges and multiple emitters. Values are photon counts:
+the PSF integral times `emitter.photons`. GaussianPSF retains Float32 for
+Float32 width and evaluation coordinates.
+
+Rendering a finite emitter z outside a 3D spline's sampled z range warns once
+and returns a zero image.
 
 ### PSF with Aberrations
 

@@ -4,7 +4,8 @@
     ScalarPSF(nₐ::Real, λ::Real, n::Real;
                 pupil=nothing,
                 pupil_data::Union{Nothing,AbstractMatrix}=nothing,
-                zernike_coeffs=nothing)
+                zernike_coeffs=nothing,
+                grid_size::Integer=128)
 
 Create a scalar 3D PSF with the specified optical parameters.
 
@@ -17,6 +18,14 @@ Create a scalar 3D PSF with the specified optical parameters.
 - `pupil`: Optional pre-created PupilFunction
 - `pupil_data`: Optional complex matrix to initialize the pupil function
 - `zernike_coeffs`: Optional ZernikeCoefficients for aberrations
+- `grid_size`: Generated pupil grid size (default: 128); a supplied `pupil` or
+  `pupil_data` retains its own grid. The field repeats in x and y with period
+  `L = (grid_size - 1) * λ / (2nₐ)` in microns, using the actual pupil grid size.
+  Keep render `support` below `L/2` or the frame narrower than `L`. A larger grid
+  widens `L`. For NA 1.4 and λ 0.6 microns, grid 128 gives `L ≈ 27.21` microns.
+  Grid 128 takes about four times the evaluation time of grid 64. A measured
+  warmed image case takes 10.269 s at grid 128 and 2.613 s at grid 64; see the
+  ScalarPSF guide for the optics, accuracy, and tabulation measurements.
 
 # Returns
 - `ScalarPSF`: 3D PSF with scalar diffraction model
@@ -37,10 +46,13 @@ add_astigmatism!(zc, 0.5)  # Add astigmatism
 psf = ScalarPSF(1.4, 0.532, 1.518; zernike_coeffs=zc)
 ```
 """
-function ScalarPSF(nₐ::Real, λ::Real, n::Real;
-    pupil::Union{Nothing,PupilFunction}=nothing,
-    pupil_data::Union{Nothing,AbstractMatrix}=nothing,
-    zernike_coeffs::Union{Nothing,ZernikeCoefficients}=nothing)
+function ScalarPSF(
+        nₐ::Real, λ::Real, n::Real;
+        pupil::Union{Nothing, PupilFunction} = nothing,
+        pupil_data::Union{Nothing, AbstractMatrix} = nothing,
+        zernike_coeffs::Union{Nothing, ZernikeCoefficients} = nothing,
+        grid_size::Integer = 128
+    )
     
     # Add this check to enforce n ≥ NA
     n >= nₐ || throw(ArgumentError("Refractive index (n=$n) must be ≥ numerical aperture (NA=$nₐ). " * 
@@ -54,7 +66,7 @@ function ScalarPSF(nₐ::Real, λ::Real, n::Real;
         PupilFunction(nₐ, λ, n, pupil_data)
     else
         zernike_coeffs_out = isnothing(zernike_coeffs) ? ZernikeCoefficients(1) : zernike_coeffs
-        PupilFunction(nₐ, λ, n, zernike_coeffs_out)
+        PupilFunction(nₐ, λ, n, zernike_coeffs_out; grid_size = Int(grid_size))
     end
 
     normalize!(pupil_func)

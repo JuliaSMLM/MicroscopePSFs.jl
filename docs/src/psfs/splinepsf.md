@@ -121,6 +121,9 @@ spline_psf_auto = SplinePSF(scalar_psf,
 - **Memory Usage**: Memory scales with grid size (O(nx×ny×nz))
 - **Interpolation Order**: Higher order provides more accuracy at slight computational cost
 - **Boundary Handling**: Returns 0 for positions outside the grid boundaries
+  Rendering an emitter with finite z outside a 3D spline's sampled z range warns
+  once, names the range, and returns a zero image. This applies to cameras,
+  explicit edges, and emitter batches.
 
 ## Working with Experimental PSFs
 

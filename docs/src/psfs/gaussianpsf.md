@@ -16,6 +16,14 @@ where:
 
 This function is normalized to integrate to 1 over the entire domain, ensuring energy conservation.
 
+## Pixel integration
+
+`integrate_pixels` uses the exact product of erf differences over each pixel's
+edges, including explicit pixel-edge, in-place, and multi-emitter routes.
+The `sampling` keyword is accepted and does not affect Gaussian intensity
+integration. Pixel values are photon counts: the integral times the emitter's
+photons. All-Float32 width and evaluation coordinates produce Float32 values.
+
 ## Constructor and Parameters
 
 ```julia
