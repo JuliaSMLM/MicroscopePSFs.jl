@@ -22,7 +22,7 @@ This function is normalized to integrate to 1 over the entire domain, ensuring e
 edges, including explicit pixel-edge, in-place, and multi-emitter routes.
 The `sampling` keyword is accepted and does not affect Gaussian intensity
 integration. Pixel values are photon counts: the integral times the emitter's
-photons. All-Float32 width and evaluation coordinates produce Float32 values.
+photons.
 
 ## Constructor and Parameters
 

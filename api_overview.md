@@ -118,8 +118,7 @@ the evaluation time of grid 64; see the ScalarPSF guide for measured cases.
 
 Gaussian pixel integration uses exact erf differences for any `sampling`,
 including explicit pixel edges and multiple emitters. Values are photon counts:
-the PSF integral times `emitter.photons`. GaussianPSF retains Float32 for
-Float32 width and evaluation coordinates.
+the PSF integral times `emitter.photons`.
 
 Rendering a finite emitter z outside a 3D spline's sampled z range warns once
 and returns a zero image.

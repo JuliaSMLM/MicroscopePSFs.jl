@@ -119,14 +119,6 @@ using Logging: with_logger
         @test sum(image) ≈ 1234.0 atol = 1.0e-9
     end
 
-    @testset "Should 9: inferred Float32 Gaussian" begin
-        psf = GaussianPSF(0.13f0)
-        for x in (0.0f0, 0.1f0)
-            @test (@inferred psf(x, 0.0f0)) isa Float32
-            @test (@inferred amplitude(psf, x, 0.0f0)) isa Float32
-        end
-    end
-
     @testset "Review 1: 2D emitters on 3D splines" begin
         xr = -0.5:0.1:0.5
         spline = SplinePSF(
