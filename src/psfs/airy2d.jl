@@ -11,13 +11,14 @@ function (psf::AiryPSF)(x::Real, y::Real)
 end
 
 function amplitude(psf::AiryPSF, x::Real, y::Real)
-    r = sqrt(x^2 + y^2)
-    w = r * psf.ν
-    if w < 1e-5  # Handle center point using series expansion
-        return psf.ν/sqrt(4π)  # First term of 2J₁(w)/w series is 1
-    else
-        return psf.ν/sqrt(4π) * (2*besselj1(w)/w)
+    r² = x^2 + y^2
+    w² = r² * psf.ν^2
+    # Series of 2J₁(w)/w; no square root at r = 0, so derivatives survive.
+    if w² < 1.0e-10
+        return psf.ν / sqrt(4π) * (1 - w² / 8)
     end
+    w = sqrt(r²) * psf.ν
+    return psf.ν / sqrt(4π) * (2 * besselj1(w) / w)
 end
 
 

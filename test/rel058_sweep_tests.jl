@@ -1,7 +1,32 @@
 using Logging: with_logger
+using ForwardDiff
 
 @testset "0.5.8 sweep" verbose = true begin
     M = MicroscopePSFs
+
+    @testset "AiryPSF center curvature" begin
+        psf = AiryPSF(1.4, 0.533)
+        hessian = ForwardDiff.hessian(v -> psf(v[1], v[2]), zeros(2))
+        curvature = -(psf.ν^2 / (4π)) * psf.ν^2 / 2
+        @test hessian[1, 1] ≈ curvature rtol = 1.0e-12
+        @test hessian[2, 2] ≈ curvature rtol = 1.0e-12
+        @test hessian[1, 2] == 0
+        @test hessian[2, 1] == 0
+    end
+
+    @testset "AiryPSF values outside the center series" begin
+        psf = AiryPSF(1.4, 0.533)
+        coordinates = range(-0.5, 0.5; length = 11)
+        for x in coordinates, y in coordinates
+            iszero(x) && iszero(y) && continue
+            # Preserve origin/main's arithmetic outside the center series.
+            r = sqrt(x^2 + y^2)
+            w = r * psf.ν
+            reference = psf.ν / sqrt(4π) * (2 * besselj1(w) / w)
+            @test amplitude(psf, x, y) === reference
+            @test psf(x, y) === abs2(reference)
+        end
+    end
 
     @testset "Should 1: documented Zernike radians" begin
         for file in ("docs/src/zernike.md", "docs/src/psfs/scalarpsf.md")
