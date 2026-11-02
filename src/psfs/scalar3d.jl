@@ -19,12 +19,11 @@ Create a scalar 3D PSF with the specified optical parameters.
 - `pupil_data`: Optional complex matrix to initialize the pupil function
 - `zernike_coeffs`: Optional ZernikeCoefficients for aberrations
 - `grid_size`: Generated pupil grid size (default: 128); a supplied `pupil` or
-  `pupil_data` retains its own grid. The field repeats in x and y with period
+  `pupil_data` retains its own grid. The intensity repeats in x and y with period
   `L = (grid_size - 1) * λ / (2nₐ)` in microns, using the actual pupil grid size.
   Keep render `support` below `L/2` or the frame narrower than `L`. A larger grid
   widens `L`. For NA 1.4 and λ 0.6 microns, grid 128 gives `L ≈ 27.21` microns.
-  Grid 128 takes about four times the evaluation time of grid 64. A measured
-  warmed image case takes 10.269 s at grid 128 and 2.613 s at grid 64; see the
+  Grid 128 takes about four times the evaluation time of grid 64. See the
   ScalarPSF guide for the optics, accuracy, and tabulation measurements.
 
 # Returns

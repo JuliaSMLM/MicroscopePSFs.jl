@@ -46,7 +46,7 @@ VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
 - `z_stage`: Distance the sample stage was moved (μm) (default: 0.0)
 - `grid_size`: Size of grid for pupil function (default: 128)
 
-The pupil field repeats in x and y with period
+The PSF intensity repeats in x and y with period
 `L = (grid_size - 1) * λ / (2nₐ)` in microns. For rendering, keep `support` below
 `L/2` or use a frame narrower than `L`. A larger `grid_size` widens `L`.
 For NA 1.4, wavelength 0.6 microns, and grid 128, `L ≈ 27.21` microns.

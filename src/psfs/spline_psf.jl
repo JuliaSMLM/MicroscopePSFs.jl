@@ -429,12 +429,7 @@ function integrate_pixels!(
         sampling::Integer = 2,
         threaded::Bool = true
     ) where {T <: Real}
-    if supports_3d(psf)
-        has_z_coordinate(emitter) || throw(
-            ArgumentError(
-                "3D SplinePSF requires an emitter with a z-coordinate"
-            )
-        )
+    if supports_3d(psf) && has_z_coordinate(emitter)
         if isfinite(emitter.z) && (emitter.z < psf.z_min || emitter.z > psf.z_max)
             message = "Emitter z=$(emitter.z) is outside SplinePSF z range " *
                 "[$(psf.z_min), $(psf.z_max)]; returning zero photon counts"

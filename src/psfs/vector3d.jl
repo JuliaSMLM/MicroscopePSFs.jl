@@ -34,7 +34,7 @@ for the measurement points and fixed-dipole results.
 - `n_coverslip`: Cover slip refractive index (default: 1.52)
 - `n_immersion`: Immersion medium refractive index (default: 1.52)
 - `z_stage`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm) (default: 0.0)
-- `grid_size`: Size of pupil grid (default: 128). The image field repeats in x
+- `grid_size`: Size of pupil grid (default: 128). The image intensity repeats in x
   and y with period `L = (grid_size - 1) * λ / (2nₐ)` in microns. Keep render
   `support` below `L/2` or the frame narrower than `L`. A larger grid widens `L`.
   For NA 1.4 and λ 0.6 microns, the default grid gives `L ≈ 27.21` microns.
@@ -133,7 +133,7 @@ for the measurement points and fixed-dipole results.
 - `n_coverslip`: Cover slip refractive index (default: 1.52)
 - `n_immersion`: Immersion medium refractive index (default: 1.52)
 - `z_stage`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm) (default: 0.0)
-- `grid_size`: Size of pupil grid (default: 128). The image field repeats in x
+- `grid_size`: Size of pupil grid (default: 128). The image intensity repeats in x
   and y with period `L = (grid_size - 1) * λ / (2nₐ)` in microns. Keep render
   `support` below `L/2` or the frame narrower than `L`. A larger grid widens `L`.
   For NA 1.4 and λ 0.6 microns, the default grid gives `L ≈ 27.21` microns.

@@ -126,4 +126,58 @@ using Logging: with_logger
             @test (@inferred amplitude(psf, x, 0.0f0)) isa Float32
         end
     end
+
+    @testset "Review 1: 2D emitters on 3D splines" begin
+        xr = -0.5:0.1:0.5
+        spline = SplinePSF(
+            [exp(-x^2 - y^2 - z^2) for y in xr, x in xr, z in xr], xr, xr, xr
+        )
+        edges = [-0.2, 0.0, 0.2]
+        camera = IdealCamera(edges, edges)
+        emitter = Emitter2D(0.0, 0.0, 1000.0)
+        reference = integrate_pixels(
+            spline, edges, edges, Emitter3D(0.0, 0.0, 0.0, 1000.0); threaded = false
+        )
+        @test sum(reference) ≈ 156.065 atol = 0.0005 rtol = 0
+        for threaded in (false, true)
+            image = @test_logs integrate_pixels(spline, edges, edges, emitter; threaded)
+            @test image == reference
+            result = similar(reference)
+            @test_logs M.integrate_pixels!(result, spline, edges, edges, emitter; threaded)
+            @test result == reference
+            @test_logs M.integrate_pixels!(result, spline, camera, emitter; threaded)
+            @test result == reference
+            batch = @test_logs integrate_pixels(
+                spline, edges, edges, [emitter, emitter];
+                threaded
+            )
+            @test batch == 2reference
+            batch = @test_logs integrate_pixels(
+                spline, camera, [emitter, emitter]; threaded
+            )
+            @test batch == 2reference
+            # The allocating single-emitter camera route requires an explicit z.
+            @test_throws ArgumentError integrate_pixels(spline, camera, emitter; threaded)
+        end
+    end
+
+    @testset "Review 1: Float32 Gaussian tails" begin
+        psf = GaussianPSF(0.13f0)
+        emitter = Emitter2D(0.0f0, 0.0f0, 1000.0f0)
+        tail_edges = [0.75f0, 0.85f0]
+        center_edges = [-0.05f0, 0.05f0]
+        for threaded in (false, true), (ex, ey) in (
+                    (tail_edges, center_edges), (center_edges, tail_edges),
+                )
+            image = integrate_pixels(psf, ex, ey, emitter; threaded)
+            @test eltype(image) == Float32
+            @test only(image) ≈ 1.18312f-6 rtol = 2.0f-5
+            camera = IdealCamera(ex, ey)
+            @test integrate_pixels(psf, camera, emitter; threaded) == image
+            result = similar(image)
+            M.integrate_pixels!(result, psf, ex, ey, emitter; threaded)
+            @test result == image
+            @test integrate_pixels(psf, ex, ey, [emitter, emitter]; threaded) == 2image
+        end
+    end
 end

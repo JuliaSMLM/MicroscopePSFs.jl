@@ -31,15 +31,15 @@ function integrate_pixels!(
     )
     scale = sqrt(typeof(psf.σ)(2)) * psf.σ
     x_integrals = [
-        (
-            erf((pixel_edges_x[i + 1] - emitter.x) / scale) -
-                erf((pixel_edges_x[i] - emitter.x) / scale)
+        erf(
+            (pixel_edges_x[i] - emitter.x) / scale,
+            (pixel_edges_x[i + 1] - emitter.x) / scale
         ) / 2 for i in 1:nx
     ]
     y_integrals = [
-        (
-            erf((pixel_edges_y[j + 1] - emitter.y) / scale) -
-                erf((pixel_edges_y[j] - emitter.y) / scale)
+        erf(
+            (pixel_edges_y[j] - emitter.y) / scale,
+            (pixel_edges_y[j + 1] - emitter.y) / scale
         ) / 2 for j in 1:ny
     ]
     function integrate_column(i)

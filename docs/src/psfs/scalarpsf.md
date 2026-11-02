@@ -47,7 +47,7 @@ an unaberrated pupil is created using `grid_size`.
 
 ## Pupil sampling and field of view
 
-The pupil field repeats in x and y with period
+The PSF intensity repeats in x and y with period
 `L = (grid_size - 1) * λ / (2nₐ)` in microns, using the actual pupil grid size.
 For rendering, keep `support` below `L/2` or use a frame narrower than `L`.
 Increasing `grid_size` widens `L` and improves defocused intensity accuracy.

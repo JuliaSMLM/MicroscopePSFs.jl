@@ -108,7 +108,7 @@ dipole = DipoleVector(1.0, 0.0, 0.0)  # x-dipole
 psf_vector = VectorPSF(1.4, 0.690, dipole; z_stage=0.0)
 ```
 
-Pupil PSF fields repeat in x and y with period
+Pupil PSF intensity repeats in x and y with period
 `L = (grid_size - 1) * λ / (2nₐ)` in microns. Keep render `support` below `L/2`
 or use a frame narrower than `L`. A larger `grid_size` widens `L`.
 For NA 1.4, λ 0.6 microns, and grid 128, `L ≈ 27.21` microns.
