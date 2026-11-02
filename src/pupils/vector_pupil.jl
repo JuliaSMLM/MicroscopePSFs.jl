@@ -23,8 +23,8 @@ struct VectorPupilFunction{T<:AbstractFloat}
     Ex::PupilFunction{T}
     Ey::PupilFunction{T}
 
-    function VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real, n_coverslip::Real, n_immersion::Real,
-                               Ex::PupilFunction, Ey::PupilFunction)
+    function VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real,
+        n_coverslip::Real, n_immersion::Real, Ex::PupilFunction, Ey::PupilFunction)
         # Validation
         nₐ > 0 || throw(ArgumentError("Numerical aperture must be positive"))
         λ > 0 || throw(ArgumentError("Wavelength must be positive"))
@@ -60,9 +60,49 @@ Create a vector pupil function with empty field components.
 - `VectorPupilFunction` with zero-initialized field components
 """
 function VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real, n_coverslip::Real, n_immersion::Real, grid_size::Integer)
-    Ex = PupilFunction(nₐ, λ, n_medium, zeros(Complex{Float64}, grid_size, grid_size))
-    Ey = PupilFunction(nₐ, λ, n_medium, zeros(Complex{Float64}, grid_size, grid_size))
+    T = float(promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
+        typeof(n_coverslip), typeof(n_immersion)))
+    Ex = PupilFunction(nₐ, λ, n_medium, zeros(Complex{T}, grid_size, grid_size))
+    Ey = PupilFunction(nₐ, λ, n_medium, zeros(Complex{T}, grid_size, grid_size))
     VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
+end
+
+@inline function _vector_pupil_sample(i, j, center, kpixel, kmax²)
+    kx = (i - center) * kpixel
+    ky = (j - center) * kpixel
+    kr2 = kx^2 + ky^2
+    return kx, ky, kr2, kr2 <= kmax²
+end
+
+function _vector_pupil_energy(p::VectorPupilFunction{T}) where {T}
+    N = size(p.Ex.field, 1)
+    kpixel = kpixelsize(p)
+    center = (N + 1) / 2
+    ex_energy = ey_energy = zero(T)
+    for i in 1:N, j in 1:N
+        _, _, _, inside = _vector_pupil_sample(i, j, center, kpixel, kmax(p)^2)
+        if inside
+            ex_energy += abs2(p.Ex.field[j,i])
+            ey_energy += abs2(p.Ey.field[j,i])
+        end
+    end
+    return (ex_energy + ey_energy) * kpixel^2
+end
+
+# Normalize all incoherent orientations together, preserving their relative weights.
+function _normalize_vector_pupils!(pupils)
+    total_energy = zero(typeof(first(pupils).nₐ))
+    for pupil in pupils
+        total_energy += _vector_pupil_energy(pupil)
+    end
+    isfinite(total_energy) && total_energy > 0 || throw(ArgumentError(
+        "Vector pupil energy must be finite and positive; supply finite nonzero fields"))
+    scale = 1 / sqrt(total_energy)
+    for pupil in pupils
+        pupil.Ex.field .*= scale
+        pupil.Ey.field .*= scale
+    end
+    return pupils
 end
 
 # Computed properties
@@ -80,6 +120,7 @@ kpixelsize(p::VectorPupilFunction) = kpixelsize(p.Ex)
 
 Normalize the electric field components of the vector pupil function.
 Ensures total energy across both components equals 1.
+Energy includes exactly the circular aperture samples used by vector evaluation.
 
 # Arguments
 - `p`: Vector pupil function to normalize
@@ -88,8 +129,10 @@ Ensures total energy across both components equals 1.
 - Normalized vector pupil function
 """
 function normalize!(p::VectorPupilFunction)
-    kpix² = kpixelsize(p)^2
-    total_energy = (sum(abs2, p.Ex.field) + sum(abs2, p.Ey.field)) * kpix²
+    total_energy = _vector_pupil_energy(p)
+    isfinite(total_energy) && total_energy > 0 || throw(ArgumentError(
+        "Vector pupil energy must be finite and positive; " *
+        "supply finite nonzero fields"))
     scale = 1/sqrt(total_energy)
     
     p.Ex.field .*= scale
@@ -106,6 +149,10 @@ Fill vector pupil function with field components including dipole orientation,
 base aberrations, and proper apodization.
 
 This pre-calculates all position-independent factors of the pupil function.
+When `n_medium == n_coverslip`, use `nₐ <= 0.995 * n_medium`: apodization
+diverges at grazing angles and grid sampling fails near 90 degrees. Real objectives
+stay below this bound. For a higher-index coverslip, the finite medium-grazing
+limit is evaluated by combining Fresnel transmission and apodization.
 
 # Arguments
 - `vpupil`: Vector pupil function to fill
@@ -123,38 +170,31 @@ function fill_vector_pupils!(vpupil::VectorPupilFunction,
                            base_pupil::Union{Nothing, PupilFunction}=nothing;
                            normalize::Bool=true)
     
+    _check_vector_aperture(vpupil.nₐ, vpupil.n_medium, vpupil.n_coverslip)
     grid_size = size(vpupil.Ex.field, 1)
-    xs = ys = range(-1, 1, length=grid_size)
-    kmax = vpupil.nₐ/vpupil.λ
+    kmax_val = kmax(vpupil)
+    kpixel = kpixelsize(vpupil)
+    center = (grid_size + 1) / 2
+    fill!(vpupil.Ex.field, 0)
+    fill!(vpupil.Ey.field, 0)
     
     for i in 1:grid_size, j in 1:grid_size
-        x, y = xs[i], ys[j]
-        ρ = sqrt(x^2 + y^2)
-        ρ > 1 && continue
-        
-        # Convert normalized pupil coordinates to k-space
-        kr2 = (ρ * kmax)^2
+        kx, ky, kr2, inside = _vector_pupil_sample(i, j, center, kpixel, kmax_val^2)
+        inside || continue
         
         # Calculate angles and convert to ComplexF64 to handle evanescent waves
-        ϕ = ComplexF64(atan(y, x))
+        ϕ = ComplexF64(atan(ky, kx))
             
         # Calculate angles in medium for field components
         sinθ = sqrt(complex(kr2 * vpupil.λ^2 / vpupil.n_medium^2))
         cosθ = sqrt(complex(1 - kr2 * vpupil.λ^2 / vpupil.n_medium^2))
         
-        # Calculate Fresnel coefficients for interfaces
-        Tp, Ts = calculate_fresnel_coefficients(
+        # Evaluate the finite combined product at medium grazing incidence.
+        Tp, Ts = _apodized_fresnel_coefficients(
             kr2, vpupil.λ, vpupil.n_medium, vpupil.n_coverslip, vpupil.n_immersion)
         
         # Calculate field components for dipole orientation
         Ex, Ey = calculate_dipole_field_components(ϕ, sinθ, cosθ, dipole, Tp, Ts)
-        
-        # Calculate apodization factor
-        apod = calculate_apodization(kr2, vpupil.λ, vpupil.n_medium, vpupil.n_immersion)
-        
-        # Apply apodization 
-        Ex *= apod
-        Ey *= apod
         
         # Combine with base aberration if provided
         if !isnothing(base_pupil)
@@ -224,10 +264,8 @@ function apply_defocus!(vp::VectorPupilFunction, z::Real, z_stage::Real=zero(z))
     center = (grid_size + 1) / 2
 
     for i in 1:grid_size, j in 1:grid_size
-        kx = (i - center) * kpixel
-        ky = (j - center) * kpixel
-        kr2 = kx^2 + ky^2
-        kr2 > kmax_val^2 && continue
+        _, _, kr2, inside = _vector_pupil_sample(i, j, center, kpixel, kmax_val^2)
+        inside || continue
 
         kz_medium, kz_coverslip, kz_immersion = calculate_wave_vectors(
             kr2, vp.λ, vp.n_medium, vp.n_coverslip, vp.n_immersion)

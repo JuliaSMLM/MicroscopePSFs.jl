@@ -79,7 +79,7 @@ using CairoMakie
 function evaluate_polynomial_grid_nl(n::Integer, l::Integer, grid_size::Integer=201)
     j = nl2noll(n, l)
     coeffs = ZernikeCoefficients(j)
-    coeffs.mag[1] = 0.0 # was set to 1 by default
+    coeffs.mag[1] = 0.0 # Clear the default unit piston.
     coeffs.mag[j] = 1.0
     field = evaluate_pupil(coeffs, grid_size)
     result = real.(field)

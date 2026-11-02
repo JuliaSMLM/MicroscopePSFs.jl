@@ -120,29 +120,23 @@
     end
     
     @testset "VectorPSF" begin
-        # Only run this test if VectorPSF is fully implemented
-        try
-            # Create a VectorPSF
-            dipole = DipoleVector(0.0, 0.0, 1.0)  # z-oriented dipole
-            psf = VectorPSF(na, λ, dipole, n_medium=n_medium)
-            
-            # Test multi-emitter integration
-            result = integrate_pixels(psf, camera, dipole_emitters)
-            
-            # Check size
-            @test size(result) == expected_dims_2d
-            
-            # Check some basic properties
-            @test sum(result) > 0
-            @test sum(result) <= sum(e.photons for e in dipole_emitters)
-            
-            # Test amplitude integration
-            amp_result = integrate_pixels_amplitude(psf, camera, dipole_emitters)
-            @test size(amp_result) == expected_dims_3d_vector
-            @test eltype(amp_result) <: Complex
-        catch e
-            # Skip if VectorPSF not fully implemented
-            @info "Skipping VectorPSF tests: $e"
-        end
+        # Create a VectorPSF
+        dipole = DipoleVector(0.0, 0.0, 1.0)  # z-oriented dipole
+        psf = VectorPSF(na, λ, dipole, n_medium=n_medium)
+
+        # Test multi-emitter integration
+        result = integrate_pixels(psf, camera, dipole_emitters)
+
+        # Check size
+        @test size(result) == expected_dims_2d
+
+        # Check some basic properties
+        @test sum(result) > 0
+        @test sum(result) <= sum(e.photons for e in dipole_emitters)
+
+        # Test amplitude integration
+        amp_result = integrate_pixels_amplitude(psf, camera, dipole_emitters)
+        @test size(amp_result) == expected_dims_3d_vector
+        @test eltype(amp_result) <: Complex
     end
 end

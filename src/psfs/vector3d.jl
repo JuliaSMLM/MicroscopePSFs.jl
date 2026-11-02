@@ -7,10 +7,20 @@
                 n_medium::Real=1.33,
                 n_coverslip::Real=1.52,
                 n_immersion::Real=1.52,
-                z_stage::Real=0.0,
+                z_stage::Real=zero(float(nₐ)),
                 grid_size::Integer=128)
 
 Create a vector PSF using either a pupil-based or Zernike-based approach.
+When `n_medium == n_coverslip`, use `nₐ <= 0.995 * n_medium`. Apodization
+diverges at grazing angles, so grid sampling fails near 90 degrees; real objectives
+stay below this bound.
+
+The pupil grid sets accuracy at high NA. For `NA/n_medium = 0.982`, matched
+indices 1.518 and wavelength 0.68 microns, rotating-dipole intensity errors over
+four sample points were about 9.1%, 3.5%, 1.0%, and 0.31% at grid sizes 32, 64,
+128, and 256. These are measured discretization errors, not universal bounds.
+Use `grid_size >= 128` at high NA; 128 is the default. See the VectorPSF guide
+for the measurement points and fixed-dipole results.
 
 # Arguments
 - `nₐ`: Numerical aperture
@@ -35,10 +45,25 @@ function VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     n_medium::Real=1.33,
     n_coverslip::Real=1.52,
     n_immersion::Real=1.52,
-    z_stage::Real=0.0,
+    z_stage::Real=zero(float(nₐ)),
     grid_size::Integer=128)
 
-    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium), typeof(z_stage))
+    _require_fixed_dipole(dipole)
+    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
+        typeof(n_coverslip), typeof(n_immersion), typeof(z_stage),
+        typeof(dipole.px),
+        isnothing(base_pupil) ? typeof(nₐ) : real(eltype(base_pupil.field)),
+        isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike))
+    nₐ, λ, n_medium = T(nₐ), T(λ), T(n_medium)
+    n_coverslip, n_immersion = T(n_coverslip), T(n_immersion)
+    _check_vector_aperture(nₐ, n_medium, n_coverslip)
+
+    if !isnothing(base_pupil) && !(base_pupil isa PupilFunction{T})
+        base_pupil = PupilFunction(nₐ, λ, n_medium, Complex{T}.(base_pupil.field))
+    end
+    if !isnothing(base_zernike) && !(base_zernike isa ZernikeCoefficients{T})
+        base_zernike = ZernikeCoefficients(T.(base_zernike.mag), T.(base_zernike.phase))
+    end
 
     # Store the base pupil and/or convert Zernike coeffs to pupil if provided
     stored_base_pupil = base_pupil
@@ -48,6 +73,8 @@ function VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
         # Create base pupil from Zernike coefficients
         base_pupil = PupilFunction(nₐ, λ, n_medium, base_zernike; grid_size=grid_size)
     end
+
+    dipole = DipoleVector{T}(dipole.px, dipole.py, dipole.pz)
 
     # Create a single vector pupil function
     vector_pupil = VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, grid_size)
@@ -76,11 +103,21 @@ end
                 n_medium::Real=1.33,
                 n_coverslip::Real=1.52,
                 n_immersion::Real=1.52,
-                z_stage::Real=0.0,
+                z_stage::Real=zero(float(nₐ)),
                 grid_size::Integer=128)
 
 Create a vector PSF with a rotating dipole, modeled as an incoherent sum of 
 x, y, and z dipole orientations.
+When `n_medium == n_coverslip`, use `nₐ <= 0.995 * n_medium` because
+apodization diverges at grazing angles and grid sampling fails near 90 degrees.
+Real objectives stay below this bound.
+
+The pupil grid sets accuracy at high NA. For `NA/n_medium = 0.982`, matched
+indices 1.518 and wavelength 0.68 microns, rotating-dipole intensity errors over
+four sample points were about 9.1%, 3.5%, 1.0%, and 0.31% at grid sizes 32, 64,
+128, and 256. These are measured discretization errors, not universal bounds.
+Use `grid_size >= 128` at high NA; 128 is the default. See the VectorPSF guide
+for the measurement points and fixed-dipole results.
 
 # Arguments
 - `nₐ`: Numerical aperture
@@ -108,10 +145,23 @@ function VectorPSF(nₐ::Real, λ::Real;
     n_medium::Real=1.33,
     n_coverslip::Real=1.52,
     n_immersion::Real=1.52,
-    z_stage::Real=0.0,
+    z_stage::Real=zero(float(nₐ)),
     grid_size::Integer=128)
 
-    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium), typeof(z_stage))
+    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
+        typeof(n_coverslip), typeof(n_immersion), typeof(z_stage),
+        isnothing(base_pupil) ? typeof(nₐ) : real(eltype(base_pupil.field)),
+        isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike))
+    nₐ, λ, n_medium = T(nₐ), T(λ), T(n_medium)
+    n_coverslip, n_immersion = T(n_coverslip), T(n_immersion)
+    _check_vector_aperture(nₐ, n_medium, n_coverslip)
+
+    if !isnothing(base_pupil) && !(base_pupil isa PupilFunction{T})
+        base_pupil = PupilFunction(nₐ, λ, n_medium, Complex{T}.(base_pupil.field))
+    end
+    if !isnothing(base_zernike) && !(base_zernike isa ZernikeCoefficients{T})
+        base_zernike = ZernikeCoefficients(T.(base_zernike.mag), T.(base_zernike.phase))
+    end
 
     # Store the base pupil and/or convert Zernike coeffs to pupil if provided
     stored_base_pupil = base_pupil
@@ -131,11 +181,9 @@ function VectorPSF(nₐ::Real, λ::Real;
     
     # Use a placeholder dipole for the main struct field
     # This isn't used for calculations with multiple pupils, just for metadata
-    placeholder_dipole = DipoleVector(0.0, 0.0, 0.0)
+    placeholder_dipole = DipoleVector(zero(T), zero(T), zero(T))
     
     # Create vector pupils for each dipole orientation
-    vector_pupils = Vector{VectorPupilFunction{T}}(undef, 3)
-    
     vector_pupils = Vector{VectorPupilFunction{T}}(undef, 3)
     
     for i in 1:3
@@ -148,19 +196,7 @@ function VectorPSF(nₐ::Real, λ::Real;
         vector_pupils[i] = pupil
     end
     
-    # Calculate total energy across all pupils
-    total_energy = 0.0
-    for pupil in vector_pupils
-        kpix² = kpixelsize(pupil)^2
-        total_energy += (sum(abs2, pupil.Ex.field) + sum(abs2, pupil.Ey.field)) * kpix²
-    end
-    
-    # Apply joint normalization
-    scale = 1/sqrt(total_energy)
-    for pupil in vector_pupils
-        pupil.Ex.field .*= scale
-        pupil.Ey.field .*= scale
-    end
+    _normalize_vector_pupils!(vector_pupils)
 
     return VectorPSF{T}(
         T(nₐ), T(λ), T(n_medium), T(n_coverslip),
@@ -196,7 +232,6 @@ function _calculate_field_amplitude(
     x::Real, y::Real, z::Real)
     
     # Initialize result vector [Ex, Ey]
-    # Fixed: Don't use the type constructor in this way
     T = promote_type(real(eltype(pupil.Ex.field)), typeof(x), typeof(y), typeof(z))
     result = zeros(Complex{T}, 2)
 
@@ -209,12 +244,8 @@ function _calculate_field_amplitude(
     # Integrate over pupil
     for i in 1:grid_size, j in 1:grid_size
         # Get k-space coordinates
-        kx = (i - center) * kpixel
-        ky = (j - center) * kpixel
-        kr2 = kx^2 + ky^2
-
-        # Skip points outside the pupil
-        kr2 > kmax_val^2 && continue
+        kx, ky, kr2, inside = _vector_pupil_sample(i, j, center, kpixel, kmax_val^2)
+        inside || continue
 
         # Get wave vectors in each medium
         kz_medium, kz_coverslip, kz_immersion = calculate_wave_vectors(
@@ -412,11 +443,13 @@ function update_pupils!(psf::VectorPSF)
         
         for i in 1:length(psf.vector_pupils)
             if !isnothing(updated_base_pupil)
-                fill_vector_pupils!(psf.vector_pupils[i], dipoles[i], updated_base_pupil)
+                fill_vector_pupils!(psf.vector_pupils[i], dipoles[i],
+                    updated_base_pupil; normalize=false)
             else
-                fill_vector_pupils!(psf.vector_pupils[i], dipoles[i])
+                fill_vector_pupils!(psf.vector_pupils[i], dipoles[i]; normalize=false)
             end
         end
+        _normalize_vector_pupils!(psf.vector_pupils)
     end
 
     return psf
@@ -445,6 +478,10 @@ Uses the flexible core integration function that handles vector returns.
 
 # Returns
 - The `result` array, filled with integrated complex amplitudes for each polarization
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude!(
     result::AbstractArray{Complex{T},3},
@@ -454,23 +491,9 @@ function integrate_pixels_amplitude!(
     sampling::Integer=2,
     threaded::Bool=true
 ) where T <: Real
-    # Verify dimensions
-    ny, nx, npol = size(result)
-    npol == 2 || throw(DimensionMismatch("Third dimension of result array must be 2 for Ex and Ey"))
-    
-    # Use the core integration function directly - it now handles vector returns
-    _integrate_pixels_generic!(
-        result,
-        psf,
-        camera.pixel_edges_x,
-        camera.pixel_edges_y,
-        emitter,
-        amplitude,  # The amplitude function returns [Ex, Ey]
-        sampling=sampling,
-        threaded=threaded
-    )
-    
-    return result
+    return integrate_pixels_amplitude!(result, psf,
+        camera.pixel_edges_x, camera.pixel_edges_y, emitter;
+        sampling=sampling, threaded=threaded)
 end
 
 """
@@ -494,6 +517,10 @@ Specialized version of amplitude integration for VectorPSF that preserves polari
 # Returns
 - 3D array of integrated complex amplitudes with dimensions [y, x, pol]
   where pol index 1 = Ex and pol index 2 = Ey
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude(
     psf::VectorPSF,
@@ -502,24 +529,8 @@ function integrate_pixels_amplitude(
     sampling::Integer=2,
     threaded::Bool=true
 )
-    if length(psf.vector_pupils) > 1
-        error("integrate_pixels_amplitude() not meaningful for multiple dipole orientations")
-    end
-    
-    T = Complex{typeof(emitter.photons)}
-    
-    # Use the generic function with additional dimension specified
-    return _integrate_pixels_generic(
-        psf,
-        camera.pixel_edges_x,
-        camera.pixel_edges_y,
-        emitter,
-        amplitude,
-        T,
-        (2,);  # Additional dimension for the polarization components
-        sampling=sampling,
-        threaded=threaded
-    )
+    return integrate_pixels_amplitude(psf, camera.pixel_edges_x, camera.pixel_edges_y,
+        emitter; sampling=sampling, threaded=threaded)
 end
 
 """
@@ -547,6 +558,10 @@ Special version for VectorPSF that preserves polarization components.
 
 # Notes
 - Results are the coherent sum of individual emitter field contributions
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude(
     psf::VectorPSF,
@@ -555,29 +570,11 @@ function integrate_pixels_amplitude(
     sampling::Integer=2,
     threaded::Bool=true
 )
-    if length(psf.vector_pupils) > 1
-        error("integrate_pixels_amplitude() not meaningful for multiple dipole orientations")
-    end
-    
-    isempty(emitters) && return zeros(Complex{Float64}, length(camera.pixel_edges_y)-1, length(camera.pixel_edges_x)-1, 2)
-    
-    # Determine result type from first emitter
-    T = Complex{typeof(emitters[1].photons)}
-    
-    # Allocate result array
-    ny = length(camera.pixel_edges_y) - 1
-    nx = length(camera.pixel_edges_x) - 1
-    result = zeros(T, ny, nx, 2)  # 3D array for polarization components
-    
-    # Temporary buffer for individual emitter contribution
-    buffer = similar(result)
-    
-    # Process each emitter
-    for emitter in emitters
-        fill!(buffer, zero(T))
-        integrate_pixels_amplitude!(buffer, psf, camera, emitter; sampling=sampling, threaded=threaded)
-        result .+= buffer
-    end
-    
-    return result
+    return integrate_pixels_amplitude(psf, camera.pixel_edges_x, camera.pixel_edges_y,
+        emitters; sampling=sampling, threaded=threaded)
 end
+
+
+_amplitude_output_dims(::VectorPSF) = (2,)
+_check_amplitude_integration(p::VectorPSF, support) =
+    _check_vector_amplitude_integration(p, support)

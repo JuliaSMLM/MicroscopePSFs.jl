@@ -60,6 +60,7 @@ end
     _load_psf_impl(file::_H5Parent, ::Type{VectorPSF})
 
 Load a VectorPSF from an HDF5 file, reconstructing all components.
+Stored pupil fields are preserved exactly.
 
 # Arguments
 - `file`: Open HDF5 file handle
@@ -115,7 +116,8 @@ function _load_psf_impl(file::_H5Parent, ::Type{VectorPSF})
         # Create pupil functions
         Ex = PupilFunction(nₐ, λ, n_medium, ex_field)
         Ey = PupilFunction(nₐ, λ, n_medium, ey_field)
-        vector_pupils[i] = VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
+        vector_pupils[i] = VectorPupilFunction(
+            nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
     end
     
     # Load base pupil if available

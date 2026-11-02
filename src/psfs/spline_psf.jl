@@ -283,21 +283,9 @@ function SplinePSF(psf::AbstractPSF;
     # Calculate ranges with specified step size
     x_range = y_range = range(-lateral_range, lateral_range, step=lateral_step)
     
-    # Check if this is a 3D PSF by trying to call it with a z parameter
-    is_3d = false
-    try
-        psf(0.0, 0.0, 0.0)
-        is_3d = true
-    catch e
-        if e isa MethodError
-            is_3d = false
-        else
-            rethrow(e)
-        end
-    end
-    
+    # Use the dimension capability instead of probing evaluation exceptions.
     # Create either a 2D or 3D SplinePSF based on the input PSF
-    if is_3d
+    if supports_3d(psf)
         z_range = range(-axial_range, axial_range, step=axial_step)
         return SplinePSF(psf, x_range, y_range, z_range; order=order)
     else
@@ -512,6 +500,10 @@ Integrate PSF amplitude (complex) over camera pixels.
 
 # Notes
 - For 3D SplinePSFs (when z_range is defined), requires an emitter with a z-coordinate
+
+This returns a unit-photon field: emitter photons are ignored. Squaring a
+pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
+for intensity images.
 """
 function integrate_pixels_amplitude(
     psf::SplinePSF,

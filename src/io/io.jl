@@ -13,7 +13,7 @@ Key functions:
 
 # Constants
 const _H5Parent = Union{HDF5.File, HDF5.Group}
-const IO_VERSION = v"1.0.0"  # Version of the I/O system
+const IO_VERSION = v"1.1.0"  # Version of the I/O system
 const MIN_SUPPORTED_VERSION = v"1.0.0"  # Minimum supported version
 
 # Main interface functions
@@ -85,9 +85,9 @@ function load_psf(filename::String)
     h5open(filename, "r") do file
         # Check version compatibility
         attrs = attributes(file)
-        if haskey(attrs, "io_version")
-            _check_version_compatibility(read(attrs["io_version"]))
-        end
+        file_version = haskey(attrs, "io_version") ?
+            read(attrs["io_version"]) : string(MIN_SUPPORTED_VERSION)
+        _check_version_compatibility(file_version)
         
         # Read object type as a base type name
         type_str = read(attrs["psf_type"])
@@ -110,9 +110,8 @@ end
     _resolve_psf_type(type_str::AbstractString) -> Type
 
 Map a stored `psf_type` attribute to a MicroscopePSFs type. Accepts the bare name
-(`"SplinePSF"`) and the `MicroscopePSFs.`-qualified name that versions 0.5.0-0.5.6
-wrote when the saving session had not run `using MicroscopePSFs`. Any other name
-throws an `ArgumentError`.
+(`"SplinePSF"`) and the `MicroscopePSFs.`-qualified name found in some saved files.
+Any other name throws an `ArgumentError`.
 """
 function _resolve_psf_type(type_str::AbstractString)
     name = chopprefix(type_str, "MicroscopePSFs.")

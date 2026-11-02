@@ -13,6 +13,10 @@ Check if a PSF type supports 3D evaluation via psf(x, y, z).
 supports_3d(::Type{<:AbstractPSF}) = false
 supports_3d(::Type{<:Abstract3DPSF}) = true
 
+# Shared amplitude shape and validation for every pixel integration entry point.
+_amplitude_output_dims(::AbstractPSF) = ()
+_check_amplitude_integration(::AbstractPSF, support) = nothing
+
 # Special case for SplinePSF - depends on whether z_range is defined
 supports_3d(::Type{SplinePSF{T,IT}}) where {T,IT} = true  # We'll check the actual instance
 
@@ -75,26 +79,15 @@ function get_pixel_indices(
         x_min, x_max, y_min, y_max = support
     end
     
-    # Find pixel indices that overlap with region
-    i_min = searchsortedlast(pixel_edges_x, x_min)
-    i_max = searchsortedfirst(pixel_edges_x, x_max)
-    j_min = searchsortedlast(pixel_edges_y, y_min)
-    j_max = searchsortedfirst(pixel_edges_y, y_max)
-    
-    # Validate indices
-    if i_min >= length(pixel_edges_x) || i_max <= 1 || 
-       j_min >= length(pixel_edges_y) || j_max <= 1 ||
-       i_min >= i_max || j_min >= j_max
-        # Support region doesn't overlap with camera
-        return UnitRange{Int}(1:0), UnitRange{Int}(1:0)  # Empty ranges
+    # Upper bounds are edge indices; touching an edge does not overlap a pixel.
+    i_min = max(1, searchsortedlast(pixel_edges_x, x_min))
+    i_max = min(length(pixel_edges_x) - 1, searchsortedfirst(pixel_edges_x, x_max) - 1)
+    j_min = max(1, searchsortedlast(pixel_edges_y, y_min))
+    j_max = min(length(pixel_edges_y) - 1, searchsortedfirst(pixel_edges_y, y_max) - 1)
+    if x_min >= x_max || y_min >= y_max || i_min > i_max || j_min > j_max
+        return 1:0, 1:0
     end
-    
-    # Ensure at least one pixel in each dimension
-    i_min = max(1, i_min)
-    i_max = min(length(pixel_edges_x)-1, max(i_min, i_max))
-    j_min = max(1, j_min)
-    j_max = min(length(pixel_edges_y)-1, max(j_min, j_max))
-    
+
     return i_min:i_max, j_min:j_max
 end
 

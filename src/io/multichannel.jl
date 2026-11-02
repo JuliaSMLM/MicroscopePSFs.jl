@@ -26,7 +26,7 @@ function _save_psf_impl(file::_H5Parent, p::FourPiPSF)
 end
 function _load_psf_impl(file::_H5Parent, ::Type{FourPiPSF})
     return FourPiPSF(_io_load_child(file, "top"), _io_load_child(file, "bottom");
-                     phase=read(file["parameters/phase"]))
+        phase=read(file["parameters/phase"]))
 end
 
 function _save_psf_impl(file::_H5Parent, mc::MultiChannelPSF)

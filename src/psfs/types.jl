@@ -19,14 +19,23 @@ abstract type Abstract2DPSF{T<:AbstractFloat} <: AbstractPSF end
 """
     GaussianPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
 
-Isotropic 2D Gaussian PSF.
+Isotropic 2D Gaussian PSF. The width `σ` must be finite and strictly positive.
 
 # Fields
 - `σ`: Standard deviation in physical units (typically microns)
 """
 struct GaussianPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
     σ::T
+
+    function GaussianPSF{T}(σ::Real) where {T<:AbstractFloat}
+        width = T(σ)
+        isfinite(width) && width > 0 || throw(ArgumentError(
+            "Gaussian width σ must be finite and positive; supply σ > 0"))
+        return new{T}(width)
+    end
 end
+
+GaussianPSF(σ::T) where {T<:AbstractFloat} = GaussianPSF{T}(σ)
 
 """
     AiryPSF{T<:AbstractFloat} <: Abstract2DPSF{T}

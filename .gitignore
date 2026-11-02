@@ -17,3 +17,5 @@ Manifest.toml
 Manifest.toml
 
 **/.claude/settings.local.json
+
+!test/fixtures/vector-v056-*.h5

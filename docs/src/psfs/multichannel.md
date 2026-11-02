@@ -16,7 +16,8 @@ expected image i = N * mc.transmission[i] *
     integrate_pixels(mc.channels[i], camera_i, unit-photon emitter at channel_position(mc, i, x, y, z))
 ```
 
-`N` is the emitter's total photons. Registration matrices have size 2×3 and map
+`N` is the emitter's total photons. When transmissions sum below 1, photons
+mean photons before those losses. Registration matrices have size 2×3 and map
 **absolute camera coordinates in microns**, as used by `SMLMData` pixel edges:
 `[xᵢ, yᵢ] = A * [x, y] + t`. They do not map pixels or crop-local coordinates;
 keeping the original pixel edges makes the same registration valid after crops.
@@ -51,6 +52,8 @@ images = [mc.transmission[i] * integrate_pixels(mc.channels[i], camera,
 high-NA defocus. It is not the same phase as translating a camera in low-NA
 image space; a learned pupil absorbs that difference. Use either a plane
 wrapper or a container `z_offset` for a given shift to avoid adding it twice.
+Learned containers carry axial offsets in `z_offset`; `PlanePSF` is for building
+model channels. A learned channel's offset is never applied twice.
 A plane can wrap a 3D intensity spline, but splines cannot supply coherent
 fields to an analyzer or an interferometer.
 
@@ -110,7 +113,11 @@ Vector arms require `n_medium ≥ NA`: otherwise evanescent fields grow
 without bound at negative emitter z, which one of the arms always sees.
 
 The factor `1/√2` makes unit-energy arms give a unit-energy channel averaged
-over the fringe. Complementary phase channels obey
+over the fringe. A 4Pi port's transmission is its fringe-average share, 0.5 for
+each of two complementary ports. Fitted photons are the fringe-average total.
+A single 4Pi channel at transmission 1 predicts up to twice that total at the
+fringe peak. This photon convention also applies to learned 4Pi channels.
+Complementary phase channels obey
 `p(φ) + p(φ + π) ≈ top(x,y,z) + bottom(x,y,-z)` when the mirror signs are all
 ones or for a rotating dipole.
 
@@ -125,12 +132,12 @@ Its three intensities add incoherently, but each dipole's two arms interfere.
 
 For a fixed dipole, build the bottom arm with `DipoleVector(px, py, -pz)`;
 the mirror is already in its orientation, so its remaining field sign is +1.
-The constructor compares normalized dipoles, including dipoles constructed
-with same-typed arguments that did not normalize automatically.
+Every `DipoleVector` constructor normalizes nonzero inputs. The 4Pi constructor
+compares the mirrored directions within the coarser arm's precision.
 
 Emitter z and dipole z share one frame, with +z pointing into the sample,
 away from the objective. A code dipole `DipoleVector(1.0, 0, 1.0)` matches
-lab orientation `[1, 0, 1]/√2`. The opposed-objective mirror rule still applies:
+lab orientation `[1, 0, 1]/√2`. The opposed-objective mirror rule applies:
 
 ```julia
 using MicroscopePSFs

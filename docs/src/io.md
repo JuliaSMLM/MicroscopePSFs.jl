@@ -145,17 +145,17 @@ This format is designed to be portable and future-proof.
 
 ## Version Compatibility
 
-The I/O system uses versioning to ensure forward and backward compatibility. Files created with newer versions of MicroscopePSFs.jl may not be readable by older versions.
+Loading requires file format version 1.0.0 or later. Files with a major format
+version above 1 load with a warning that some features may not be supported.
 
-Current I/O version: v1.0.0
+Current I/O version: v1.1.0
 
 ## Multi-channel and wrapper layout
 
 `save_psf` and `load_psf` also support `PlanePSF`, `AnalyzerPSF`, `FourPiPSF`,
-and `MultiChannelPSF`, at the root or recursively in child groups. Root metadata
-keywords work as before. The existing types keep their exact dataset and
-attribute layout, and `IO_VERSION` remains `1.0.0`. No PSFLearning or Reactant
-import is needed to load and evaluate a container.
+and `MultiChannelPSF`, at the root or recursively in child groups, with the same
+root metadata keywords as any PSF. No PSFLearning or Reactant import is needed
+to load and evaluate a container.
 
 A container has root attribute `psf_type = "MultiChannelPSF"` and this layout
 (the registration size is in Julia dimension order):

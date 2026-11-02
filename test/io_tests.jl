@@ -205,17 +205,11 @@
     end
     
     @testset "VectorPSF I/O" begin
-        try
-            # Skip if dipole orientation and vector PSF is not fully implemented
-            dipole = DipoleVector(0.0, 0.0, 1.0)  # z-oriented dipole
-            psf = VectorPSF(1.4, 0.532, dipole)
-            
-            test_points = [(0.0, 0.0, 0.0), (0.1, 0.2, 0.3), (-0.15, 0.15, -0.2)]
-            test_save_load(psf, test_points, atol=1e-8)  # Use looser tolerance for complex fields
-        catch e
-            # Skip this test if VectorPSF is not properly implemented
-            @warn "Skipping VectorPSF tests: $e"
-        end
+        dipole = DipoleVector(0.0, 0.0, 1.0)  # z-oriented dipole
+        psf = VectorPSF(1.4, 0.532, dipole)
+
+        test_points = [(0.0, 0.0, 0.0), (0.1, 0.2, 0.3), (-0.15, 0.15, -0.2)]
+        test_save_load(psf, test_points, atol=1e-8)
     end
 
     @testset "Stored type name" begin

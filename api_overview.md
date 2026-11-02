@@ -368,7 +368,7 @@ axial_intensity = [psf(0.0, 0.0, zi) for zi in z_range]
 
 ## Multi-channel PSFs
 
-These additions preserve the existing PSF interface. All distances are microns.
+These types use the standard PSF interface. All distances are microns.
 Each wrapper below is a complete 3D PSF; `MultiChannelPSF` is a separate
 container and deliberately does not subtype `AbstractPSF`.
 
@@ -412,6 +412,6 @@ Vector 4Pi arms require `n_medium ≥ NA`. `phase` is the cavity phase;
 polarization-specific phases use
 `AnalyzerPSF(FourPiPSF(top, bottom; phase=φ); component=c)` per channel.
 Emitter z and dipole z share one frame, with +z pointing into the sample,
-away from the objective. The opposed-objective mirror rule still applies.
+away from the objective. The opposed-objective mirror rule applies.
 Splines hold intensity only and cannot enter
-coherent sums. All new wrappers and the container support recursive HDF5 I/O.
+coherent sums. All wrappers and the container support recursive HDF5 I/O.

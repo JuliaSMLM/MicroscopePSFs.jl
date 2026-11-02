@@ -34,6 +34,33 @@ function calculate_wave_vectors(kr2::Real, λ::Real,
     return kz_medium, kz_coverslip, kz_immersion
 end
 
+function _check_vector_aperture(nₐ::Real, n_medium::Real, n_coverslip::Real)
+    limit = oftype(float(n_medium), 0.995) * n_medium
+    n_medium == n_coverslip && nₐ > limit && throw(ArgumentError(
+        "Use NA <= 0.995 * n_medium when n_medium == n_coverslip: " *
+        "the apodization diverges at grazing angles in an index-matched sample, " *
+        "so grid sampling fails near 90 degrees; real objectives stay below this bound"))
+    return nothing
+end
+
+# Cancel the medium Fresnel numerator against apodization before evaluation.
+# Tp_mc*A = 2*nm*sqrt(ci)/(nm*cc + nc*cm), and similarly for s polarization.
+function _apodized_fresnel_coefficients(kr2::Real, λ::Real,
+    n_medium::Real, n_coverslip::Real, n_immersion::Real)
+    cm = sqrt(complex(1 - kr2 * λ^2 / n_medium^2))
+    cc = sqrt(complex(1 - kr2 * λ^2 / n_coverslip^2))
+    ci = sqrt(complex(1 - kr2 * λ^2 / n_immersion^2))
+    numerator = 2 * n_medium * sqrt(ci)
+    Tp = numerator / (n_medium * cc + n_coverslip * cm)
+    Ts = numerator / (n_medium * cm + n_coverslip * cc)
+    # An index-matched second interface transmits identically, even at cc=ci=0.
+    if n_coverslip == n_immersion
+        return Tp, Ts
+    end
+    Tp_ci, Ts_ci = calculate_interface_fresnel(kr2, λ, n_coverslip, n_immersion)
+    return Tp * Tp_ci, Ts * Ts_ci
+end
+
 """
     calculate_interface_fresnel(kr2::Real, λ::Real, 
                               n1::Real, n2::Real)
@@ -101,12 +128,15 @@ Calculate total axial phase from defocus.
 - `z`: Emitter position relative to the coverslip (depth above the coverslip in μm)
 - `z_stage`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm)
 - `kz_medium`: z-component of wave vector in sample medium
-- `kz_coverslip`: z-component of wave vector in coverslip
+- `kz_coverslip`: z-component of wave vector in coverslip; ignored by this function
 - `kz_immersion`: z-component of wave vector in immersion medium
-- `coverslip_thickness`: Thickness of coverslip in mm (default: 0.17mm)
+- `coverslip_thickness`: Coverslip thickness in mm (default 0.17); ignored
 
 # Returns
-- Defocus phase
+- Defocus phase `kz_medium * z - kz_immersion * z_stage`
+
+`kz_coverslip` and `coverslip_thickness` are ignored; this function models only
+emitter and stage defocus, without a coverslip-thickness phase contribution.
 
 """
 function calculate_axial_phase(z::Real, z_stage::Real, kz_medium::Complex,

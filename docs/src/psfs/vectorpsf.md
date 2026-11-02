@@ -46,6 +46,33 @@ VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
 - `z_stage`: Distance the sample stage was moved (μm) (default: 0.0)
 - `grid_size`: Size of grid for pupil function (default: 128)
 
+## Pupil sampling and high-NA accuracy
+
+The pupil grid sets intensity accuracy at high NA. Use `grid_size >= 128` at
+high NA; 128 is the default. Ordinary discretization error decreases as the grid
+is refined, but depends on dipole orientation, position, wavelength, and indices.
+
+An independent angular quadrature for `NA / n_medium = 0.982`, all indices 1.518,
+wavelength 0.68 microns, and zero stage displacement gave these maximum relative
+intensity errors over `(0,0,0)`, `(0.1,-0.2,0.3)`, `(0.2,0.1,0)`, and `(0,0,0.3)`
+in microns. The fixed dipole was `(0.6,0,0.8)`. These measurements are examples,
+not universal error bounds.
+
+| `grid_size` | Rotating dipole | Fixed dipole |
+|---:|---:|---:|
+| 32 | 9.11% | 10.73% |
+| 64 | 3.52% | 4.11% |
+| 128 | 0.98% | 1.14% |
+| 256 | 0.31% | 0.36% |
+
+When `n_medium == n_coverslip`, construction and pupil refilling require
+`NA <= 0.995 * n_medium`. The apodization diverges at grazing angles in an
+index-matched sample, so grid sampling fails near 90 degrees. Real objectives
+stay below this bound. The bound excludes catastrophic near-grazing sampling;
+it does not promise a particular discretization accuracy for a coarse grid.
+With a higher-index coverslip, Fresnel transmission cancels the medium-grazing
+singularity, so this matched-index bound does not apply.
+
 ## Dipole Orientation Options
 
 The VectorPSF supports both fixed and rotating dipole orientations:
@@ -133,7 +160,7 @@ no single coherent amplitude.
 
 Emitter z and dipole z share one frame: +z points from the coverslip into
 the sample, away from the objective. `DipoleVector(1.0, 0, 1.0)` matches
-lab dipole `[1, 0, 1]/√2`. Opposed objectives still mirror `pz`: construct the
+lab dipole `[1, 0, 1]/√2`. Opposed objectives mirror `pz`: construct the
 bottom fixed dipole as
 `DipoleVector(px, py, -pz)`. See [Multi-channel PSFs](multichannel.md) for
 analyzers, the 4Pi mirror rule, and photon normalization.
@@ -144,14 +171,3 @@ reprinting Lew, Backlund, and Moerner, [*Nano Letters* **13**, 3967 (2013)](http
 Membrane-normal dipoles appear shifted laterally toward the cell edge on
 both sides of focus, with larger shifts farther from focus. This statement
 does not depend on a z-axis or defocus sign convention.
-
-Versions before 0.5.7 had the axial term with the wrong sign, so a fixed
-dipole with both in-plane and axial components came out mirrored in `pz`.
-Pure x, y, and z dipoles and the rotating dipole had correct intensities.
-The `amplitude` and `dipole_fields` of a pure z dipole change sign in 0.5.7.
-For a rotating dipole, `dipole_fields(psf, x, y, z)[3]` and
-`pupil_at(psf, z)[3]` also change sign, with intensities unchanged.
-
-A `VectorPSF` file stores filled pupils. A tilted fixed dipole saved by an
-earlier version keeps the old sign when loaded, and the file does not record
-which sign it holds. Rebuild it from its parameters.
