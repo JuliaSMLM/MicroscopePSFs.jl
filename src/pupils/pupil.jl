@@ -78,8 +78,12 @@ Create a PupilFunction from ZernikeCoefficients type.
 # Returns
 - `PupilFunction` with complex field computed from Zernike polynomials
 
-Amplitude is the sum of the magnitude coefficients times their Zernike modes.
-The default unit piston supplies the unaberrated amplitude; no offset is added.
+Magnitude coefficients are absolute. The amplitude is `Σⱼ zc.mag[j] Zⱼ` with no offset
+added, so unit amplitude needs `zc.mag[1] = 1`, which `ZernikeCoefficients(n)` sets.
+A caller holding offsets from unit amplitude must add 1 to `zc.mag[1]`: `1 + 0.06 Z₅` is
+`mag[1] = 1, mag[5] = 0.06`, while `mag[5] = 0.06` alone gives `0.06 Z₅` and no error.
+With every magnitude zero the field is zero, so a phase-only pupil also needs
+`mag[1] = 1`; `ScalarPSF` and `VectorPSF` refuse a zero field.
 """
 function PupilFunction(nₐ::Real, λ::Real, n::Real,
     zc::ZernikeCoefficients;
