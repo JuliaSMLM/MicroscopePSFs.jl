@@ -16,9 +16,7 @@ Changes a caller has to act on. Full notes for every version are on the
   - All-zero magnitudes now give a zero pupil. `PupilFunction(zc)` returns it with no
     error; `ScalarPSF(...; zernike_coeffs)` and `VectorPSF(...; base_zernike)` refuse it.
     A phase-only pupil needs `mag[1] = 1`.
-  - Coefficients from `ZernikeCoefficients(n)` already carry `mag[1] = 1`. In a normalized
-    pupil, which `ScalarPSF` and `VectorPSF` build from coefficients, phase aberrations on
-    them are unchanged. Magnitude terms set on them now count at full size against the
-    piston, where the added 1 used to halve them; to reproduce an earlier normalized
-    pupil, halve those terms. To reproduce an earlier raw `PupilFunction(zc)` field, add 1
-    to `mag[1]` and change nothing else.
+  - Coefficients from `ZernikeCoefficients(n)` already carry `mag[1] = 1` and need no edit
+    for phase aberrations. Magnitude terms set on them now count at full size against the
+    piston, where the added 1 used to halve them. To keep their earlier size relative to
+    the piston, halve them.
