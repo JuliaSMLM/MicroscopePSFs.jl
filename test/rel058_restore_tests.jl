@@ -291,6 +291,83 @@
     end
 end
 
+@testset "Review 11: default scalar constructor precision" verbose = true begin
+    # Values measured at ef969db with the default grid and no supplied pupil/coefficients.
+    cases = (
+        (
+            "Float16", (Float16(1.4), Float16(0.6), Float16(1.518)),
+            17.076213057723137, 0.16854272117576785 + 2.5585121393234274im,
+        ),
+        (
+            "Int/Float32 aperture", (1, 0.5f0, 1.5f0),
+            12.54287308574597, -1.1175561829939553 + 2.3088947956471757im,
+        ),
+        (
+            "Int/Float32 wavelength", (1.0f0, 1, 1.5f0),
+            3.1357182714364926, 0.8881106210689277 + 1.3768048883784205im,
+        ),
+        (
+            "Int/Float32 index", (1.0f0, 0.5f0, 2),
+            12.54287308574597, -2.4672568901659884 + 0.7612718868196726im,
+        ),
+        (
+            "Float64/Float32 aperture", (1.4, 0.6f0, 1.518f0),
+            17.072242565475804, 0.16548617485477884 + 2.5589890633420924im,
+        ),
+        (
+            "Float64/Float32 wavelength", (1.4f0, 0.6, 1.518f0),
+            17.072243340796028, 0.16548596397054666 + 2.558989085463303im,
+        ),
+        (
+            "Float64/Float32 index", (1.4f0, 0.6f0, 1.518),
+            17.07224198400845, 0.16548616987329187 + 2.558989069930216im,
+        ),
+        (
+            "Float32", (1.4f0, 0.6f0, 1.518f0),
+            17.07224198400845, 0.16548614163186381 + 2.5589890739426595im,
+        ),
+        (
+            "Float64", (1.4, 0.6, 1.518),
+            17.072243922263382, 0.16548602543489196 + 2.5589890708503im,
+        ),
+    )
+
+    function constructor_energy64(pupil)
+        N = size(pupil.field, 1)
+        step = 2 * (pupil.nₐ / pupil.λ) / (N - 1)
+        center = (N + 1) / 2
+        energy = 0.0
+        for i in 1:N, j in 1:N
+            kx, ky = step * (i - center), step * (j - center)
+            if kx^2 + ky^2 < (pupil.nₐ / pupil.λ)^2
+                energy += abs2(ComplexF64(pupil.field[j, i]))
+            end
+        end
+        return energy * Float64(step)^2
+    end
+
+    for (name, optics, center, field) in cases
+        @testset "$name" begin
+            all_float32 = all(x -> x isa Float32, optics)
+            T = all_float32 ? Float32 : Float64
+            tolerance = all_float32 ? sqrt(eps(Float32)) : 32eps(Float64)
+            psf = @inferred ScalarPSF(optics...)
+            @test psf isa ScalarPSF{T}
+            @test psf.pupil isa PupilFunction{T}
+            @test size(psf.pupil.field) == (128, 128)
+            @test isnothing(psf.zernike_coeffs)
+            @test constructor_energy64(psf.pupil) ≈ 1 rtol = max(tolerance, 1.0e-12)
+            @test (@inferred psf(0.0, 0.0, 0.0)) ≈ center rtol = tolerance
+            @test (@inferred amplitude(psf, 0.1, -0.07, 0.12)) ≈ field rtol = tolerance
+            @test (@inferred psf(0.1, -0.07, 0.12)) ≈ abs2(field) rtol = tolerance
+            @test (@inferred psf(0.0f0, 0.0f0, 0.0f0)) isa T
+            @test (@inferred amplitude(psf, 0.0f0, 0.0f0, 0.0f0)) isa Complex{T}
+            @test psf(0.0f0, 0.0f0, 0.0f0) ≈ center rtol = tolerance
+            @test amplitude(psf, 0.0f0, 0.0f0, 0.0f0) ≈ sqrt(center) rtol = tolerance
+        end
+    end
+end
+
 @testset "0.5.8 review 10" verbose = true begin
     M = MicroscopePSFs
 

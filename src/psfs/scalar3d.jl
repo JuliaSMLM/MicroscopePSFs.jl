@@ -67,7 +67,7 @@ function ScalarPSF(
                                   "This is a physical constraint since NA = n·sin(θ). " *
                                   "Consider using VectorPSF for proper handling of index mismatch."))
     
-    T = float(promote_type(typeof(nₐ), typeof(λ), typeof(n)))
+    T = nₐ isa Float32 && λ isa Float32 && n isa Float32 ? Float32 : Float64
     pupil_func = if !isnothing(pupil)
         pupil
     elseif !isnothing(pupil_data)
