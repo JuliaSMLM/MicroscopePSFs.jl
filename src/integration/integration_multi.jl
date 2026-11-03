@@ -143,7 +143,9 @@ Integrate PSF complex amplitude over camera pixels for multiple emitters with op
 - Values represent coherently summed field contributions
 
 # Notes
-- Results are the coherent sum of individual emitter field contributions
+- Results are the coherent sum of individual emitter field contributions.
+- `abs2` of this sum is not the image of mutually incoherent emitters;
+  use `integrate_pixels` for their image.
 - Returns a unit-photon field for each emitter; emitter photons are ignored.
 - Squaring a pixel-integrated field is not pixel-integrated intensity.
 - For incoherent photon counts, use `integrate_pixels`.
@@ -207,9 +209,10 @@ This version takes a camera object instead of explicit pixel edges.
 - Array of integrated complex amplitudes
 - Values represent coherently summed field contributions
 
-This returns a unit-photon field: emitter photons are ignored. Squaring a
-pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
-for intensity images.
+The result is the coherent sum of the emitters' unit-photon fields; emitter
+photons are ignored. Its `abs2` is not the image of mutually incoherent emitters;
+use `integrate_pixels` for their image. Squaring a pixel-integrated field is not
+pixel-integrated intensity.
 """
 function integrate_pixels_amplitude(
     psf::AbstractPSF,

@@ -104,7 +104,22 @@ struct ScalarPSF{T} <: Abstract3DPSF{T}
         nₐ > 0 || throw(ArgumentError("NA must be positive"))
         λ > 0 || throw(ArgumentError("wavelength must be positive"))
         n > 0 || throw(ArgumentError("refractive index must be positive"))
-        new{T}(T(nₐ), T(λ), T(n), pupil, zernike_coeffs)
+        n >= nₐ || throw(
+            ArgumentError(
+                "Numerical aperture nₐ=$nₐ must be <= refractive index n=$n"
+            )
+        )
+        scale = _pupil_field_scale(pupil)
+        isfinite(scale) && scale > 0 || throw(
+            ArgumentError(
+                "Pupil field scale=$scale must be finite and > 0 inside the aperture"
+            )
+        )
+        zc = zernike_coeffs
+        if !isnothing(zc) && !(zc isa ZernikeCoefficients{T})
+            zc = ZernikeCoefficients(T.(zc.mag), T.(zc.phase))
+        end
+        return new{T}(T(nₐ), T(λ), T(n), pupil, zc)
     end
 end
 

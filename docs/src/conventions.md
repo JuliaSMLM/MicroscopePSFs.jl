@@ -35,8 +35,8 @@ PSF models use the following normalization conventions:
 Aberrations are represented using Zernike polynomials:
 
 - Zernike polynomials are normalized to give an RMS of 1.0
-- Coefficients can be set directly via indexing: `zc[5] = 0.5`
-- The OSA indexing scheme is used by default
+- Phase coefficients can be set with `zc[5, :phase] = 0.5` or `zc.phase[5] = 0.5`
+- The Noll indexing scheme is used by default
 - Positive z (defocus) corresponds to the emitter moving away from the objective
 
 ## Units
