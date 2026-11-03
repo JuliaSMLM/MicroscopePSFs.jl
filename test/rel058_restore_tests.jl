@@ -362,6 +362,82 @@
     end
 end
 
+@testset "Review 14: primal field-window boundaries" verbose = true begin
+    M = MicroscopePSFs
+    @testset "Integer-valued dual coordinates" begin
+        pupil = PupilFunction(1.0, 2.0^60, 1.5, ones(ComplexF64, 17, 17))
+        psf = ScalarPSF(pupil.nₐ, pupil.λ, pupil.n, pupil)
+        halfwidth = Int(M._alias_free_halfwidth(pupil))
+        for axis in 1:2, side in (-1, 1)
+            # An Int one unit inside the boundary rounds to it in Float64.
+            inside = side * (halfwidth - 1)
+            xyz = ntuple(i -> i == axis ? inside : 0, 3)
+            @test !iszero(psf(xyz...))
+            for seed in (-1, 1)
+                dual = ForwardDiff.Dual{Nothing}(inside, seed)
+                dual_xyz = ntuple(i -> i == axis ? dual : xyz[i], 3)
+                @test ForwardDiff.value(psf(dual_xyz...)) ≈ psf(xyz...)
+                value = amplitude(pupil, dual_xyz...)
+                primal = complex(
+                    ForwardDiff.value(real(value)), ForwardDiff.value(imag(value))
+                )
+                @test primal ≈ amplitude(pupil, xyz...)
+            end
+        end
+    end
+    for T in (Float32, Float64), N in (16, 17)
+        scalar = ScalarPSF(T(1.2), T(0.6), T(1.33); grid_size = N)
+        optics = (
+            n_medium = T(1.33), n_coverslip = T(1.52),
+            n_immersion = T(1.52), grid_size = N,
+        )
+        fixed = VectorPSF(
+            T(1.2), T(0.6), DipoleVector(T(1), T(0), T(0)); optics...
+        )
+        rotating = VectorPSF(T(1.2), T(0.6); optics...)
+        for (name, psf) in (("scalar", scalar), ("fixed", fixed), ("rotating", rotating))
+            @testset "$T grid $N $name" begin
+                pupil = psf === scalar ? scalar.pupil : first(psf.vector_pupils)
+                halfwidth = M._alias_free_halfwidth(pupil)
+                for axis in 1:2, side in (-one(T), one(T))
+                    boundary = side * halfwidth
+                    xyz = ntuple(i -> i == axis ? boundary : T(i == 3 ? 0.5 : 0.1), 3)
+                    @test iszero(psf(xyz...))
+                    for seed in (-one(T), one(T))
+                        dual = ForwardDiff.Dual{Nothing}(boundary, seed)
+                        dual_xyz = ntuple(i -> i == axis ? dual : xyz[i], 3)
+                        @test iszero(psf(dual_xyz...))
+                        @test all(
+                            field -> all(iszero, field), dipole_fields(psf, dual_xyz...)
+                        )
+                        if psf !== rotating
+                            @test all(iszero, amplitude(psf, dual_xyz...))
+                        end
+                        if psf === scalar
+                            @test iszero(amplitude(pupil, dual_xyz...))
+                        end
+
+                        # Nested AD must also classify the innermost primal boundary.
+                        nested = ForwardDiff.Dual{Nothing}(dual, one(dual) * seed)
+                        nested_xyz = ntuple(i -> i == axis ? nested : xyz[i], 3)
+                        @test iszero(psf(nested_xyz...))
+
+                        # The nearest representable interior point remains inside;
+                        # neither seed direction may expand or shrink the window.
+                        inside = side < 0 ? nextfloat(boundary) : prevfloat(boundary)
+                        outside = side < 0 ? prevfloat(boundary) : nextfloat(boundary)
+                        for (position, is_outside) in ((inside, false), (outside, true))
+                            offset = ForwardDiff.Dual{Nothing}(position, seed)
+                            offset_xyz = ntuple(i -> i == axis ? offset : xyz[i], 3)
+                            @test iszero(psf(offset_xyz...)) == is_outside
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
 @testset "Review 13: Float32 range and precision documentation" verbose = true begin
     function scalar_range_reference(pupil, xyz)
         N = size(pupil.field, 1)

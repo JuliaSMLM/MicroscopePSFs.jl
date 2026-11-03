@@ -52,6 +52,24 @@ kpixelsize(p::PupilFunction) = 2kmax(p) / (size(p.field, 1) - 1)
 # Half width of the sampled pupil's alias-free image field, in emitter coordinates.
 _alias_free_halfwidth(p) = inv(2kpixelsize(p))
 
+# Rounding classifies primal distances without consulting AD tangents at a tie.
+# Keep the original coordinates for the field arithmetic inside the window.
+@inline function _outside_field_window(x::Real, halfwidth::Real)
+    isinf(x) && return true
+    if isinteger(x)
+        value = trunc(x)
+        return value <= -halfwidth || value >= halfwidth
+    end
+    return ceil(x + halfwidth) <= 0 || floor(x - halfwidth) >= 0
+end
+
+# Direct comparison avoids rounding mixed float/integer or rational coordinates.
+@inline function _outside_field_window(
+        x::Union{AbstractFloat, Integer, Rational}, halfwidth::Real
+    )
+    return x <= -halfwidth || x >= halfwidth
+end
+
 """
     copy(p::PupilFunction)
 
@@ -214,7 +232,7 @@ function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
         return Complex{R}(NaN, NaN)
     end
     halfwidth = _alias_free_halfwidth(p)
-    if x <= -halfwidth || x >= halfwidth || y <= -halfwidth || y >= halfwidth
+    if _outside_field_window(x, halfwidth) || _outside_field_window(y, halfwidth)
         return zero(Complex{R})
     end
     sz = size(p.field, 1)
