@@ -256,7 +256,7 @@ function _calculate_field_amplitude(
         return fill!(result, Complex{T}(NaN, NaN))
     end
     halfwidth = _alias_free_halfwidth(pupil)
-    if abs(x) >= halfwidth || abs(y) >= halfwidth
+    if x <= -halfwidth || x >= halfwidth || y <= -halfwidth || y >= halfwidth
         return result
     end
 

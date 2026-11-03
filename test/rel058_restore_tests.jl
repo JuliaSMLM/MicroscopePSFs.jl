@@ -291,6 +291,37 @@
     end
 end
 
+@testset "Review 12: signed integer field-window boundaries" verbose = true begin
+    scalar = ScalarPSF(1.2, 0.6, 1.33; grid_size = 16)
+    fixed = VectorPSF(1.2, 0.6, DipoleVector(1.0, 0.0, 0.0); grid_size = 16)
+    rotating = VectorPSF(1.2, 0.6; grid_size = 16)
+    plane = PlanePSF(scalar; dz = 0.1)
+    for T in (Int8, Int16, Int32, Int64)
+        @testset "$T" begin
+            for extreme in (typemin(T), typemax(T)), axis in 1:2
+                xyz = axis == 1 ? (extreme, zero(T), zero(T)) :
+                    (zero(T), extreme, zero(T))
+                for psf in (scalar, fixed, rotating, plane)
+                    @test iszero(psf(xyz...))
+                    @test all(field -> all(iszero, field), dipole_fields(psf, xyz...))
+                    if psf !== rotating
+                        @test all(iszero, amplitude(psf, xyz...))
+                    end
+                    # A NaN coordinate takes precedence over the lateral window.
+                    nan_xyz = (xyz[1], xyz[2], NaN)
+                    @test isnan(psf(nan_xyz...))
+                    @test all(field -> all(isnan, field), dipole_fields(psf, nan_xyz...))
+                    if psf !== rotating
+                        @test all(isnan, amplitude(psf, nan_xyz...))
+                    end
+                end
+                @test iszero(amplitude(scalar.pupil, xyz...))
+                @test isnan(amplitude(scalar.pupil, xyz[1], xyz[2], NaN))
+            end
+        end
+    end
+end
+
 @testset "Review 11: default scalar constructor precision" verbose = true begin
     # Values measured at ef969db with the default grid and no supplied pupil/coefficients.
     cases = (

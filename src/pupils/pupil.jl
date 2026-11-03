@@ -214,7 +214,7 @@ function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
         return Complex{R}(NaN, NaN)
     end
     halfwidth = _alias_free_halfwidth(p)
-    if abs(x) >= halfwidth || abs(y) >= halfwidth
+    if x <= -halfwidth || x >= halfwidth || y <= -halfwidth || y >= halfwidth
         return zero(Complex{R})
     end
     sz = size(p.field, 1)
