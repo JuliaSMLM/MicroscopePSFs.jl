@@ -252,6 +252,9 @@ function _calculate_field_amplitude(
     # Initialize result vector [Ex, Ey]
     T = promote_type(real(eltype(pupil.Ex.field)), typeof(x), typeof(y), typeof(z))
     result = zeros(Complex{T}, 2)
+    if isnan(x) || isnan(y) || isnan(z)
+        return fill!(result, Complex{T}(NaN, NaN))
+    end
     halfwidth = _alias_free_halfwidth(pupil)
     if abs(x) >= halfwidth || abs(y) >= halfwidth
         return result

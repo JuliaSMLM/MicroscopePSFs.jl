@@ -109,10 +109,10 @@ struct ScalarPSF{T} <: Abstract3DPSF{T}
                 "Numerical aperture nₐ=$nₐ must be <= refractive index n=$n"
             )
         )
-        energy = _pupil_energy(pupil)
-        isfinite(energy) && energy > 0 || throw(
+        scale = _pupil_field_scale(pupil)
+        isfinite(scale) && scale > 0 || throw(
             ArgumentError(
-                "Pupil energy=$energy must be finite and > 0 inside the aperture"
+                "Pupil field scale=$scale must be finite and > 0 inside the aperture"
             )
         )
         zc = zernike_coeffs

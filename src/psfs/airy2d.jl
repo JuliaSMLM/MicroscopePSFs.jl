@@ -11,15 +11,15 @@ function (psf::AiryPSF)(x::Real, y::Real)
 end
 
 function amplitude(psf::AiryPSF{T}, x::Real, y::Real) where {T}
-    R = promote_type(T, typeof(x), typeof(y))
+    C = T === Float32 && x isa Float32 && y isa Float32 ? Float32 : Float64
     r² = x^2 + y^2
     w² = r² * psf.ν^2
     # Series of 2J₁(w)/w; no square root at r = 0, so derivatives survive.
     if w² < 1.0e-10
-        return psf.ν / sqrt(4R(π)) * (1 - w² / 8)
+        return psf.ν / sqrt(4C(π)) * (1 - w² / 8)
     end
     w = sqrt(r²) * psf.ν
-    return psf.ν / sqrt(4R(π)) * (2 * besselj1(w) / w)
+    return psf.ν / sqrt(4C(π)) * (2 * besselj1(w) / w)
 end
 
 

@@ -8,9 +8,9 @@
 Gaussian PSF intensity. Radially symmetric with standard deviation σ.
 """
 function (psf::GaussianPSF{T})(x::Real, y::Real) where {T}
-    R = promote_type(T, typeof(x), typeof(y))
+    C = T === Float32 && x isa Float32 && y isa Float32 ? Float32 : Float64
     r² = x^2 + y^2
-    return 1 / (2R(π) * psf.σ^2) * exp(-r² / (2psf.σ^2))
+    return 1 / (2C(π) * psf.σ^2) * exp(-r² / (2psf.σ^2))
 end
 
 # All intensity integration routes dispatch here after choosing their pixel region.

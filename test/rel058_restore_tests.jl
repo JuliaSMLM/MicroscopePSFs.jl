@@ -65,7 +65,7 @@
         for args in ((), (nothing,), (ZernikeCoefficients(1),))
             @test_throws ArgumentError ScalarPSF(1.4, 0.6, 1.518, zero_pupil, args...)
         end
-        @test_throws r"energy=0.0.*> 0" ScalarPSF(1.4, 0.6, 1.518, zero_pupil)
+        @test_throws r"scale=0.0.*> 0" ScalarPSF(1.4, 0.6, 1.518, zero_pupil)
         @test_throws ArgumentError ScalarPSF(1.4, 0.6, 1.518; pupil = zero_pupil)
         pupil = PupilFunction(1.4, 0.6, 1.518, ones(ComplexF64, 16, 16))
         psf = ScalarPSF(1.4, 0.6, 1.518, pupil)
@@ -288,5 +288,199 @@
         argument_type = Core.eval(Main, Meta.parse(type_name))
         @test hasmethod(GaussianPSF, Tuple{argument_type})
         @test GaussianPSF(0.15) isa GaussianPSF
+    end
+end
+
+@testset "0.5.8 review 10" verbose = true begin
+    M = MicroscopePSFs
+
+    # Independent quadrature with the grid arithmetic used at ef969db.
+    function reference_samples(pupil)
+        N = size(pupil.field, 1)
+        step = 2 * (pupil.nₐ / pupil.λ) / (N - 1)
+        center = (N + 1) / 2
+        samples = [
+            (i, j, step * (i - center), step * (j - center))
+                for i in 1:N for j in 1:N
+                if (step * (i - center))^2 + (step * (j - center))^2 <
+                (pupil.nₐ / pupil.λ)^2
+        ]
+        return step, samples
+    end
+    function reference_amplitude(pupil, x, y, z)
+        step, samples = reference_samples(pupil)
+        result = zero(ComplexF64)
+        for (i, j, kx, ky) in samples
+            kz = sqrt(complex((pupil.n / pupil.λ)^2 - kx^2 - ky^2))
+            result += pupil.field[j, i] * exp(2π * im * (x * kx + y * ky + z * kz))
+        end
+        return result * step^2
+    end
+    function reference_energy(pupil)
+        step, samples = reference_samples(pupil)
+        return sum(abs2(ComplexF64(pupil.field[j, i])) for (i, j, _, _) in samples) *
+            step^2
+    end
+
+    @testset "Review 10.1: odd-grid aperture and Float32 quadrature" begin
+        tolerance = sqrt(eps(Float32))
+        for N in (9, 17, 25, 33)
+            psf = ScalarPSF(1.4f0, 0.6f0, 1.518f0; grid_size = N)
+            @test reference_energy(psf.pupil) ≈ 1 rtol = tolerance
+            if N == 17
+                @test length(reference_samples(psf.pupil)[2]) == 197
+                @test psf(0.0f0, 0.0f0, 0.0f0) ≈ 16.75867889171337 rtol = tolerance
+            end
+            for xyz in ((0.0f0, 0.0f0, 0.0f0), (0.1f0, -0.07f0, 0.12f0))
+                reference = reference_amplitude(psf.pupil, Float64.(xyz)...)
+                @test amplitude(psf, xyz...) ≈ reference rtol = tolerance
+                @test psf(xyz...) ≈ abs2(reference) rtol = tolerance
+                @test amplitude(psf, xyz...) ≈ amplitude(psf, Float64.(xyz)...) rtol =
+                    tolerance
+                z = ForwardDiff.Dual{Nothing}(xyz[3], 1.0f0)
+                dual_amplitude = amplitude(psf, xyz[1], xyz[2], z)
+                dual_value = complex(
+                    ForwardDiff.value(real(dual_amplitude)),
+                    ForwardDiff.value(imag(dual_amplitude))
+                )
+                @test dual_value ≈ reference rtol = 32eps(Float64)
+                @test ForwardDiff.derivative(t -> psf(xyz[1], xyz[2], t), xyz[3]) ≈
+                    ForwardDiff.derivative(
+                    t -> abs2(reference_amplitude(psf.pupil, xyz[1], xyz[2], t)),
+                    xyz[3]
+                ) rtol = 64eps(Float64) atol = 64eps(Float64)
+            end
+            # The aperture and normalization also agree for an arbitrary complex field.
+            field = ComplexF32[
+                complex(1 + i / N, j / N) for j in 1:N, i in 1:N
+            ]
+            pupil = PupilFunction(1.4f0, 0.6f0, 1.518f0, field)
+            @test M._pupil_energy(pupil) ≈ reference_energy(pupil) rtol = tolerance
+            M.normalize!(pupil)
+            @test reference_energy(pupil) ≈ 1 rtol = tolerance
+            @test amplitude(pupil, 0.0f0, 0.0f0, 0.0f0) ≈
+                reference_amplitude(pupil, 0.0, 0.0, 0.0) rtol = tolerance
+            # Exactly representable optics allow a separate Float64 PSF comparison.
+            single = ScalarPSF(1.0f0, 0.5f0, 1.5f0; grid_size = N)
+            double = ScalarPSF(1.0, 0.5, 1.5; grid_size = N)
+            @test single(0.1f0, -0.07f0, 0.12f0) ≈
+                double(Float64(0.1f0), Float64(-0.07f0), Float64(0.12f0)) rtol =
+                tolerance
+        end
+    end
+
+    @testset "Review 10.2: NaN propagation outside the window" begin
+        for T in (Float32, Float64)
+            scalar = ScalarPSF(T(1.4), T(0.6), T(1.518); grid_size = 16)
+            fixed = VectorPSF(
+                T(1.4), T(0.6), DipoleVector(T(1), T(0), T(0)); grid_size = 16
+            )
+            rotating = VectorPSF(T(1.4), T(0.6); grid_size = 16)
+            for nan_axis in 1:3, outside_axis in 1:2, outside in (-20, 20, -Inf, Inf)
+                nan_axis == outside_axis && continue
+                xyz = ntuple(3) do axis
+                    axis == nan_axis ? T(NaN) : axis == outside_axis ? T(outside) : zero(T)
+                end
+                for psf in (scalar, fixed, rotating)
+                    @test isnan(psf(xyz...))
+                    if psf !== rotating
+                        @test all(isnan, amplitude(psf, xyz...))
+                    end
+                    @test all(field -> all(isnan, field), dipole_fields(psf, xyz...))
+                end
+                @test isnan(amplitude(scalar.pupil, xyz...))
+            end
+            for psf in (scalar, fixed, rotating), outside in (-20, 20, -Inf, Inf)
+                @test isnan(psf(T(outside), T(-outside), T(NaN)))
+                if psf !== rotating
+                    @test all(isnan, amplitude(psf, T(outside), T(-outside), T(NaN)))
+                end
+            end
+        end
+    end
+
+    # These formulas preserve the ef969db arithmetic for inputs outside all-Float32.
+    function reference_airy(psf, x, y)
+        r² = x^2 + y^2
+        w² = r² * psf.ν^2
+        w² < 1.0e-10 && return psf.ν / sqrt(4π) * (1 - w² / 8)
+        w = sqrt(r²) * psf.ν
+        return psf.ν / sqrt(4π) * (2 * besselj1(w) / w)
+    end
+    function reference_gaussian(psf, x, y)
+        return 1 / (2π * psf.σ^2) * exp(-(x^2 + y^2) / (2psf.σ^2))
+    end
+
+    @testset "Review 10.3: Float32 scope and inferred mixed inputs" begin
+        for T in (Float16, Float32, Float64)
+            airy = AiryPSF(T(1.4), T(0.6))
+            gaussian = GaussianPSF(T(0.13))
+            pupil = PupilFunction(T(1.4), T(0.6), T(1.518), ones(Complex{T}, 17, 17))
+            scalar = ScalarPSF(T(1.4), T(0.6), T(1.518), pupil)
+            for X in (Float16, Float32, Float64, Int), Y in (Float32, Float64, Int)
+                R = T === Float32 && X === Float32 && Y === Float32 ? Float32 : Float64
+                for (x, y) in ((zero(X), zero(Y)), (one(X), zero(Y)))
+                    for psf in (airy, gaussian)
+                        value = @inferred psf(x, y)
+                        field = @inferred amplitude(psf, x, y)
+                        @test value isa R
+                        @test field isa R
+                        if R === Float64
+                            reference = if psf isa AiryPSF
+                                reference_airy(psf, x, y)
+                            else
+                                sqrt(reference_gaussian(psf, x, y))
+                            end
+                            @test field === reference
+                            @test value === (
+                                psf isa AiryPSF ? abs2(reference) :
+                                    reference_gaussian(psf, x, y)
+                            )
+                        end
+                    end
+                    xyz = (x, y, zero(Y))
+                    value = @inferred scalar(xyz...)
+                    field = @inferred amplitude(scalar, xyz...)
+                    @test value isa R
+                    @test field isa Complex{R}
+                    if R === Float64
+                        reference = reference_amplitude(pupil, xyz...)
+                        @test field ≈ reference rtol = 32eps(Float64)
+                        @test value ≈ abs2(reference) rtol = 64eps(Float64)
+                    end
+                end
+                # Early returns have the same inferred type as interior evaluation.
+                @test (@inferred amplitude(scalar, X(20), zero(Y), zero(Y))) isa Complex{R}
+                @test (@inferred scalar(X(20), zero(Y), zero(Y))) isa R
+            end
+        end
+    end
+
+    @testset "Review 10.4: nonzero positional pupil below energy range" begin
+        pupil = PupilFunction(
+            1.4f0, 0.6f0, 1.518f0, fill(ComplexF32(1.0f-23), 16, 16)
+        )
+        @test M._pupil_energy(pupil) == 0.0f0
+        original = copy(pupil.field)
+        for args in ((), (nothing,), (ZernikeCoefficients(1; T = Float32),))
+            psf = ScalarPSF(1.4f0, 0.6f0, 1.518f0, pupil, args...)
+            @test psf.pupil === pupil
+            @test pupil.field == original
+            @test (@inferred psf(0.0, 0.0, 0.0)) ≈ 2.7715255298306554e-44
+            @test (@inferred psf(0.0f0, 0.0f0, 0.0f0)) > 0.0f0
+        end
+        # Nonzero samples outside the aperture do not make a zero pupil usable.
+        outside = zeros(ComplexF32, 16, 16)
+        outside[1, 1] = 1.0f0
+        @test_throws ArgumentError ScalarPSF(
+            1.4f0, 0.6f0, 1.518f0, PupilFunction(1.4f0, 0.6f0, 1.518f0, outside)
+        )
+        for value in (ComplexF32(NaN), ComplexF32(Inf))
+            field = copy(original)
+            field[8, 8] = value
+            @test_throws ArgumentError ScalarPSF(
+                1.4f0, 0.6f0, 1.518f0, PupilFunction(1.4f0, 0.6f0, 1.518f0, field)
+            )
+        end
     end
 end
