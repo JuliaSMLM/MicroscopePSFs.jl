@@ -10,13 +10,20 @@ Gaussian PSF intensity. Radially symmetric with standard deviation σ.
 function (psf::GaussianPSF{T})(x::Real, y::Real) where {T}
     C = T === Float32 && x isa Float32 && y isa Float32 ? Float32 : Float64
     if C === Float32
-        width² = Float64(psf.σ)^2
-        radius² = Float64(x)^2 + Float64(y)^2
-        return Float32(exp(-radius² / (2width²)) / (2π * width²))
+        return Float32(_gaussian_intensity_float64(psf, x, y))
     end
     r² = x^2 + y^2
     return 1 / (2C(π) * psf.σ^2) * exp(-r² / (2psf.σ^2))
 end
+
+function _gaussian_intensity_float64(psf::GaussianPSF{Float32}, x::Real, y::Real)
+    width² = Float64(psf.σ)^2
+    radius² = Float64(x)^2 + Float64(y)^2
+    return exp(-radius² / (2width²)) / (2π * width²)
+end
+
+_amplitude_float64(psf::GaussianPSF{Float32}, x::Real, y::Real) =
+    sqrt(_gaussian_intensity_float64(psf, x, y))
 
 # All intensity integration routes dispatch here after choosing their pixel region.
 function integrate_pixels!(
@@ -66,7 +73,10 @@ function integrate_pixels!(
 end
 
 
-function amplitude(psf::GaussianPSF, x::Real, y::Real)
+function amplitude(psf::GaussianPSF{T}, x::Real, y::Real) where {T}
+    if T === Float32 && x isa Float32 && y isa Float32
+        return Float32(_amplitude_float64(psf, x, y))
+    end
     return sqrt(psf(x, y))
 end
 

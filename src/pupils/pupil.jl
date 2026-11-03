@@ -239,10 +239,17 @@ function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
                 kx, ky, kr2 = Float32(kx), Float32(ky), Float32(kr2)
             end
             delta = k₀² - kr2
-            kz = all_float32 && delta >= 0 ? complex(sqrt(delta)) : sqrt(complex(delta))
-            phase = 2C(π) * (x * kx + y * ky + z * kz)
             field = all_float32 ? ComplexF64(p.field[j, i]) : p.field[j, i]
-            result += field * exp(im * phase)
+            if all_float32 && delta >= 0
+                kz = complex(sqrt(delta))
+                phase = 2C(π) * (x * kx + y * ky + z * kz)
+                result += field * exp(im * phase)
+            else
+                kz = sqrt(complex(delta))
+                phase = 2C(π) * (x * kx + y * ky + z * kz)
+                propagator = all_float32 ? exp(im * ComplexF64(phase)) : exp(im * phase)
+                result += field * propagator
+            end
         end
     end
 

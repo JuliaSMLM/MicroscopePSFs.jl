@@ -475,10 +475,95 @@ end
                 @test isinf(value) == isinf(expected)
                 @test iszero(value) == iszero(expected)
                 @test value ≈ expected rtol = 2eps(Float32) atol = eps(0.0f0)
-                @test (@inferred amplitude(psf, x, y)) isa Float32
+                field = @inferred amplitude(psf, x, y)
+                expected_field = Float32(sqrt(reference))
+                @test field isa Float32
+                @test isinf(field) == isinf(expected_field)
+                @test iszero(field) == iszero(expected_field)
+                @test field ≈ expected_field rtol = 2eps(Float32) atol = eps(0.0f0)
             end
         end
         @test GaussianPSF(1.0f-20)(1.0f-19, 0.0f0) ≈ 3.069701f17
+    end
+end
+
+@testset "Review 16: Float32 rounding after final operations" verbose = true begin
+    function gaussian_field_reference(psf, x, y)
+        σ = BigFloat(psf.σ)
+        return exp(-(BigFloat(x)^2 + BigFloat(y)^2) / (4σ^2)) / (sqrt(2big(π)) * σ)
+    end
+    function airy_field_reference(psf, x, y)
+        ν = iszero(psf.ν) || !isfinite(psf.ν) ?
+            2big(π) * BigFloat(psf.nₐ) / BigFloat(psf.λ) : BigFloat(psf.ν)
+        w² = (BigFloat(x)^2 + BigFloat(y)^2) * ν^2
+        # Independent convergent Bessel series at the tested radii (w < 9).
+        term = one(w²)
+        series = term
+        for m in 1:160
+            term *= -w² / (4m * (m + 1))
+            series += term
+        end
+        return ν / sqrt(4big(π)) * series
+    end
+    function scalar_field_reference(psf, x, y, z)
+        p = psf isa PupilFunction ? psf : psf.pupil
+        N = size(p.field, 1)
+        step = 2 * (p.nₐ / p.λ) / (N - 1)
+        center = (N + 1) / 2
+        limit = (p.nₐ / p.λ)^2
+        result = zero(Complex{BigFloat})
+        for i in 1:N, j in 1:N
+            kx, ky = Float64(step) * (i - center), Float64(step) * (j - center)
+            kx^2 + ky^2 < limit || continue
+            kz = sqrt(complex(BigFloat((p.n / p.λ)^2) - BigFloat(kx)^2 - BigFloat(ky)^2))
+            phase = 2big(π) * (BigFloat(x) * kx + BigFloat(y) * ky + BigFloat(z) * kz)
+            result += Complex{BigFloat}(p.field[j, i]) * exp(im * phase)
+        end
+        return result * BigFloat(step)^2
+    end
+    function raw_scalar(field, wavelength = 0.5f0)
+        pupil = PupilFunction(1.0f0, wavelength, 1.5f0, fill(ComplexF32(field), 17, 17))
+        return ScalarPSF(1.0f0, wavelength, 1.5f0, pupil)
+    end
+    setprecision(BigFloat, 256) do
+        @testset "Gaussian and Airy amplitudes" begin
+            for width in (0.15f0, 1.0f-20, 1.0f-40, 1.0f20, 1.0f25, floatmax(Float32))
+                psf = GaussianPSF(width)
+                field = @inferred amplitude(psf, 0.0f0, 0.0f0)
+                expected = Float32(gaussian_field_reference(psf, 0, 0))
+                @test field isa Float32
+                @test field ≈ expected rtol = 2eps(Float32) atol = eps(0.0f0)
+            end
+            for wavelength in (0.5f0, 1.0f-20, 1.0f20)
+                psf = AiryPSF(1.0f0, wavelength)
+                for x in (0.0f0, wavelength)
+                    field = @inferred amplitude(psf, x, 0.0f0)
+                    reference = airy_field_reference(psf, x, 0)
+                    @test field isa Float32
+                    @test field ≈ Float32(reference) rtol = 32eps(Float32) atol = eps(0.0f0)
+                    @test (@inferred psf(x, 0.0f0)) ≈ Float32(abs2(reference)) rtol =
+                        32eps(Float32) atol = eps(0.0f0)
+                end
+            end
+        end
+        @testset "Pupil amplitude final quadrature weight" begin
+            for (field, wavelength) in ((1.0f0, 0.5f0), (1.0f37, 1.0f10), (1.0f37, 1.0f21))
+                psf = raw_scalar(field, wavelength)
+                reference = scalar_field_reference(psf, 0, 0, 0)
+                actual = amplitude(psf.pupil, 0.0f0, 0.0f0, 0.0f0)
+                @test actual ≈ ComplexF32(reference) rtol = 32eps(Float32)
+            end
+            for N in (16, 17)
+                pupil = PupilFunction(
+                    1.5f0, 0.5f0, 1.0f0, fill(ComplexF32(1.0f-38), N, N)
+                )
+                reference = scalar_field_reference(pupil, 0, 0, -10)
+                actual = @inferred amplitude(pupil, 0.0f0, 0.0f0, -10.0f0)
+                @test actual isa ComplexF32
+                @test isfinite(actual)
+                @test actual ≈ ComplexF32(reference) rtol = sqrt(eps(Float32))
+            end
+        end
     end
 end
 
