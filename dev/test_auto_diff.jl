@@ -22,7 +22,7 @@ camera = IdealCamera(nx, ny, pixel_size)
 # Create PSF with astigmatism
 zc = ZernikeCoefficients(15)
 zc.phase[6] = 0.5  # Add vertical astigmatism
-psf = ScalarPSF(na, λ, n, coeffs=zc)
+psf = ScalarPSF(na, λ, n; zernike_coeffs = zc)
 psf = VectorPSF(na, λ; base_zernike=zc)  
 
 # Calculate the derivative with respect to x

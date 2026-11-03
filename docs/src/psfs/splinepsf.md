@@ -114,6 +114,9 @@ spline_psf_auto = SplinePSF(scalar_psf,
                            axial_step=0.2)
 ```
 
+Nonfinite evaluation coordinates return NaN in both 2D and 3D. Finite
+coordinates outside the sampled range return zero.
+
 ## Performance Considerations
 
 - **Initial Construction**: Creating the SplinePSF can be slow for complex source PSFs
@@ -129,14 +132,18 @@ spline_psf_auto = SplinePSF(scalar_psf,
 
 SplinePSF can be used with experimentally measured PSF data:
 
+This example reads an HDF5 dataset named `psf`, stored in `[y, x, z]` order.
+
 ```julia
 # Define physical coordinates for the experimental PSF
+using HDF5
+
 pixel_size = 0.1  # μm in the image
 z_step = 0.2      # μm between z-planes
-measured_psf = load_experimental_psf("path/to/measured_psf.h5")
+measured_psf = h5read("path/to/measured_psf.h5", "psf")
 
 # Create coordinate ranges
-nx, ny, nz = size(measured_psf)
+ny, nx, nz = size(measured_psf)
 x_center = nx ÷ 2
 y_center = ny ÷ 2
 z_center = nz ÷ 2

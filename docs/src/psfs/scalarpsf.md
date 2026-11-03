@@ -43,15 +43,20 @@ ScalarPSF(nₐ::Real, λ::Real, n::Real;
   `pupil_data` retains its own grid.
 
 Supply one of `pupil`, `pupil_data`, or `zernike_coeffs`. If none is provided,
-an unaberrated pupil is created using `grid_size`.
+an unaberrated pupil is created using `grid_size`. Stored Zernike coefficients
+are converted to the PSF element type. All-Float32 optical parameters and
+coordinates produce Float32 values. A supplied pupil must have finite positive
+energy inside the circular aperture.
 
 ## Pupil sampling and field of view
 
-The PSF intensity repeats in x and y with period
-`L = (grid_size - 1) * λ / (2nₐ)` in microns, using the actual pupil grid size.
-For rendering, keep `support` below `L/2` or use a frame narrower than `L`.
-Increasing `grid_size` widens `L` and improves defocused intensity accuracy.
-For NA 1.4, wavelength 0.6 microns, and grid 128, `L ≈ 27.21` microns.
+The computed field is zero at and beyond `L/2` in either lateral coordinate
+relative to the emitter, where `L = (grid_size - 1) * λ / (2nₐ)` in microns uses
+the actual pupil grid size. A larger `grid_size` widens this field.
+For NA 1.4, wavelength 0.6 microns, and grid 128, `L ≈ 27.21` microns and
+`L/2 ≈ 13.61` microns. `support=Inf` selects the whole camera; explicit support
+and spline sampling ranges may extend beyond the field.
+Increasing `grid_size` also improves defocused intensity accuracy.
 
 For NA 1.4, wavelength 0.6 microns, index 1.518, and 0.5 rad RMS astigmatism
 (`zc.phase[6] = 0.5`), the following maximum absolute intensity errors were

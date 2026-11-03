@@ -77,4 +77,7 @@ airy_equivalent = AiryPSF(gaussian_psf, λ=0.532)
 4. **No Polarization**: Doesn't model polarization effects
 5. **No Refractive Index Mismatches**: Assumes uniform media
 
-For standard usage patterns, camera integration, and comparison with other PSF types, see the [PSF Overview](overview.md).
+For standard usage patterns, camera integration, and comparison with other PSF
+types, see the [PSF Overview](overview.md).
+
+All-Float32 optical parameters and evaluation coordinates produce Float32 values.

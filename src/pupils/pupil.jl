@@ -49,6 +49,9 @@ k₀(p::PupilFunction) = p.n / p.λ
 Get pupil plane sampling in μm⁻¹"""
 kpixelsize(p::PupilFunction) = 2kmax(p) / (size(p.field, 1) - 1)
 
+# Half width of the sampled pupil's alias-free image field, in emitter coordinates.
+_alias_free_halfwidth(p) = inv(2kpixelsize(p))
+
 """
     copy(p::PupilFunction)
 
@@ -70,10 +73,10 @@ Create a PupilFunction from ZernikeCoefficients type.
 - `zc`: ZernikeCoefficients containing amplitude and phase coefficients
 
 # Keyword Arguments
-- `grid_size`: Size of square sampling grid (default: 64). The image intensity repeats
-  in x and y with period `L = (grid_size - 1) * λ / (2nₐ)` in microns. Keep render
-  `support` below `L/2` or the frame narrower than `L`. A larger grid widens `L`.
-  For `grid_size=128`, NA 1.4 and λ 0.6 microns, `L ≈ 27.21` microns.
+- `grid_size`: Size of square sampling grid (default: 64). The field is zero at
+  and beyond `L/2` in either lateral coordinate relative to the emitter, where
+  `L = (grid_size - 1) * λ / (2nₐ)` in microns. A larger `grid_size` widens the field.
+  For grid 128, NA 1.4 and λ 0.6 microns, `L/2 ≈ 13.61` microns.
 
 # Returns
 - `PupilFunction` with complex field computed from Zernike polynomials
@@ -189,12 +192,19 @@ Calculate complex amplitude from pupil function integration.
 - `y::Real`: Y position in μm
 - `z::Real`: Z position in μm"""
 function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
+    R = promote_type(T, typeof(x), typeof(y), typeof(z))
+    # Preserve the interior arithmetic except when all inputs are Float32.
+    C = R === Float32 ? Float32 : Float64
+    halfwidth = _alias_free_halfwidth(p)
+    if abs(x) >= halfwidth || abs(y) >= halfwidth
+        return zero(Complex{R})
+    end
     sz = size(p.field, 1)
     kpix = kpixelsize(p)
     # k0_center = (sz + 1) ÷ 2
-    k0_center = (sz + 1) / 2
+    k0_center = C((sz + 1) / 2)
 
-    result = zero(Complex{T})
+    result = zero(Complex{R})
     kmax² = kmax(p)^2
     k₀² = k₀(p)^2
 
@@ -205,7 +215,7 @@ function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
 
         if kr2 < kmax²
             kz = sqrt(complex(k₀² - kr2))
-            phase = 2π * (x * kx + y * ky + z * kz)
+            phase = 2C(π) * (x * kx + y * ky + z * kz)
             result += p.field[j, i] * exp(im * phase)
         end
     end

@@ -3,6 +3,13 @@
 Changes a caller has to act on. Full notes for every version are on the
 [releases page](https://github.com/JuliaSMLM/MicroscopePSFs.jl/releases).
 
+## [Unreleased]
+
+- Vector pupils refuse numerical aperture above the immersion refractive index.
+- Positional `ScalarPSF` refuses zero-energy pupils and NA above the medium index.
+- Pupil PSFs are zero at and beyond L/2 from the emitter in either lateral coordinate,
+  where L = (grid_size - 1) λ / (2 NA); images on frames wider than L change.
+
 ## [0.5.7] - 2026-11-02
 
 ### Changed

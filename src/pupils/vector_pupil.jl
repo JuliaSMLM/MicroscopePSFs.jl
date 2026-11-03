@@ -4,6 +4,7 @@
     VectorPupilFunction{T}
 
 Vector pupil function storing Ex,Ey field components as PupilFunctions.
+The numerical aperture must satisfy `nₐ <= n_immersion`.
 
 # Fields
 - `nₐ::T`: Numerical aperture
@@ -31,6 +32,11 @@ struct VectorPupilFunction{T<:AbstractFloat}
         n_medium > 0 || throw(ArgumentError("n_medium must be positive"))
         n_coverslip > 0 || throw(ArgumentError("n_coverslip must be positive"))
         n_immersion > 0 || throw(ArgumentError("n_immersion must be positive"))
+        nₐ <= n_immersion || throw(
+            ArgumentError(
+                "Numerical aperture nₐ=$nₐ must be <= n_immersion=$n_immersion"
+            )
+        )
         
         size(Ex.field) == size(Ey.field) || 
             throw(ArgumentError("Ex and Ey pupils must have same size"))
@@ -54,10 +60,10 @@ Create a vector pupil function with empty field components.
 - `n_medium`: Sample medium refractive index
 - `n_coverslip`: Cover slip refractive index
 - `n_immersion`: Immersion medium refractive index
-- `grid_size`: Size of pupil grid (grid_size × grid_size). The image intensity repeats
-  in x and y with period `L = (grid_size - 1) * λ / (2nₐ)` in microns. Keep render
-  `support` below `L/2` or the frame narrower than `L`. A larger grid widens `L`.
-  For `grid_size=128`, NA 1.4 and λ 0.6 microns, `L ≈ 27.21` microns.
+- `grid_size`: Size of pupil grid (grid_size × grid_size). The field is zero at
+  and beyond `L/2` in either lateral coordinate relative to the emitter, where
+  `L = (grid_size - 1) * λ / (2nₐ)` in microns. A larger `grid_size` widens the field.
+  For grid 128, NA 1.4 and λ 0.6 microns, `L/2 ≈ 13.61` microns.
 
 # Returns
 - `VectorPupilFunction` with zero-initialized field components

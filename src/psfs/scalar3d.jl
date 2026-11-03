@@ -14,25 +14,34 @@ Create a scalar 3D PSF with the specified optical parameters.
 - `λ`: Wavelength in microns
 - `n`: Refractive index of the medium
 
+The numerical aperture must satisfy `nₐ <= n`, including positional construction
+with a supplied pupil.
+
 # Keyword Arguments
 - `pupil`: Optional pre-created PupilFunction
 - `pupil_data`: Optional complex matrix to initialize the pupil function
 - `zernike_coeffs`: Optional ZernikeCoefficients for aberrations
 - `grid_size`: Generated pupil grid size (default: 128); a supplied `pupil` or
-  `pupil_data` retains its own grid. The intensity repeats in x and y with period
-  `L = (grid_size - 1) * λ / (2nₐ)` in microns, using the actual pupil grid size.
-  Keep render `support` below `L/2` or the frame narrower than `L`. A larger grid
-  widens `L`. For NA 1.4 and λ 0.6 microns, grid 128 gives `L ≈ 27.21` microns.
+  `pupil_data` retains its own grid. The field is zero at and beyond `L/2` in
+  either lateral coordinate relative to the emitter, where
+  `L = (grid_size - 1) * λ / (2nₐ)` in microns uses the actual pupil grid size.
+  A larger `grid_size` widens the field. For NA 1.4 and λ 0.6 microns, grid 128
+  gives `L/2 ≈ 13.61` microns.
   Grid 128 takes about four times the evaluation time of grid 64. See the
   ScalarPSF guide for the optics, accuracy, and tabulation measurements.
 
 # Returns
 - `ScalarPSF`: 3D PSF with scalar diffraction model
 
+Evaluate intensity with `psf(x, y, z)`, the squared magnitude of the complex
+field at coordinates in microns relative to the emitter.
+
 # Notes
 - Exactly one of `pupil`, `pupil_data`, or `zernike_coeffs` should be provided
 - If none are provided, creates an unaberrated pupil
-- The constructed PSF stores the provided Zernike coefficients for later use
+- The constructed PSF stores Zernike coefficients converted to its element type
+- All-Float32 optical parameters and evaluation coordinates produce Float32 values
+- A supplied pupil must have finite positive energy inside the circular aperture
 
 # Examples
 ```julia
@@ -41,7 +50,7 @@ psf = ScalarPSF(1.4, 0.532, 1.518)
 
 # Create PSF with Zernike aberrations
 zc = ZernikeCoefficients(15)
-add_astigmatism!(zc, 0.5)  # Add astigmatism
+zc.phase[5] = 0.5  # Add 0.5 rad RMS of oblique astigmatism
 psf = ScalarPSF(1.4, 0.532, 1.518; zernike_coeffs=zc)
 ```
 """
@@ -58,13 +67,14 @@ function ScalarPSF(
                                   "This is a physical constraint since NA = n·sin(θ). " *
                                   "Consider using VectorPSF for proper handling of index mismatch."))
     
-    # Rest of the constructor remains the same
+    T = float(promote_type(typeof(nₐ), typeof(λ), typeof(n)))
     pupil_func = if !isnothing(pupil)
         pupil
     elseif !isnothing(pupil_data)
         PupilFunction(nₐ, λ, n, pupil_data)
     else
-        zernike_coeffs_out = isnothing(zernike_coeffs) ? ZernikeCoefficients(1) : zernike_coeffs
+        zernike_coeffs_out = isnothing(zernike_coeffs) ?
+            ZernikeCoefficients(1; T = T) : zernike_coeffs
         PupilFunction(nₐ, λ, n, zernike_coeffs_out; grid_size = Int(grid_size))
     end
 
@@ -95,21 +105,6 @@ function amplitude(psf::ScalarPSF{T}, x::Real, y::Real, z::Real) where {T}
     return amplitude(psf.pupil, x, y, z)
 end
 
-"""
-    (psf::ScalarPSF)(x::Real, y::Real, z::Real)
-
-Evaluate PSF intensity at the given 3D position.
-
-# Arguments
-- `x, y, z`: Position in microns relative to PSF center
-
-# Returns
-- Intensity value at the specified position
-
-# Notes
-- Calculated as |amplitude|² of the complex field
-- Follows standard operator syntax: `intensity = psf(x, y, z)`
-"""
 function (psf::ScalarPSF)(x::Real, y::Real, z::Real)
     return abs2(amplitude(psf, x, y, z))
 end

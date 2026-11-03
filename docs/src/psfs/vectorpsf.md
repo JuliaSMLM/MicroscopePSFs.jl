@@ -38,18 +38,23 @@ VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
 
 ### Optional Parameters
 
+The numerical aperture must satisfy `nₐ <= n_immersion`.
+
 - `base_pupil`: Optional base aberration pupil function (default: none)
 - `base_zernike`: Zernike coefficients for aberrations (default: none)
 - `n_medium`: Refractive index of the sample medium (default: 1.33, water)
 - `n_immersion`: Refractive index of the immersion medium (default: 1.52, oil)
 - `n_coverslip`: Refractive index of the coverslip (default: 1.52, glass)
 - `z_stage`: Distance the sample stage was moved (μm) (default: 0.0)
-- `grid_size`: Size of grid for pupil function (default: 128)
+- `grid_size`: Generated pupil grid size (default: 128); a supplied `base_pupil`
+  retains its own grid
 
-The PSF intensity repeats in x and y with period
-`L = (grid_size - 1) * λ / (2nₐ)` in microns. For rendering, keep `support` below
-`L/2` or use a frame narrower than `L`. A larger `grid_size` widens `L`.
-For NA 1.4, wavelength 0.6 microns, and grid 128, `L ≈ 27.21` microns.
+The computed field is zero at and beyond `L/2` in either lateral coordinate
+relative to the emitter, where `L = (grid_size - 1) * λ / (2nₐ)` in microns uses
+the actual pupil grid size. A larger `grid_size` widens this field.
+For NA 1.4, wavelength 0.6 microns, and grid 128, `L ≈ 27.21` microns and
+`L/2 ≈ 13.61` microns. `support=Inf` selects the whole camera; explicit support
+and spline sampling ranges may extend beyond the field.
 
 ## Pupil sampling and high-NA accuracy
 
@@ -139,7 +144,7 @@ psf = VectorPSF(
 
 # Create a PSF with aberrations
 zc = ZernikeCoefficients(15)
-zc[11] = 0.5  # Add spherical aberration (normalized to rms = 1.0)
+zc.phase[11] = 0.5  # Add 0.5 rad RMS of spherical aberration
 psf_aberrated = VectorPSF(
     1.4, 0.532, dipole_z,
     n_medium=1.33,

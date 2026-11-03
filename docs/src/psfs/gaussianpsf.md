@@ -27,7 +27,7 @@ photons.
 ## Constructor and Parameters
 
 ```julia
-GaussianPSF(σ::Real)
+GaussianPSF(σ::AbstractFloat)
 ```
 
 - `σ`: Standard deviation in microns, representing the width of the PSF

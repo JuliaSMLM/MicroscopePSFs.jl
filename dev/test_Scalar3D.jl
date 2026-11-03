@@ -31,7 +31,7 @@ cam_size = nx * pixel_size
 # Create PSF with astigmatism
 zc = ZernikeCoefficients(15)
 zc.phase[6] = 0.0  # Add phase shift for visualization
-psf = ScalarPSF(na, λ, n, coeffs=zc)
+psf = ScalarPSF(na, λ, n; zernike_coeffs = zc)
 
 # Check normalization over camera
 psf_normalized = integrate_pixels(psf, camera, Emitter3D(nx/2 * pixel_size, ny/2 * pixel_size, 0.0, 1.0))

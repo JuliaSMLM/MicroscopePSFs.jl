@@ -96,10 +96,11 @@ pixels = integrate_pixels(psf, camera, emitters, threaded=false)
 
 For incoherent emitters (typical fluorescence), intensities are summed using
 `integrate_pixels`. `integrate_pixels_amplitude` returns a unit-photon field:
-emitter photons are ignored, including when summing several emitters.
-Squaring a pixel-integrated field is not pixel-integrated intensity. Pixel
-integration and squared magnitude do not commute; use `integrate_pixels` for
-photon-count images.
+emitter photons are ignored. For multiple emitters, the result is the coherent
+sum of their fields. Its `abs2` is not the image of mutually incoherent emitters;
+use `integrate_pixels` for their image. Squaring a pixel-integrated field is not
+pixel-integrated intensity. Pixel integration and squared magnitude do not commute;
+use `integrate_pixels` for photon-count images.
 
 ## Working with PSFs
 
@@ -137,10 +138,9 @@ function analyze_psf_width(psf::AbstractPSF)
     x = range(-1, 1, length=100)
     intensities = [psf(xi, 0.0) for xi in x]
     
-    # Calculate FWHM or other properties
-    # ...
-    
-    return results
+    # Width of the sampled profile at half its peak intensity
+    half_max_indices = findall(intensities .>= maximum(intensities) / 2)
+    return x[last(half_max_indices)] - x[first(half_max_indices)]
 end
 
 # Works with any PSF model that implements the 2D interface

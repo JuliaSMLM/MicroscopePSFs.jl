@@ -27,7 +27,7 @@ Convert from (n,l) indices to OSA/ANSI single index.
 # Examples
 ```julia
 julia> nl2osa(4, 2)
-15
+13
 ```
 """
 function nl2osa(n::Integer, l::Integer)::Int
@@ -104,16 +104,19 @@ Convert from Noll single index to (n,l) indices.
 # Returns
 - Tuple of (n,l) indices
 """
-function noll2nl(j::Int)::Tuple{Int,Int}
-    n = ceil((-3 + sqrt(1 + 8*j)) / 2);
-    l = j - n * (n + 1) / 2 - 1;
+function noll2nl(j::Integer)::Tuple{Int, Int}
+    j >= 1 || throw(ArgumentError("Noll index j=$j must be >= 1"))
+    # Widen before multiplying to retain exact triangular-number boundaries.
+    index = j isa Union{Int128, UInt128, BigInt} ? big(j) : signed(widen(j))
+    n = (isqrt(8index - 7) - 1) ÷ 2
+    l = index - n * (n + 1) ÷ 2 - 1
     if mod(n, 2) != mod(l, 2)
-       l = l + 1;
+        l = l + 1
     end
     if mod(j, 2) == 1
-       l= -l;
+        l = -l
     end
-    return n,l
+    return n, l
 end
 
 

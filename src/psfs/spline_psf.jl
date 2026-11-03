@@ -307,7 +307,7 @@ Evaluate the 3D spline PSF at position (x, y, z).
 - PSF intensity at the specified position
 
 # Notes
-- Returns 0 if the position is outside the PSF boundary
+- Returns NaN for nonfinite coordinates and 0 outside the finite PSF boundary
 - Preserves the normalization of the original PSF data
 
 # Example
@@ -321,6 +321,8 @@ function (psf::SplinePSF)(x::Real, y::Real, z::Real)
     if psf.z_range === nothing
         throw(ArgumentError("Cannot evaluate a 2D SplinePSF with 3D coordinates. Use psf(x, y) instead."))
     end
+
+    isfinite(x) && isfinite(y) && isfinite(z) || return NaN
 
     # Check bounds using cached Float64 values (avoids type-instability from first/last on ranges)
     if x < psf.x_min || x > psf.x_max ||
@@ -349,7 +351,7 @@ Evaluate the spline PSF at position (x, y).
 
 # Notes
 - For 3D PSFs, evaluates at z = 0 if in range, otherwise returns 0
-- Returns 0 if the position is outside the PSF boundary
+- Returns NaN for nonfinite coordinates and 0 outside the finite PSF boundary
 - Preserves the normalization of the original PSF data
 
 # Example
@@ -359,6 +361,7 @@ intensity = spline_psf(0.1, 0.2)
 ```
 """
 function (psf::SplinePSF)(x::Real, y::Real)
+    isfinite(x) && isfinite(y) || return NaN
     # Check bounds using cached Float64 values
     if x < psf.x_min || x > psf.x_max ||
        y < psf.y_min || y > psf.y_max

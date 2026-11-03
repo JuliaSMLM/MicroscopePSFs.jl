@@ -101,7 +101,7 @@ function plot_zernike_nl_grid(max_n::Integer=4)
                 title="j=$j, (n=$n, l=$l)",
                 xticklabelsize=0,
                 yticklabelsize=0,
-                yreversed=false)
+                yreversed=true)
             z_data = evaluate_polynomial_grid_nl(n, l, 201)
             max_val = maximum(abs.(z_data))
             min_val = -max_val
@@ -120,7 +120,12 @@ save("zernike_polys.png",fig)
 ```
 ![](zernike_polys.png)
 
-This visualization shows the first 21 Zernike polynomials laid out in a grid. Each plot is labeled with both its Noll index j and the corresponding (n,l) indices. Red regions represent positive values, blue regions represent negative values, and white represents zero. Posiive y axis is up to match [Wikipedia](https://en.wikipedia.org/wiki/Zernike_polynomials). 
+This visualization shows the first 21 Zernike polynomials, labeled with their
+Noll index j and (n,l) indices. Red is positive, blue is negative, and white is
+zero. Positive x points right and positive y points down, matching the image
+rows and the pupil ky grid. The angle `atan(ky, kx)` therefore increases clockwise
+in the displayed pupil. Sin-type modes, including Noll 3, 5, and 7, appear
+mirrored relative to a plot with positive y up.
 
 ## Usage in PSF Models
 
@@ -135,7 +140,7 @@ zc.phase[4] = 0.5  # 0.5 rad RMS of defocus
 zc.phase[11] = 0.2  # 0.2 rad RMS of spherical aberration
 
 # Create a ScalarPSF with these aberrations
-psf = ScalarPSF(1.4, 0.532, 1.518, coeffs=zc)
+psf = ScalarPSF(1.4, 0.532, 1.518; zernike_coeffs=zc)
 
 # Create a VectorPSF with these aberrations
 vector_psf = VectorPSF(1.4, 0.532, base_zernike=zc, n_medium=1.33)

@@ -108,13 +108,18 @@ dipole = DipoleVector(1.0, 0.0, 0.0)  # x-dipole
 psf_vector = VectorPSF(1.4, 0.690, dipole; z_stage=0.0)
 ```
 
-Pupil PSF intensity repeats in x and y with period
-`L = (grid_size - 1) * λ / (2nₐ)` in microns. Keep render `support` below `L/2`
-or use a frame narrower than `L`. A larger `grid_size` widens `L`.
-For NA 1.4, λ 0.6 microns, and grid 128, `L ≈ 27.21` microns.
-ScalarPSF and VectorPSF default to `grid_size=128`; ScalarPSF retains the grid
-of a supplied `pupil` or `pupil_data`. The scalar default takes about four times
-the evaluation time of grid 64; see the ScalarPSF guide for measured cases.
+Pupil PSFs are zero at and beyond `L/2` in either lateral coordinate relative
+to the emitter, where `L = (grid_size - 1) * λ / (2nₐ)` in microns uses the
+actual pupil grid size. A larger `grid_size` widens the field. For NA 1.4,
+λ 0.6 microns, and grid 128, `L ≈ 27.21` and `L/2 ≈ 13.61` microns.
+ScalarPSF and VectorPSF default to `grid_size=128`; supplied scalar pupils,
+scalar pupil data, and vector base pupils retain their own grids.
+`support=Inf` selects the whole camera; explicit support and spline sampling
+ranges may extend beyond the field. Vector pupils require `nₐ <= n_immersion`.
+The scalar default takes about four times the evaluation time of grid 64;
+see the ScalarPSF guide for measured cases.
+All-Float32 ScalarPSF, AiryPSF, and GaussianPSF inputs produce Float32 values.
+SplinePSF evaluation returns NaN for nonfinite coordinates.
 
 Gaussian pixel integration uses exact erf differences for any `sampling`,
 including explicit pixel edges and multiple emitters. Values are photon counts:
@@ -126,13 +131,13 @@ and returns a zero image.
 ### PSF with Aberrations
 
 ```julia
-# Create Zernike coefficients (max radial order 15)
+# Create Zernike coefficients (15 Noll terms)
 zc = ZernikeCoefficients(15)
 
 # Add specific aberrations (Noll indexing)
-zc.phase[5] = 0.3    # Defocus
+zc.phase[5] = 0.3    # Oblique astigmatism
 zc.phase[6] = 0.5    # Vertical astigmatism
-zc.phase[7] = -0.2   # Oblique astigmatism
+zc.phase[7] = -0.2   # Vertical coma
 
 # Create aberrated PSF
 psf_aberrated = ScalarPSF(1.4, 0.532, 1.52; zernike_coeffs=zc)
@@ -154,17 +159,22 @@ psf_spline = SplinePSF(psf_scalar, x_range, y_range, z_range)
 ### PSF Evaluation
 
 ```julia
-# 2D PSF evaluation
-intensity = psf(x, y)                    # Single point
-intensity = psf(x_vec, y_vec)            # Vectorized
+x, y, z = 0.1, 0.2, 0.3
+x_vec, y_vec, z_vec = [0.0, 0.1], [0.0, 0.2], [0.0, 0.3]
 
-# 3D PSF evaluation  
-intensity = psf(x, y, z)                 # Single point
-intensity = psf(x_vec, y_vec, z_vec)     # Vectorized
+# 2D PSF evaluation
+psf_2d = GaussianPSF(0.15)
+intensity = psf_2d(x, y)                # Single point
+intensity = psf_2d.(x_vec, y_vec)       # Broadcast over coordinate vectors
+
+# 3D PSF evaluation
+psf_3d = ScalarPSF(1.4, 0.532, 1.518)
+intensity = psf_3d(x, y, z)
+intensity = psf_3d.(x_vec, y_vec, z_vec)
 
 # Complex amplitude (before squaring)
-amp = amplitude(psf, x, y)              # 2D
-amp = amplitude(psf, x, y, z)           # 3D
+amp = amplitude(psf_2d, x, y)
+amp = amplitude(psf_3d, x, y, z)
 ```
 
 ### Image Generation
@@ -197,6 +207,10 @@ complex_image = integrate_pixels_amplitude(psf, camera, emitter)
 # Useful for coherent imaging or interferometry
 ```
 
+For several emitters, amplitude integration returns the coherent sum of their
+fields. Its `abs2` is not the image of mutually incoherent emitters; use
+`integrate_pixels` for photon-count images.
+
 ## Common Workflows
 
 ### 1. Simple 2D Imaging
@@ -221,7 +235,7 @@ image = integrate_pixels(psf, camera, emitter)
 
 ```julia
 # Create PSF with astigmatism for 3D
-zc = ZernikeCoefficients(5)
+zc = ZernikeCoefficients(6)
 zc.phase[6] = 1.0  # Add astigmatism
 
 psf = ScalarPSF(1.4, 0.680, 1.52; zernike_coeffs=zc)
@@ -316,12 +330,12 @@ noisy_image = image .+ 0.01 * randn(size(image))  # Gaussian read noise
 using MicroscopePSFs
 
 # Create tetrapod PSF using phase mask
-zc = ZernikeCoefficients(15)
+zc = ZernikeCoefficients(22)
 
 # Tetrapod phase mask coefficients (example values)
 zc.phase[11] = 1.5   # Primary spherical
 zc.phase[22] = 0.8   # Secondary spherical
-zc.phase[5] = 0.3    # Defocus
+zc.phase[5] = 0.3    # Oblique astigmatism
 
 # Create engineered PSF
 psf_tetrapod = ScalarPSF(1.4, 0.680, 1.52; zernike_coeffs=zc)
