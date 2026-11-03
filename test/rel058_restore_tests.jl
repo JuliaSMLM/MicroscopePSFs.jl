@@ -362,6 +362,126 @@
     end
 end
 
+@testset "Review 15: exact coordinates and Gaussian range" verbose = true begin
+    @testset "Review 15.1: exact primal window membership" begin
+        M = MicroscopePSFs
+        @test Base.get_extension(M, :MicroscopePSFsForwardDiffExt) !== nothing
+
+        function window_models(T, width)
+            optics = (
+                n_medium = T(1.33), n_coverslip = T(1.52),
+                n_immersion = T(1.52), grid_size = 17,
+            )
+            wavelength = width / T(4)
+            return (
+                ScalarPSF(T(1), wavelength, T(1.33); grid_size = 17),
+                VectorPSF(
+                    T(1), wavelength, DipoleVector(T(0.3), T(0.4), T(0.5)); optics...
+                ),
+                VectorPSF(T(1), wavelength; optics...),
+            )
+        end
+
+        function check_window(psf, x, axis, halfwidth)
+            # High-precision distances give an independent membership reference.
+            outside = abs(BigFloat(x)) >= BigFloat(halfwidth)
+            xyz = ntuple(i -> i == axis ? x : i == 3 ? 0.5 : 0.1, 3)
+            value = psf(xyz...)
+            @test isfinite(value)
+            @test iszero(value) == outside
+            @test all(field -> all(iszero, field), dipole_fields(psf, xyz...)) == outside
+            if psf isa ScalarPSF || length(psf.vector_pupils) == 1
+                @test all(iszero, amplitude(psf, xyz...)) == outside
+            end
+            return outside, xyz, value
+        end
+
+        setprecision(BigFloat, 256) do
+            for T in (Float32, Float64), constant in (π, ℯ)
+                target = T(constant)
+                for width in (prevfloat(target), target, nextfloat(target))
+                    for psf in window_models(T, width)
+                        pupil = psf isa ScalarPSF ? psf.pupil : first(psf.vector_pupils)
+                        halfwidth = M._alias_free_halfwidth(pupil)
+                        coordinates = (
+                            constant, target, prevfloat(target), nextfloat(target),
+                            BigFloat(constant), Rational{BigInt}(BigFloat(constant)),
+                        )
+                        for axis in 1:2, x in coordinates
+                            check_window(psf, x, axis, halfwidth)
+                        end
+                    end
+                end
+            end
+
+            for T in (Float32, Float64), psf in window_models(T, T(2))
+                pupil = psf isa ScalarPSF ? psf.pupil : first(psf.vector_pupils)
+                halfwidth = M._alias_free_halfwidth(pupil)
+                @test halfwidth == 2
+                coordinates = (
+                    19999999999999999 // 10000000000000000, 2 // 1,
+                    20000000000000001 // 10000000000000000,
+                    prevfloat(BigFloat(2)), BigFloat(2), nextfloat(BigFloat(2)),
+                )
+                for axis in 1:2, side in (-1, 1), position in coordinates
+                    x = side * position
+                    outside, xyz, reference = check_window(psf, x, axis, halfwidth)
+                    for seed in (-one(x), one(x))
+                        dual = ForwardDiff.Dual{Nothing}(x, seed)
+                        nested = ForwardDiff.Dual{Nothing}(dual, one(dual) * seed)
+                        for d in (dual, nested)
+                            dual_xyz = ntuple(i -> i == axis ? d : xyz[i], 3)
+                            value = psf(dual_xyz...)
+                            @test iszero(value) == outside
+                            @test all(
+                                field -> all(iszero, field), dipole_fields(psf, dual_xyz...)
+                            ) == outside
+                            if !outside
+                                primal = ForwardDiff.value(ForwardDiff.value(value))
+                                @test primal ≈ reference rtol = 64eps(Float64)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        # The exact review reproductions, without converting either coordinate.
+        scalar = ScalarPSF(1.0f0, Float32(π) / 4, 1.5f0; grid_size = 17)
+        @test scalar(π, 0.0f0, 0.0f0) > 0
+        scalar = ScalarPSF(1.2, 0.6, 1.33; grid_size = 17)
+        x = 19999999999999999 // 10000000000000000
+        for seed in (-1 // 1, 1 // 1)
+            dual = ForwardDiff.Dual{Nothing}(x, seed)
+            @test ForwardDiff.value(scalar(dual, 0.1, 0.5)) ≈ scalar(x, 0.1, 0.5)
+        end
+    end
+
+    @testset "Review 15.2: Float32 Gaussian final rounding" begin
+        setprecision(BigFloat, 256) do
+            widths = (
+                nextfloat(0.0f0), floatmin(Float32), 1.0f-25, 1.0f-20, 0.15f0,
+                1.0f19, 1.0f20, 1.0f25, floatmax(Float32),
+            )
+            for width in widths, ratio in (0.0f0, 1.0f0, 2.0f0, 8.0f0, 10.0f0, 16.0f0)
+                psf = GaussianPSF(width)
+                x, y = ratio * width, zero(width)
+                σ = BigFloat(width)
+                reference = exp(-(BigFloat(x)^2 + BigFloat(y)^2) / (2σ^2)) /
+                    (2big(π) * σ^2)
+                expected = Float32(reference)
+                value = @inferred psf(x, y)
+                @test value isa Float32
+                @test isinf(value) == isinf(expected)
+                @test iszero(value) == iszero(expected)
+                @test value ≈ expected rtol = 2eps(Float32) atol = eps(0.0f0)
+                @test (@inferred amplitude(psf, x, y)) isa Float32
+            end
+        end
+        @test GaussianPSF(1.0f-20)(1.0f-19, 0.0f0) ≈ 3.069701f17
+    end
+end
+
 @testset "Review 14: primal field-window boundaries" verbose = true begin
     M = MicroscopePSFs
     @testset "Integer-valued dual coordinates" begin
