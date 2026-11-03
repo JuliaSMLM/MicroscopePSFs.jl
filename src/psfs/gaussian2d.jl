@@ -9,6 +9,12 @@ Gaussian PSF intensity. Radially symmetric with standard deviation σ.
 """
 function (psf::GaussianPSF{T})(x::Real, y::Real) where {T}
     C = T === Float32 && x isa Float32 && y isa Float32 ? Float32 : Float64
+    if C === Float32
+        inverse_width = inv(psf.σ)
+        normalization = (inverse_width / (2C(π))) * inverse_width
+        scaled_radius² = (x / psf.σ)^2 + (y / psf.σ)^2
+        return normalization * exp(-scaled_radius² / 2)
+    end
     r² = x^2 + y^2
     return 1 / (2C(π) * psf.σ^2) * exp(-r² / (2psf.σ^2))
 end

@@ -219,7 +219,9 @@ function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
     end
     sz = size(p.field, 1)
     kpix = kpixelsize(p)
-    result = zero(Complex{R})
+    # Keep Float32 phase arithmetic, with enough range for the unweighted field sum.
+    A = all_float32 ? Float64 : R
+    result = zero(Complex{A})
     k₀² = k₀(p)^2
 
     @inbounds for i in 1:sz, j in 1:sz
@@ -228,11 +230,13 @@ function amplitude(p::PupilFunction{T}, x::Real, y::Real, z::Real) where {T}
             if all_float32
                 kx, ky, kr2 = Float32(kx), Float32(ky), Float32(kr2)
             end
-            kz = sqrt(complex(k₀² - kr2))
+            delta = k₀² - kr2
+            kz = all_float32 && delta >= 0 ? complex(sqrt(delta)) : sqrt(complex(delta))
             phase = 2C(π) * (x * kx + y * ky + z * kz)
-            result += p.field[j, i] * exp(im * phase)
+            field = all_float32 ? ComplexF64(p.field[j, i]) : p.field[j, i]
+            result += field * exp(im * phase)
         end
     end
 
-    return result * kpix^2
+    return all_float32 ? ComplexF32(result * Float64(kpix)^2) : result * kpix^2
 end

@@ -44,9 +44,13 @@ ScalarPSF(nₐ::Real, λ::Real, n::Real;
 
 Supply one of `pupil`, `pupil_data`, or `zernike_coeffs`. If none is provided,
 an unaberrated pupil is created using `grid_size`. Stored Zernike coefficients
-are converted to the PSF element type. All-Float32 optical parameters and
-coordinates produce Float32 values. A supplied pupil must have finite positive
-energy inside the circular aperture.
+are converted to the PSF element type. Evaluation returns Float32 for a
+`ScalarPSF{Float32}` with Float32 x, y, and z. Optics and the supplied pupil,
+pupil data, or coefficients determine the PSF element type by promotion.
+With Float32 optics, Float64 coefficients or pupil components produce a Float64 PSF.
+If no pupil, pupil data, or coefficients are supplied, default coefficients are
+Float32 only when all three optical arguments are Float32; otherwise they are Float64.
+A supplied pupil must have finite positive energy inside the circular aperture.
 
 ## Pupil sampling and field of view
 

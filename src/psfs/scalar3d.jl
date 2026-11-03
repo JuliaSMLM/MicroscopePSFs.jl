@@ -40,7 +40,11 @@ field at coordinates in microns relative to the emitter.
 - Exactly one of `pupil`, `pupil_data`, or `zernike_coeffs` should be provided
 - If none are provided, creates an unaberrated pupil
 - The constructed PSF stores Zernike coefficients converted to its element type
-- All-Float32 optical parameters and evaluation coordinates produce Float32 values
+- Evaluation returns Float32 for a `ScalarPSF{Float32}` with Float32 x, y, and z.
+  Optics promote with the supplied pupil, pupil data, or coefficient element type.
+  With Float32 optics, Float64 coefficients or pupil components produce a Float64 PSF.
+- If no pupil, pupil data, or coefficients are supplied, default coefficients are
+  Float32 only when all three optical arguments are Float32; otherwise they are Float64
 - A supplied pupil must have finite positive energy inside the circular aperture
 
 # Examples

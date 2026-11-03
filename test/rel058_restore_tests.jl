@@ -51,6 +51,77 @@
             @test dipole_fields(psf, 0.1, -0.2, 0.3) ==
                 dipole_fields(reference, 0.1, -0.2, 0.3)
         end
+
+        # Independent matched-index Debye field: transmission is one and the
+        # apodization is 1/sqrt(cos(theta)). Do not use production pupil helpers.
+        function aberrated_vector_reference(base, dipoles, xyz)
+            N = size(base, 1)
+            step = 4 / (N - 1) # NA=1, wavelength=0.5, so kmax=2.
+            center = (N + 1) / 2
+            fields = [zeros(ComplexF64, 2, N, N) for _ in dipoles]
+            phase = zeros(ComplexF64, N, N)
+            for i in 1:N, j in 1:N
+                kx, ky = step * (i - center), step * (j - center)
+                radius² = kx^2 + ky^2
+                radius² > 4 && continue
+                angle = atan(ky, kx)
+                c, s = cos(angle), sin(angle)
+                sinθ = sqrt(radius²) / 3 # n/wavelength=3.
+                cosθ = sqrt(1 - radius² / 9)
+                for (field, (px, py, pz)) in zip(fields, dipoles)
+                    field[1, j, i] = base[j, i] / sqrt(cosθ) * (
+                        px * (cosθ * c^2 + s^2) + py * (cosθ - 1) * c * s +
+                            pz * sinθ * c
+                    )
+                    field[2, j, i] = base[j, i] / sqrt(cosθ) * (
+                        px * (cosθ - 1) * c * s + py * (cosθ * s^2 + c^2) +
+                            pz * sinθ * s
+                    )
+                end
+                phase[j, i] = cis(
+                    2π * (
+                        kx * xyz[1] + ky * xyz[2] +
+                            sqrt(9 - radius²) * xyz[3]
+                    )
+                )
+            end
+            energy = sum(sum(abs2, field) for field in fields) * step^2
+            pupils = [field / sqrt(energy) for field in fields]
+            values = [
+                [sum(field[c, :, :] .* phase) * step^2 for c in 1:2]
+                    for field in pupils
+            ]
+            return pupils, values
+        end
+
+        for N in (16, 32), requested in (16, 32, 64), rotating in (false, true)
+            coords = range(-1, 1; length = N)
+            field = [
+                (0.8 + 0.2x + 0.1y^2) * cis(0.3x^2 + 0.2x * y - 0.17y)
+                    for y in coords, x in coords
+            ]
+            base = PupilFunction(1.0, 0.5, 1.5, field)
+            args = rotating ? () : (DipoleVector(1.0, 2.0, 3.0),)
+            dipoles = rotating ? [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)] :
+                [Tuple([1, 2, 3] / sqrt(14))]
+            psf = VectorPSF(
+                1.0, 0.5, args...; n_medium = 1.5, n_coverslip = 1.5,
+                n_immersion = 1.5, base_pupil = base, grid_size = requested
+            )
+            for xyz in ((0.0, 0.0, 0.0), (0.1, -0.2, 0.3))
+                pupils, values = aberrated_vector_reference(field, dipoles, xyz)
+                for (actual, expected) in zip(dipole_fields(psf, xyz...), values)
+                    @test actual ≈ expected rtol = 1.0e-12 atol = 1.0e-13
+                end
+                @test psf(xyz...) ≈ sum(sum(abs2, value) for value in values) rtol = 1.0e-12
+                if iszero(xyz[3])
+                    for (pupil, expected) in zip(psf.vector_pupils, pupils)
+                        @test pupil.Ex.field ≈ expected[1, :, :] rtol = 1.0e-12
+                        @test pupil.Ey.field ≈ expected[2, :, :] rtol = 1.0e-12
+                    end
+                end
+            end
+        end
     end
 
     @testset "Review 7d: ScalarPSF constructor documentation" begin
@@ -288,6 +359,100 @@
         argument_type = Core.eval(Main, Meta.parse(type_name))
         @test hasmethod(GaussianPSF, Tuple{argument_type})
         @test GaussianPSF(0.15) isa GaussianPSF
+    end
+end
+
+@testset "Review 13: Float32 range and precision documentation" verbose = true begin
+    function scalar_range_reference(pupil, xyz)
+        N = size(pupil.field, 1)
+        step = 2 * (pupil.nₐ / pupil.λ) / (N - 1)
+        center = (N + 1) / 2
+        result = 0.0 + 0.0im
+        for i in 1:N, j in 1:N
+            kx, ky = step * (i - center), step * (j - center)
+            radius² = kx^2 + ky^2
+            radius² < (pupil.nₐ / pupil.λ)^2 || continue
+            kz = sqrt(complex(Float64((pupil.n / pupil.λ)^2) - radius²))
+            phase = 2π * (xyz[1] * kx + xyz[2] * ky + xyz[3] * kz)
+            result += ComplexF64(pupil.field[j, i]) * exp(im * phase)
+        end
+        return result * Float64(step)^2
+    end
+
+    @testset "Review 13.1: Float32 pupil accumulation range" begin
+        for (N, wavelength, value) in (
+                (16, 1.0f10, ComplexF32(1.0f37)),
+                (17, 1.0f10, ComplexF32(1.0f37)),
+                (16, 1.0f10, ComplexF32(3.0f38, 3.0f38)),
+                (128, 1.0f21, ComplexF32(1.0f37)),
+            )
+            pupil = PupilFunction(1.0f0, wavelength, 1.5f0, fill(value, N, N))
+            psf = ScalarPSF(1.0f0, wavelength, 1.5f0, pupil)
+            points = wavelength > 1.0f20 ? ((0.0f0, 0.0f0, 0.0f0),) :
+                ((0.0f0, 0.0f0, 0.0f0), (0.1f0, -0.07f0, 0.12f0) .* wavelength)
+            for xyz in points
+                reference = scalar_range_reference(pupil, Float64.(xyz))
+                field = @inferred amplitude(psf, xyz...)
+                value = @inferred psf(xyz...)
+                @test field isa ComplexF32
+                @test value isa Float32
+                @test isfinite(field)
+                @test isfinite(value)
+                @test field ≈ reference rtol = sqrt(eps(Float32))
+                @test value ≈ abs2(reference) rtol = sqrt(eps(Float32))
+            end
+        end
+        pupil = PupilFunction(1.0f0, 1.0f10, 1.5f0, fill(ComplexF32(1.0f37), 16, 16))
+        psf = ScalarPSF(1.0f0, 1.0f10, 1.5f0, pupil)
+        @test amplitude(psf, 0.0f0, 0.0f0, 0.0f0) ≈ 3.057777829354438e17 rtol =
+            8eps(Float32)
+        @test psf(0.0f0, 0.0f0, 0.0f0) ≈ 9.350005253691537e34 rtol = 8eps(Float32)
+        # Raw pupils also support evanescent samples; retain the complex square root.
+        evanescent = PupilFunction(
+            1.0f0, 1.0f10, 0.8f0, fill(ComplexF32(1.0f37), 16, 16)
+        )
+        xyz = (1.0f9, -0.7f9, 1.2f9)
+        @test amplitude(evanescent, xyz...) ≈
+            scalar_range_reference(evanescent, Float64.(xyz)) rtol = sqrt(eps(Float32))
+    end
+
+    @testset "Review 13.2: Float32 Gaussian normalization range" begin
+        for width in (1.0f19, 1.0f20), ratio in (0.0f0, 1.0f0, 2.0f0)
+            psf = GaussianPSF(width)
+            x, y = ratio * width, 0.0f0
+            reference = exp(-(Float64(x) / Float64(width))^2 / 2) /
+                (2π * Float64(width)^2)
+            value = @inferred psf(x, y)
+            @test value isa Float32
+            @test isfinite(value)
+            @test value > 0
+            @test value ≈ Float32(reference) rtol = 8eps(Float32) atol = eps(0.0f0)
+            @test (@inferred amplitude(psf, x, y)) isa Float32
+        end
+        @test GaussianPSF(1.0f19)(0.0f0, 0.0f0) ≈ 1.59155f-39 atol = eps(0.0f0)
+    end
+
+    @testset "Review 13.3: documented scalar precision rule" begin
+        docstring = string(@doc ScalarPSF(::Real, ::Real, ::Real))
+        guide = read(joinpath(dirname(@__DIR__), "docs/src/psfs/scalarpsf.md"), String)
+        for text in (docstring, guide)
+            @test occursin("ScalarPSF{Float32}", text)
+            @test occursin("Float64 coefficients or pupil components", text)
+        end
+        for T in (Float32, Float64)
+            pupil = PupilFunction(1.4f0, 0.6f0, 1.518f0, ones(Complex{T}, 16, 16))
+            options = (
+                (; zernike_coeffs = ZernikeCoefficients(15; T)),
+                (; pupil), (; pupil_data = copy(pupil.field)),
+            )
+            for keywords in options
+                psf = ScalarPSF(1.4f0, 0.6f0, 1.518f0; grid_size = 16, keywords...)
+                @test psf isa ScalarPSF{T}
+                @test (@inferred psf(0.0f0, 0.0f0, 0.0f0)) isa T
+                @test (@inferred amplitude(psf, 0.0f0, 0.0f0, 0.0f0)) isa Complex{T}
+                @test psf(0, 0.0f0, 0.0f0) isa Float64
+            end
+        end
     end
 end
 
