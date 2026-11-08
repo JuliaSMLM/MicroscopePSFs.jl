@@ -1098,4 +1098,63 @@ end
             @test amplitude(airy, x, y) === expected
         end
     end
+
+    @testset "Integer coordinates into a Float64 image" begin
+        # A preallocated Float64 image shows the wrapped values themselves.
+        function into_float64(psf, ex, ey, emitter; sampling)
+            image = zeros(length(ey) - 1, length(ex) - 1)
+            M.integrate_pixels!(image, psf, ex, ey, emitter; sampling, threaded = false)
+            return image
+        end
+        for (psf, ex, ey, x₀, sampling) in (
+                (AiryPSF(1.4, 10.0), Int8[0, 12], Int8[0, 12], Int8(0), 1),
+                (GaussianPSF(100.0), Int8[100, 120], Int8[-10, 10], Int8(-120), 2),
+            )
+            emitter = Emitter2D(x₀, zero(x₀), one(x₀))
+            reference = into_float64(
+                psf, Float64.(ex), Float64.(ey), Emitter2D(Float64(x₀), 0.0, 1.0); sampling
+            )
+            @test into_float64(psf, ex, ey, emitter; sampling) == reference
+            @test all(>(0), reference)
+        end
+    end
+
+    @testset "Integer pixel edges and positions" begin
+        # Before: Int8 arithmetic wrapped. A pixel from 0 to 12 microns had area 144, which
+        # is -112 in Int8; an edge at 100 minus an emitter at -120 gave 220, which is -36.
+        # Now each matches the same numbers given as Float64, bit for bit.
+        f64(v) = Float64.(v)
+        cases = (
+            (AiryPSF(1.4, 10.0), Int8[0, 12], Int8[0, 12], (Int8(0), Int8(0))),
+            (AiryPSF(1.4, 0.6), Int8[-3, -1, 1, 3], Int8[-3, -1, 1, 3], (Int8(1), Int8(-1))),
+            (GaussianPSF(100.0), Int8[100, 120], Int8[-10, 10], (Int8(-120), Int8(0))),
+            (GaussianPSF(0.5), Int16[-2, 0, 2], Int16[-2, 0, 2], (Int16(0), Int16(1))),
+            (ScalarPSF(1.2, 0.6, 1.33), Int8[-2, 0, 2], Int8[-2, 0, 2], (Int8(0), Int8(0))),
+        )
+        for (psf, ex, ey, (x₀, y₀)) in cases, sampling in (1, 2, 3)
+            # An emitter holds one number type, so integer emitters count integer photons.
+            I = typeof(x₀)
+            emitter = psf isa ScalarPSF ? Emitter3D(x₀, y₀, zero(I), I(100)) :
+                Emitter2D(x₀, y₀, I(100))
+            reference_emitter = psf isa ScalarPSF ?
+                Emitter3D(Float64(x₀), Float64(y₀), 0.0, 100.0) :
+                Emitter2D(Float64(x₀), Float64(y₀), 100.0)
+            image = integrate_pixels(psf, ex, ey, emitter; sampling, threaded = false)
+            reference = integrate_pixels(
+                psf, f64(ex), f64(ey), reference_emitter; sampling, threaded = false
+            )
+            @test image == reference
+            @test eltype(image) == Float64
+            @test all(>=(0), image)
+            pair = integrate_pixels(psf, ex, ey, [emitter, emitter]; sampling, threaded = false)
+            @test pair == integrate_pixels(
+                psf, f64(ex), f64(ey), [reference_emitter, reference_emitter];
+                sampling, threaded = false
+            )
+            field = integrate_pixels_amplitude(psf, ex, ey, emitter; sampling, threaded = false)
+            @test field == integrate_pixels_amplitude(
+                psf, f64(ex), f64(ey), reference_emitter; sampling, threaded = false
+            )
+        end
+    end
 end

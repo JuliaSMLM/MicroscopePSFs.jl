@@ -282,7 +282,7 @@ function integrate_pixels(
     sampling::Integer=2,
     threaded::Bool=true
 )
-    T = typeof(emitter.photons)
+    T = _photon_result_type(typeof(emitter.photons))
     
     # Get pixel indices for the support region
     i_range, j_range = get_pixel_indices(pixel_edges_x, pixel_edges_y, emitter, support)
@@ -424,7 +424,7 @@ function integrate_pixels_amplitude(
 )
     _check_amplitude_integration(psf, support)
     output_dims = _amplitude_output_dims(psf)
-    T = Complex{typeof(emitter.photons)}
+    T = Complex{_photon_result_type(typeof(emitter.photons))}
     
     # Get pixel indices for the support region
     i_range, j_range = get_pixel_indices(pixel_edges_x, pixel_edges_y, emitter, support)

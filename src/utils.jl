@@ -69,5 +69,20 @@ _widen_for_square(x::Union{Float16, Float32}) = Float64(x)
 _widen_for_square(x::Integer) = float(x)
 _widen_for_square(x::Real) = x
 
+# Pixel integration converts integer pixel edges and emitter coordinates to floating point
+# before any arithmetic, so a difference, width or area cannot wrap. Floating-point and
+# dual values pass through unchanged, and a floating-point vector is returned as is.
+_float_coordinate(x::Integer) = float(x)
+_float_coordinate(x::Real) = x
+_float_coordinates(v::AbstractVector{<:AbstractFloat}) = v
+_float_coordinates(v::AbstractVector{<:Integer}) = float.(v)
+_float_coordinates(v::AbstractVector) =
+    any(x -> x isa Integer, v) ? map(_float_coordinate, v) : v
+
+# Element type of an allocated photon image: an integer photon count gives floating point,
+# since pixel values are fractions of it; any other type is kept.
+_photon_result_type(::Type{T}) where {T <: Integer} = float(T)
+_photon_result_type(::Type{T}) where {T} = T
+
 # Export the public functions
 export get_pixel_size, get_pixel_centers, is_axis_aligned

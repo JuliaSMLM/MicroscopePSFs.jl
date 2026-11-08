@@ -43,17 +43,14 @@ function integrate_pixels!(
         )
     )
     scale = sqrt(typeof(psf.σ)(2)) * psf.σ
+    # Integer edges or positions become floating point, so an offset cannot wrap.
+    edges_x, edges_y = _float_coordinates(pixel_edges_x), _float_coordinates(pixel_edges_y)
+    x₀, y₀ = _float_coordinate(emitter.x), _float_coordinate(emitter.y)
     x_integrals = [
-        erf(
-            (pixel_edges_x[i] - emitter.x) / scale,
-            (pixel_edges_x[i + 1] - emitter.x) / scale
-        ) / 2 for i in 1:nx
+        erf((edges_x[i] - x₀) / scale, (edges_x[i + 1] - x₀) / scale) / 2 for i in 1:nx
     ]
     y_integrals = [
-        erf(
-            (pixel_edges_y[j] - emitter.y) / scale,
-            (pixel_edges_y[j + 1] - emitter.y) / scale
-        ) / 2 for j in 1:ny
+        erf((edges_y[j] - y₀) / scale, (edges_y[j + 1] - y₀) / scale) / 2 for j in 1:ny
     ]
     function integrate_column(i)
         for j in 1:ny

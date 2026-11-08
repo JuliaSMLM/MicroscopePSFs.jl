@@ -51,6 +51,34 @@ Aberrations are represented using Zernike polynomials:
 | Refractive index | Dimensionless  |
 | Zernike coefficients | Normalized (RMS=1) |
 
+## Numerical Range
+
+The PSFs are checked over this range:
+
+| Quantity | Range |
+|:---------|:------|
+| Wavelength | 0.1 to 10 μm |
+| Numerical aperture | 0.01 to 1.7, and not above the refractive index |
+| Refractive index | 1 to 4 |
+| Gaussian σ | 0.01 to 10 μm |
+| Positions and pixel edges | within 10⁴ μm (1 cm) of the origin |
+| Pixel size | at least 10⁻³ μm (1 nm) |
+| Axial position z | within 100 μm of focus |
+| Photons per emitter | up to 10¹² |
+
+Inside it, every value is finite and non-negative for `Float32`, `Float64` and integer
+inputs and any mix of them. Integer pixel edges, positions and photon counts are converted
+to floating point first, and give exactly the `Float64` result.
+
+`Float32` keeps its own resolution. All-`Float32` images of an emitter near the origin agree
+with `Float64` to within 0.1 percent of the image peak, and a `Float32` PSF evaluated at
+`Float64` positions to within 0.04 percent. A `Float32` position 1 cm from the origin
+resolves only about 1 nm, which moves the image of a PSF a few nanometers wide by up to a
+few percent; use `Float64` positions there.
+
+Outside the range, intermediate values such as squared wave numbers or pixel areas can
+leave the range of the number type and give zero, infinity or `NaN`.
+
 ## Type Hierarchy
 
 The package uses the following type hierarchy structure:

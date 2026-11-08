@@ -45,7 +45,7 @@ function integrate_pixels(
     isempty(emitters) && return zeros(Float64, length(pixel_edges_y)-1, length(pixel_edges_x)-1)
     
     # Determine result type from first emitter (promotion will happen automatically)
-    T = typeof(emitters[1].photons)
+    T = _photon_result_type(typeof(emitters[1].photons))
     
     # Allocate result array for the full domain
     nx = length(pixel_edges_x) - 1
@@ -160,7 +160,8 @@ function integrate_pixels_amplitude(
     threaded::Bool=true
 )
     _check_amplitude_integration(psf, support)
-    T = isempty(emitters) ? Complex{Float64} : Complex{typeof(first(emitters).photons)}
+    T = isempty(emitters) ? Complex{Float64} :
+        Complex{_photon_result_type(typeof(first(emitters).photons))}
     result = zeros(T, length(pixel_edges_y) - 1, length(pixel_edges_x) - 1,
         _amplitude_output_dims(psf)...)
 

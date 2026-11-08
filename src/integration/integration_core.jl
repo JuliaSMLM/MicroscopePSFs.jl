@@ -115,10 +115,36 @@ Supports both scalar and vector/tensor return types from the function.
 - `threaded`: Whether to use multi-threading for integration (default: true)
   Set to false when using with automatic differentiation frameworks
 
+Integer pixel edges and emitter coordinates are converted to floating point first, so a
+pixel width, area or offset from the emitter cannot wrap.
+
 # Returns
 - `result` array filled with integration values
 """
 function _integrate_pixels_core!(
+    result::AbstractArray,
+    pixel_edges_x::AbstractVector,
+    pixel_edges_y::AbstractVector,
+    func::Function,
+    emitter_x::Real,
+    emitter_y::Real;
+    sampling::Integer=2,
+    threaded::Bool=true
+)
+    return _integrate_float_pixels_core!(
+        result,
+        _float_coordinates(pixel_edges_x),
+        _float_coordinates(pixel_edges_y),
+        func,
+        _float_coordinate(emitter_x),
+        _float_coordinate(emitter_y);
+        sampling=sampling,
+        threaded=threaded
+    )
+end
+
+# The integration itself; integer coordinates have already been converted.
+function _integrate_float_pixels_core!(
     result::AbstractArray,
     pixel_edges_x::AbstractVector,
     pixel_edges_y::AbstractVector,
