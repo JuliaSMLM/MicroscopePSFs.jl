@@ -308,6 +308,7 @@ Evaluate the 3D spline PSF at position (x, y, z).
 
 # Notes
 - Returns NaN for nonfinite coordinates and 0 outside the finite PSF boundary
+- Never negative: where cubic interpolation between samples dips below zero, the result is 0
 - Preserves the normalization of the original PSF data
 
 # Example
@@ -333,8 +334,11 @@ function (psf::SplinePSF)(x::Real, y::Real, z::Real)
 
     # Evaluate using the scaled interpolant.
     # Note the order: since our data is (y, x, z), we call it as (y, x, z).
-    return psf.spline(y, x, z)
+    return _nonnegative(psf.spline(y, x, z))
 end
+
+# Cubic interpolation can dip below zero between samples; an intensity cannot. NaN stays NaN.
+_nonnegative(v::Real) = max(v, zero(v))
 
 # --- Define evaluation for 2D PSF ---
 
@@ -352,6 +356,7 @@ Evaluate the spline PSF at position (x, y).
 # Notes
 - For 3D PSFs, evaluates at z = 0 if in range, otherwise returns 0
 - Returns NaN for nonfinite coordinates and 0 outside the finite PSF boundary
+- Never negative: where cubic interpolation between samples dips below zero, the result is 0
 - Preserves the normalization of the original PSF data
 
 # Example
@@ -370,11 +375,11 @@ function (psf::SplinePSF)(x::Real, y::Real)
 
     # For 2D PSFs
     if psf.z_range === nothing
-        return psf.spline(y, x)
+        return _nonnegative(psf.spline(y, x))
     else
         # For 3D PSFs, check if z=0 is in range
         if psf.z_min <= 0.0 && psf.z_max >= 0.0
-            return psf.spline(y, x, 0.0)
+            return _nonnegative(psf.spline(y, x, 0.0))
         else
             return zero(Float64)
         end

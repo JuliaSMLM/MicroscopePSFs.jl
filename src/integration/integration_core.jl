@@ -307,8 +307,10 @@ function _integrate_pixels_generic!(
 )
     # Determine if we should use z-coordinate based on PSF and emitter capabilities
     if supports_3d(psf) && has_z_coordinate(emitter)
-        # For 3D PSF and emitter with z-coordinate
-        eval_func = (x, y) -> f(psf, x, y, emitter.z)
+        # For 3D PSF and emitter with z-coordinate; an integer z becomes floating point,
+        # as the lateral coordinates do in the core.
+        z₀ = _float_coordinate(emitter.z)
+        eval_func = (x, y) -> f(psf, x, y, z₀)
     else
         # For 2D PSF or emitter without z-coordinate
         eval_func = (x, y) -> f(psf, x, y)

@@ -78,7 +78,8 @@ SplinePSF(psf::AbstractPSF;
 
 - **Performance Acceleration**: Significantly faster evaluation of complex PSFs
 - **Experimental PSF Support**: Can represent measured PSF data from calibration beads
-- **Smooth Interpolation**: Cubic splines provide continuous second derivatives
+- **Smooth Interpolation**: Cubic splines provide continuous second derivatives, except where
+  the interpolation dips below zero between samples: the intensity is cut off at zero there
 - **Flexible Precision**: Trade-off between accuracy and speed via grid density
 
 ## B-Spline Interpolation Orders

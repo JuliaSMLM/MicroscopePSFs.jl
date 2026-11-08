@@ -66,18 +66,19 @@ The PSFs are checked over this range:
 | Axial position z | within 100 μm of focus |
 | Photons per emitter | up to 10¹² |
 
-Inside it, the Gaussian, Airy, scalar and vector PSFs, and the multi-channel PSFs built on
-them, give finite, non-negative intensities for `Float32`, `Float64` and integer inputs and
-any mix of them.
+Inside it, every PSF gives finite, non-negative intensities for `Float32`, `Float64` and
+integer inputs and any mix of them.
 
-Integer optical parameters, pixel edges, emitter positions, support radii and photon counts
-are converted to floating point before any arithmetic. Fixed-width integers such as `Int`
-and `Int8` give exactly the `Float64` result; a `BigInt` gives `BigFloat`.
+Integer pixel edges, emitter positions (x, y and z), support radii and photon counts are
+converted to floating point before any arithmetic. Fixed-width integers such as `Int`, `Int8`
+and `UInt8` give exactly the result of the same numbers given as `Float64`; a `BigInt` gives
+`BigFloat`. Integer optical parameters are accepted and follow Julia's promotion rules: with
+integers and `Float64` the PSF is `Float64`, and an integer mixed with `Float32` gives a
+`Float32` PSF.
 
 A `SplinePSF` reproduces the samples it was built from. Between samples, cubic
-interpolation can dip below zero where the samples are coarse compared with the width of
-the PSF, and the interpolated intensity there is negative. Sample finely enough to resolve
-the PSF's structure.
+interpolation can dip below zero, most where the samples are coarse compared with the width
+of the PSF; the interpolated intensity is cut off at zero there.
 
 `Float32` results carry `Float32` rounding, which grows with the size of the intermediate
 values: the defocus phase, about 2π z n / λ, and positions far from the origin. For

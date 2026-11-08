@@ -1195,4 +1195,57 @@ end
         @test VectorPSF(1, 1, dipole; n_medium = 2, n_coverslip = 2, n_immersion = 2) isa
             VectorPSF{Float64}
     end
+
+    @testset "Integer axial coordinates" begin
+        # Before: the 4Pi PSF negated an unsigned z, -UInt8(7) == 249; integration passed an
+        # integer z through unconverted, so a Float32 PlanePSF computed 7 + dz in Float32.
+        s = ScalarPSF(1.2, 0.6, 1.4; grid_size = 9)
+        fourpi = FourPiPSF(s, s; phase = 0.3)
+        s32 = ScalarPSF(1.2f0, 0.6f0, 1.4f0; grid_size = 9)
+        plane = PlanePSF(s32; dz = 0.02f0)
+        ex, ey = UInt8[0, 1, 5], UInt8[0, 2, 5]
+        emitter = Emitter3D(UInt8(0), UInt8(0), UInt8(7), UInt8(100))
+        reference_emitter = Emitter3D(0.0, 0.0, 7.0, 100.0)
+        for psf in (fourpi, plane), sampling in (1, 2)
+            image = integrate_pixels(psf, ex, ey, emitter; sampling, threaded = false)
+            @test image == integrate_pixels(
+                psf, Float64.(ex), Float64.(ey), reference_emitter; sampling, threaded = false
+            )
+            pair = integrate_pixels(psf, ex, ey, [emitter, emitter]; sampling, threaded = false)
+            @test pair == integrate_pixels(
+                psf, Float64.(ex), Float64.(ey), [reference_emitter, reference_emitter];
+                sampling, threaded = false
+            )
+            @test psf(0.5, 0.5, UInt8(7)) == psf(0.5, 0.5, 7.0)
+        end
+        mc = MultiChannelPSF(; channels = [s32, s32], z_offset = [0.0f0, 0.2f0])
+        @test channel_position(mc, 2, UInt8(3), UInt8(4), UInt8(7)) ==
+            channel_position(mc, 2, 3.0, 4.0, 7.0)
+    end
+
+    @testset "Spline intensity cut off at zero" begin
+        # Before: a spline of positive samples interpolated to -0.28 at x = 0.396 and gave
+        # negative photon counts there.
+        r = -1.0:0.25:1.0
+        gaussian = GaussianPSF(0.13)
+        spline = SplinePSF(gaussian, r, r)
+        @test spline(0.396, 0.0) == 0.0
+        grid = -1.0:0.004:1.0
+        @test all(>=(0), spline(x, y) for x in grid, y in (0.0, 0.1, 0.396))
+        image = integrate_pixels(
+            spline, [0.395, 0.397], [-0.001, 0.001], Emitter2D(0.0, 0.0, 1.0);
+            sampling = 1, threaded = false
+        )
+        @test all(>=(0), image)
+        @test real(amplitude(spline, 0.396, 0.0)) == 0 && imag(amplitude(spline, 0.396, 0.0)) == 0
+        # Samples are still reproduced, and NaN still propagates.
+        for x in (-0.5, 0.0, 0.25), y in (-0.25, 0.0)
+            @test spline(x, y) ≈ gaussian(x, y) rtol = 1.0e-12 atol = 1.0e-14
+        end
+        @test isnan(spline(NaN, 0.0))
+        scalar = ScalarPSF(1.2, 0.6, 1.33; grid_size = 17)
+        spline3 = SplinePSF(scalar, r, r, -0.5:0.25:0.5)
+        @test all(>=(0), spline3(x, y, z) for x in -1.0:0.01:1.0, y in (0.0, 0.3), z in (-0.4, 0.1))
+        @test isnan(spline3(0.0, 0.0, NaN))
+    end
 end
