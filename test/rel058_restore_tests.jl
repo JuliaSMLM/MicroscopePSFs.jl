@@ -514,7 +514,8 @@ end
         result = zero(Complex{BigFloat})
         for i in 1:N, j in 1:N
             kx, ky = Float64(step) * (i - center), Float64(step) * (j - center)
-            kx^2 + ky^2 < limit || continue
+            # Exact aperture geometry: kx^2 + ky^2 < kmax^2 in whole numbers.
+            (2i - N - 1)^2 + (2j - N - 1)^2 < (N - 1)^2 || continue
             kz = sqrt(complex(BigFloat((p.n / p.λ)^2) - BigFloat(kx)^2 - BigFloat(ky)^2))
             phase = 2big(π) * (BigFloat(x) * kx + BigFloat(y) * ky + BigFloat(z) * kz)
             result += Complex{BigFloat}(p.field[j, i]) * exp(im * phase)
@@ -652,7 +653,7 @@ end
         for i in 1:N, j in 1:N
             kx, ky = step * (i - center), step * (j - center)
             radius² = kx^2 + ky^2
-            radius² < (pupil.nₐ / pupil.λ)^2 || continue
+            (2i - N - 1)^2 + (2j - N - 1)^2 < (N - 1)^2 || continue    # exact aperture
             kz = sqrt(complex(Float64((pupil.n / pupil.λ)^2) - radius²))
             phase = 2π * (xyz[1] * kx + xyz[2] * ky + xyz[3] * kz)
             result += ComplexF64(pupil.field[j, i]) * exp(im * phase)
@@ -856,8 +857,7 @@ end
         samples = [
             (i, j, step * (i - center), step * (j - center))
                 for i in 1:N for j in 1:N
-                if (step * (i - center))^2 + (step * (j - center))^2 <
-                (pupil.nₐ / pupil.λ)^2
+                if (2i - N - 1)^2 + (2j - N - 1)^2 < (N - 1)^2    # exact aperture geometry
         ]
         return step, samples
     end
@@ -882,8 +882,10 @@ end
             psf = ScalarPSF(1.4f0, 0.6f0, 1.518f0; grid_size = N)
             @test reference_energy(psf.pupil) ≈ 1 rtol = tolerance
             if N == 17
-                @test length(reference_samples(psf.pupil)[2]) == 197
-                @test psf(0.0f0, 0.0f0, 0.0f0) ≈ 16.75867889171337 rtol = tolerance
+                # The four samples exactly on the rim are outside, in every precision.
+                @test length(reference_samples(psf.pupil)[2]) == 193
+                @test psf(0.0f0, 0.0f0, 0.0f0) ≈ 193 * Float64(M.kpixelsize(psf.pupil))^2 rtol =
+                    tolerance
             end
             for xyz in ((0.0f0, 0.0f0, 0.0f0), (0.1f0, -0.07f0, 0.12f0))
                 reference = reference_amplitude(psf.pupil, Float64.(xyz)...)
@@ -1284,5 +1286,64 @@ end
             grid_size = 9)
         @test vector isa VectorPSF{Float64}
         @test PupilFunction(1, 1, 2, ones(Complex{Int}, 9, 9)) isa PupilFunction{Float64}
+    end
+
+    @testset "Integer Zernike coefficients; supplied pupil of another precision" begin
+        # Before: integer Zernike coefficients kept an integer element type, and evaluating
+        # the pupil threw InexactError; ScalarPSF with Float64 optics and a Float32 pupil
+        # threw a MethodError, since no conversion between pupil types existed.
+        zi = ZernikeCoefficients([1, 0, 0, 1], [0, 0, 0, 1])
+        zf = ZernikeCoefficients([1.0, 0.0, 0.0, 1.0], [0.0, 0.0, 0.0, 1.0])
+        @test PupilFunction(1, 1, 2, zi; grid_size = 9).field ==
+            PupilFunction(1.0, 1.0, 2.0, zf; grid_size = 9).field
+        si = ScalarPSF(1, 1, 2; zernike_coeffs = zi, grid_size = 9)
+        @test si isa ScalarPSF{Float64}
+        @test si(0.1, 0.2, 0.0) == ScalarPSF(1.0, 1.0, 2.0; zernike_coeffs = zf, grid_size = 9)(0.1, 0.2, 0.0)
+        p32 = PupilFunction(1.4f0, 0.6f0, 1.518f0, ones(ComplexF32, 9, 9))
+        p64 = PupilFunction(Float64(1.4f0), Float64(0.6f0), Float64(1.518f0), ComplexF64.(p32.field))
+        # The positional route keeps a supplied pupil, so the widened Float32 pupil is the
+        # Float64 one exactly. The keyword route normalizes a copy in the pupil's own
+        # precision, so the two agree to Float32 rounding.
+        positional = ScalarPSF(1.4, 0.6, 1.518, p32)
+        @test positional isa ScalarPSF{Float64}
+        @test positional.pupil.field == p64.field
+        @test positional(0.1, 0.2, 0.3) == ScalarPSF(1.4, 0.6, 1.518, p64)(0.1, 0.2, 0.3)
+        keyword = ScalarPSF(1.4, 0.6, 1.518; pupil = p32)
+        @test keyword isa ScalarPSF{Float64}
+        @test keyword(0.1, 0.2, 0.3) ≈ ScalarPSF(1.4, 0.6, 1.518; pupil = p64)(0.1, 0.2, 0.3) rtol = 1.0e-6
+        @test convert(PupilFunction{Float32}, p32) === p32
+        @test ScalarPSF(big"1.4", big"0.6", big"1.518"; pupil = p64) isa ScalarPSF{BigFloat}
+    end
+
+    @testset "Supplied pupil left unchanged; aperture membership exact in every precision" begin
+        # Before: the keyword ScalarPSF normalized the caller's pupil in place; on an odd grid
+        # a Float32 pupil counted the four samples exactly on the aperture rim and the same
+        # pupil in Float64 did not, so their normalizations differed by 4 percent.
+        mk(T) = PupilFunction(T(1.4f0), T(0.6f0), T(1.518f0), ones(Complex{T}, 9, 9))
+        p = mk(Float64)
+        before = copy(p.field)
+        ScalarPSF(1.4, 0.6, 1.518; pupil = p)
+        @test p.field == before
+        inside(q) = count(M._pupil_sample(q, i, j)[4] for i in 1:9, j in 1:9)
+        @test inside(mk(Float32)) == inside(mk(Float64)) == 45
+        for T in (Float32, Float64)
+            vector = VectorPSF(T(1.2), T(0.6), DipoleVector(T(0), T(0), T(1));
+                n_medium = T(1.4), n_coverslip = T(1.4), n_immersion = T(1.4), grid_size = 9)
+            v = vector.vector_pupils[1]
+            c = (9 + 1) / 2
+            @test count(M._vector_pupil_sample(i, j, c, M.kpixelsize(v), M.kmax(v)^2)[4]
+                for i in 1:9, j in 1:9) == 49
+        end
+        a = ScalarPSF(1.4, 0.6, 1.518; pupil = mk(Float32))
+        b = ScalarPSF(1.4, 0.6, 1.518; pupil = mk(Float64))
+        for xyz in ((0.1, 0.2, 0.3), (0.0, 0.0, 0.0), (0.4, -0.3, 0.5))
+            @test a(xyz...) ≈ b(xyz...) rtol = 1.0e-5
+        end
+        vf = [VectorPSF(T(1.2), T(0.6), DipoleVector(T(0.3), T(0.4), T(sqrt(0.75)));
+            n_medium = T(1.4), n_coverslip = T(1.4), n_immersion = T(1.4), grid_size = 9)
+            for T in (Float32, Float64)]
+        for xyz in ((0.1, 0.2, 0.3), (0.0, 0.0, 0.0), (0.4, -0.3, 0.5))
+            @test vf[1](xyz...) ≈ vf[2](xyz...) rtol = 1.0e-4
+        end
     end
 end

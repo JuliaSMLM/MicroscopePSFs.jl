@@ -67,6 +67,12 @@ Return a deep copy of `p` with an independent `field` array.
 """
 Base.copy(p::PupilFunction) = PupilFunction(p.nₐ, p.λ, p.n, copy(p.field))
 
+# A pupil converts to another floating-point element type, so a PSF whose optics promote to a
+# wider type than its supplied pupil can hold it. The same type returns the pupil itself.
+Base.convert(::Type{PupilFunction{T}}, p::PupilFunction{T}) where {T} = p
+Base.convert(::Type{PupilFunction{T}}, p::PupilFunction) where {T} =
+    PupilFunction(T(p.nₐ), T(p.λ), T(p.n), convert(Array{Complex{T}}, p.field))
+
 """
     PupilFunction(nₐ::Real, λ::Real, n::Real, 
                   zc::ZernikeCoefficients;
@@ -100,22 +106,27 @@ that field.
 function PupilFunction(nₐ::Real, λ::Real, n::Real,
     zc::ZernikeCoefficients;
     grid_size::Int=64)
-    T = promote_type(typeof(nₐ), typeof(λ), typeof(n), eltype(zc.phase))
+    T = float(promote_type(typeof(nₐ), typeof(λ), typeof(n), eltype(zc.phase)))
     field = Zernike._evaluate_pupil(zc, grid_size, T)
 
     return PupilFunction(nₐ, λ, n, field)
 end
 
 
-# Aperture membership uses the same grid arithmetic for every evaluation precision.
+# Aperture membership is exact grid geometry, the same for every precision of the pupil and
+# of the evaluation: kr2 < kmax^2 is (2i - N - 1)^2 + (2j - N - 1)^2 < (N - 1)^2, whole
+# numbers held exactly in Float64. A sample exactly on the rim is outside.
 @inline function _pupil_sample(p::PupilFunction, i, j)
     center = (size(p.field, 1) + 1) / 2
     kpix = kpixelsize(p)
     kx = kpix * (i - center)
     ky = kpix * (j - center)
     kr2 = kx^2 + ky^2
-    return kx, ky, kr2, kr2 < kmax(p)^2
+    return kx, ky, kr2, _inside_aperture(i, j, center, <)
 end
+
+@inline _inside_aperture(i, j, center, cmp) =
+    cmp((2i - 2center)^2 + (2j - 2center)^2, (2center - 2)^2)
 
 function _pupil_energy(p::PupilFunction{T}) where {T}
     sz = size(p.field, 1)

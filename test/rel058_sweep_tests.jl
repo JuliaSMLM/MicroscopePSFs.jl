@@ -59,7 +59,7 @@ using ForwardDiff
             for i in 1:sz, j in 1:sz
                 kx, ky = kpix * (i - center), kpix * (j - center)
                 kr2 = kx^2 + ky^2
-                if kr2 < M.kmax(p)^2
+                if (2i - sz - 1)^2 + (2j - sz - 1)^2 < (sz - 1)^2    # exact aperture
                     kz = sqrt(complex(M.k₀(p)^2 - kr2))
                     phase = 2π * (x * kx + y * ky + z * kz)
                     result += p.field[j, i] * exp(im * phase)
@@ -231,7 +231,10 @@ using ForwardDiff
             @test size(psf.pupil.field) == (grid_size, grid_size)
         end
         pupil = PupilFunction(1.4, 0.6, 1.518, ZernikeCoefficients(1); grid_size = 32)
-        @test ScalarPSF(1.4, 0.6, 1.518; pupil = pupil, grid_size = 64).pupil === pupil
+        before = copy(pupil.field)
+        # A supplied pupil keeps its grid; the PSF holds a normalized copy of it.
+        @test size(ScalarPSF(1.4, 0.6, 1.518; pupil = pupil, grid_size = 64).pupil.field) == (32, 32)
+        @test pupil.field == before
         @test size(
             ScalarPSF(
                 1.4, 0.6, 1.518; pupil_data = ones(ComplexF64, 32, 32),

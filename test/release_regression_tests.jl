@@ -68,7 +68,7 @@ using Test, MicroscopePSFs, HDF5
         end
         p = PupilFunction(1.2, 0.68, 1.33, ones(ComplexF64, 32, 32))
         kpix = M.kpixelsize(p)
-        mask = [kpix^2 * ((i-16.5)^2 + (j-16.5)^2) < M.kmax(p)^2
+        mask = [(2i - 33)^2 + (2j - 33)^2 < 31^2    # exact aperture of the 32-sample grid
                 for j in 1:32, i in 1:32]
         M.normalize!(p)
         @test sum(abs2, p.field[mask]) * kpix^2 ≈ 1

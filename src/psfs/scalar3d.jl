@@ -18,7 +18,8 @@ The numerical aperture must satisfy `nₐ <= n`, including positional constructi
 with a supplied pupil.
 
 # Keyword Arguments
-- `pupil`: Optional pre-created PupilFunction
+- `pupil`: Optional pre-created PupilFunction; a normalized copy is stored, and the given
+  pupil is not changed
 - `pupil_data`: Optional complex matrix to initialize the pupil function
 - `zernike_coeffs`: Optional ZernikeCoefficients for aberrations
 - `grid_size`: Generated pupil grid size (default: 128); a supplied `pupil` or
@@ -73,7 +74,7 @@ function ScalarPSF(
     
     T = nₐ isa Float32 && λ isa Float32 && n isa Float32 ? Float32 : Float64
     pupil_func = if !isnothing(pupil)
-        pupil
+        copy(pupil)    # normalized below; the caller's pupil is left as given
     elseif !isnothing(pupil_data)
         PupilFunction(nₐ, λ, n, pupil_data)
     else

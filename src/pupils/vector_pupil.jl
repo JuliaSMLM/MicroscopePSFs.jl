@@ -76,11 +76,14 @@ function VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real, n_coverslip::
     VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
 end
 
+# Membership is exact grid geometry, as for scalar pupils, so it does not depend on the
+# precision of the pupil; a vector pupil keeps a sample exactly on the rim. The kmax²
+# argument is no longer needed for it.
 @inline function _vector_pupil_sample(i, j, center, kpixel, kmax²)
     kx = (i - center) * kpixel
     ky = (j - center) * kpixel
     kr2 = kx^2 + ky^2
-    return kx, ky, kr2, kr2 <= kmax²
+    return kx, ky, kr2, _inside_aperture(i, j, center, <=)
 end
 
 function _vector_pupil_energy(p::VectorPupilFunction{T}) where {T}
