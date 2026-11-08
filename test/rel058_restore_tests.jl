@@ -1266,4 +1266,23 @@ end
             @test eltype(image) == Float64
         end
     end
+
+    @testset "Integer counts into a Float32 image; all-integer vector optics" begin
+        # Before: a preallocated Float32 image was scaled by an integer count in Float32, so
+        # Int32(16777217) rounded before the multiplication; VectorPSF with every optical
+        # argument an integer, z_stage included, failed with a TypeError.
+        ex, ey = Float32[-0.1, 0.05, 0.25], Float32[-0.15, 0.0, 0.2]
+        for psf in (AiryPSF(1.4f0, 0.6f0), GaussianPSF(0.13f0))
+            into(photons) = (image = zeros(Float32, 2, 2);
+                M.integrate_pixels!(image, psf, ex, ey,
+                    Main.MixedPhotonEmitter(0.01f0, -0.02f0, photons); threaded = false);
+                image)
+            @test into(Int32(16777217)) == into(16777217.0)
+            @test into(Int64(10)^12) == into(1.0e12)
+        end
+        vector = VectorPSF(1, 1; n_medium = 2, n_coverslip = 2, n_immersion = 2, z_stage = 0,
+            grid_size = 9)
+        @test vector isa VectorPSF{Float64}
+        @test PupilFunction(1, 1, 2, ones(Complex{Int}, 9, 9)) isa PupilFunction{Float64}
+    end
 end

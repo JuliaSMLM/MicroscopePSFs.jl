@@ -25,7 +25,7 @@ struct PupilFunction{T<:AbstractFloat}
             size(field, 1) >= 2 || throw(ArgumentError(
                 "Pupil field must be square with at least two samples per axis; " *
                 "supply a square field"))
-        T = promote_type(typeof(nₐ), typeof(λ), typeof(n), real(eltype(field)))
+        T = float(promote_type(typeof(nₐ), typeof(λ), typeof(n), real(eltype(field))))
         new{T}(T(nₐ), T(λ), T(n), convert(Array{Complex{T}}, field))
     end
 end

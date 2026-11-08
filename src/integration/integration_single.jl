@@ -61,8 +61,9 @@ function integrate_pixels!(
         threaded=threaded
     )
     
-    # Scale by photon count
-    result .*= emitter.photons
+    # Scale by photon count; an integer count becomes floating point first, so a narrow
+    # result array gets the same rounding as for the count given as Float64.
+    result .*= _float_coordinate(emitter.photons)
     
     return result
 end
@@ -402,7 +403,7 @@ Automatically handles z-coordinate if both PSF and emitter support it.
 - `threaded::Bool=true`: Whether to use multi-threading for integration
 
 # Returns
-- `Matrix{Complex{T}}`: Integrated complex amplitudes; T is the type of `emitter.photons`, or floating point for an integer count
+- `Array{Complex{T}}`: Integrated complex amplitudes, `[y, x]`, or `[y, x, 2]` for a vector PSF's two field components; T is the type of `emitter.photons`, or floating point for an integer count
 - Array is indexed as [y,x] with [1,1] at top-left pixel
 - Values are not normalized to preserve complex amplitude relationships
 

@@ -74,8 +74,9 @@ and photon counts to floating point before any arithmetic. There, fixed-width in
 `Int`, `Int8` and `UInt8` give exactly the image of the same numbers given as `Float64`; a
 `BigInt` gives `BigFloat`. A PSF evaluated directly at integer coordinates gives finite,
 non-negative values, in a number type that follows Julia's promotion with the PSF's own type.
-Integer optical parameters are accepted; with integers alone or with `Float64` the PSF is
-`Float64`. For a `Float32` PSF, give every optical parameter as `Float32`.
+Integer optical parameters are accepted; with fixed-width integers alone or with `Float64`
+the PSF is `Float64`, and a `BigInt` gives `BigFloat`. For a `Float32` PSF, give every
+optical parameter as `Float32`.
 
 A `SplinePSF` reproduces the samples it was built from. Between samples, cubic
 interpolation can dip below zero, most where the samples are coarse compared with the width

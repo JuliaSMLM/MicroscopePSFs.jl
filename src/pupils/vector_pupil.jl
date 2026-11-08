@@ -41,9 +41,9 @@ struct VectorPupilFunction{T<:AbstractFloat}
         size(Ex.field) == size(Ey.field) || 
             throw(ArgumentError("Ex and Ey pupils must have same size"))
         
-        T = promote_type(typeof(nₐ), typeof(λ),
+        T = float(promote_type(typeof(nₐ), typeof(λ),
                         typeof(n_medium), typeof(n_coverslip), typeof(n_immersion),
-                        real(eltype(Ex.field)), real(eltype(Ey.field)))
+                        real(eltype(Ex.field)), real(eltype(Ey.field))))
         
         new{T}(T(nₐ), T(λ), T(n_medium), T(n_coverslip), T(n_immersion), Ex, Ey)
     end

@@ -54,11 +54,11 @@ function VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     grid_size::Integer=128)
 
     _require_fixed_dipole(dipole)
-    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
+    T = float(promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
         typeof(n_coverslip), typeof(n_immersion), typeof(z_stage),
         typeof(dipole.px),
         isnothing(base_pupil) ? typeof(nₐ) : real(eltype(base_pupil.field)),
-        isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike))
+        isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike)))
     nₐ, λ, n_medium = T(nₐ), T(λ), T(n_medium)
     n_coverslip, n_immersion = T(n_coverslip), T(n_immersion)
     _check_vector_aperture(nₐ, n_medium, n_coverslip)
@@ -162,10 +162,10 @@ function VectorPSF(nₐ::Real, λ::Real;
     z_stage::Real=zero(float(nₐ)),
     grid_size::Integer=128)
 
-    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
+    T = float(promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
         typeof(n_coverslip), typeof(n_immersion), typeof(z_stage),
         isnothing(base_pupil) ? typeof(nₐ) : real(eltype(base_pupil.field)),
-        isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike))
+        isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike)))
     nₐ, λ, n_medium = T(nₐ), T(λ), T(n_medium)
     n_coverslip, n_immersion = T(n_coverslip), T(n_immersion)
     _check_vector_aperture(nₐ, n_medium, n_coverslip)
