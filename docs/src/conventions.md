@@ -79,7 +79,7 @@ Pixel integration converts integer pixel edges, emitter positions (x, y and z), 
 and photon counts to floating point before any arithmetic. There, fixed-width integers such as
 `Int`, `Int8` and `UInt8` give exactly the image of the same numbers given as `Float64`; a
 `BigInt` gives `BigFloat`. A PSF evaluated directly at integer coordinates gives finite,
-non-negative values, in a number type that follows Julia's promotion with the PSF's own type.
+non-negative values; their number type is not promised.
 Integer optical parameters, Zernike coefficients included, are accepted; with fixed-width
 integers alone or with `Float64` the PSF is `Float64`. For a `Float32` PSF, give every
 optical parameter as `Float32`.
