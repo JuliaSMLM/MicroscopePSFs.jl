@@ -36,6 +36,7 @@ struct GaussianPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
 end
 
 GaussianPSF(σ::T) where {T<:AbstractFloat} = GaussianPSF{T}(σ)
+GaussianPSF(σ::Integer) = GaussianPSF(float(σ))
 
 """
     AiryPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
@@ -60,7 +61,7 @@ struct AiryPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
     ν::T
 
     function AiryPSF(nₐ::Real, λ::Real)
-        T = promote_type(typeof(nₐ), typeof(λ))
+        T = float(promote_type(typeof(nₐ), typeof(λ)))
         nₐ > 0 || throw(ArgumentError("Numerical aperture must be positive"))
         λ > 0 || throw(ArgumentError("Wavelength must be positive"))
         ν = 2T(π) * nₐ / λ

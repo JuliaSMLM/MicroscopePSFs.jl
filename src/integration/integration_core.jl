@@ -68,11 +68,14 @@ function get_pixel_indices(
             # Use full grid
             return 1:length(pixel_edges_x)-1, 1:length(pixel_edges_y)-1
         else
-            # Define region around emitter
-            x_min = emitter.x - support
-            x_max = emitter.x + support
-            y_min = emitter.y - support
-            y_max = emitter.y + support
+            # Define region around emitter; integer positions and radii become floating
+            # point first, so the bounds cannot wrap.
+            x₀, y₀ = _float_coordinate(emitter.x), _float_coordinate(emitter.y)
+            radius = _float_coordinate(support)
+            x_min = x₀ - radius
+            x_max = x₀ + radius
+            y_min = y₀ - radius
+            y_max = y₀ + radius
         end
     else
         # Explicit region provided as tuple

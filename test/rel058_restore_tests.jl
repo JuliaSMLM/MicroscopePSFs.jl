@@ -1157,4 +1157,42 @@ end
             )
         end
     end
+
+    @testset "Integer support radius and optical parameters" begin
+        # Before: an Int8 emitter at 100 plus an Int8 radius of 40 wrapped to -116, so the
+        # support region was empty and the image zero; AiryPSF(1, 1) and GaussianPSF(1)
+        # failed with method errors.
+        ex, ey = Int8[95, 100, 105], Int8[-5, 0, 5]
+        emitter = Emitter2D(Int8(100), Int8(0), Int8(100))
+        reference_emitter = Emitter2D(100.0, 0.0, 100.0)
+        for psf in (GaussianPSF(0.5), AiryPSF(1.4, 0.6)), support in (Int8(40), Int8(3))
+            image = integrate_pixels(psf, ex, ey, emitter; support, threaded = false)
+            reference = integrate_pixels(
+                psf, Float64.(ex), Float64.(ey), reference_emitter;
+                support = Float64(support), threaded = false
+            )
+            @test image == reference
+            @test sum(reference) > 0
+            field = integrate_pixels_amplitude(psf, ex, ey, emitter; support, threaded = false)
+            @test field == integrate_pixels_amplitude(
+                psf, Float64.(ex), Float64.(ey), reference_emitter;
+                support = Float64(support), threaded = false
+            )
+            pair = integrate_pixels(psf, ex, ey, [emitter, emitter]; support, threaded = false)
+            @test pair == integrate_pixels(
+                psf, Float64.(ex), Float64.(ey), [reference_emitter, reference_emitter];
+                support = Float64(support), threaded = false
+            )
+        end
+        airy = AiryPSF(1, 1)
+        @test airy isa AiryPSF{Float64}
+        @test airy(0.3, 0.1) === AiryPSF(1.0, 1.0)(0.3, 0.1)
+        gaussian = GaussianPSF(1)
+        @test gaussian isa GaussianPSF{Float64}
+        @test gaussian(0.3, 0.1) === GaussianPSF(1.0)(0.3, 0.1)
+        @test ScalarPSF(1, 1, 2) isa ScalarPSF{Float64}
+        dipole = DipoleVector(0.0, 0.0, 1.0)
+        @test VectorPSF(1, 1, dipole; n_medium = 2, n_coverslip = 2, n_immersion = 2) isa
+            VectorPSF{Float64}
+    end
 end

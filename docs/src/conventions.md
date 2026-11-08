@@ -66,15 +66,25 @@ The PSFs are checked over this range:
 | Axial position z | within 100 μm of focus |
 | Photons per emitter | up to 10¹² |
 
-Inside it, every value is finite and non-negative for `Float32`, `Float64` and integer
-inputs and any mix of them. Integer pixel edges, positions and photon counts are converted
-to floating point first, and give exactly the `Float64` result.
+Inside it, the Gaussian, Airy, scalar and vector PSFs, and the multi-channel PSFs built on
+them, give finite, non-negative intensities for `Float32`, `Float64` and integer inputs and
+any mix of them.
 
-`Float32` keeps its own resolution. All-`Float32` images of an emitter near the origin agree
-with `Float64` to within 0.1 percent of the image peak, and a `Float32` PSF evaluated at
-`Float64` positions to within 0.04 percent. A `Float32` position 1 cm from the origin
-resolves only about 1 nm, which moves the image of a PSF a few nanometers wide by up to a
-few percent; use `Float64` positions there.
+Integer optical parameters, pixel edges, emitter positions, support radii and photon counts
+are converted to floating point before any arithmetic. Fixed-width integers such as `Int`
+and `Int8` give exactly the `Float64` result; a `BigInt` gives `BigFloat`.
+
+A `SplinePSF` reproduces the samples it was built from. Between samples, cubic
+interpolation can dip below zero where the samples are coarse compared with the width of
+the PSF, and the interpolated intensity there is negative. Sample finely enough to resolve
+the PSF's structure.
+
+`Float32` results carry `Float32` rounding, which grows with the size of the intermediate
+values: the defocus phase, about 2π z n / λ, and positions far from the origin. For
+example, an all-`Float32` scalar PSF at 100 μm of defocus differed from `Float64` by 0.24
+percent of the image peak, and a `Float32` position 1 cm from the origin, which resolves
+only about 1 nm, moved the image of a PSF a few nanometers wide by up to 2 percent. Use
+`Float64` where that matters.
 
 Outside the range, intermediate values such as squared wave numbers or pixel areas can
 leave the range of the number type and give zero, infinity or `NaN`.
