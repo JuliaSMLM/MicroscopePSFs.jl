@@ -69,12 +69,13 @@ The PSFs are checked over this range:
 Inside it, every PSF gives finite, non-negative intensities for `Float32`, `Float64` and
 integer inputs and any mix of them.
 
-Integer pixel edges, emitter positions (x, y and z), support radii and photon counts are
-converted to floating point before any arithmetic. Fixed-width integers such as `Int`, `Int8`
-and `UInt8` give exactly the result of the same numbers given as `Float64`; a `BigInt` gives
-`BigFloat`. Integer optical parameters are accepted and follow Julia's promotion rules: with
-integers and `Float64` the PSF is `Float64`, and an integer mixed with `Float32` gives a
-`Float32` PSF.
+Pixel integration converts integer pixel edges, emitter positions (x, y and z), support radii
+and photon counts to floating point before any arithmetic. There, fixed-width integers such as
+`Int`, `Int8` and `UInt8` give exactly the image of the same numbers given as `Float64`; a
+`BigInt` gives `BigFloat`. A PSF evaluated directly at integer coordinates gives finite,
+non-negative values, in a number type that follows Julia's promotion with the PSF's own type.
+Integer optical parameters are accepted; with integers alone or with `Float64` the PSF is
+`Float64`. For a `Float32` PSF, give every optical parameter as `Float32`.
 
 A `SplinePSF` reproduces the samples it was built from. Between samples, cubic
 interpolation can dip below zero, most where the samples are coarse compared with the width

@@ -253,7 +253,7 @@ Automatically handles z-coordinate if both PSF and emitter support it.
   Set to false when using with automatic differentiation frameworks
 
 # Returns
-- `Matrix{T}`: Integrated intensities where T matches emitter.photons type
+- `Matrix{T}`: Integrated intensities; T is the type of `emitter.photons`, or floating point for an integer count
 - Array is indexed as [y,x] with [1,1] at top-left pixel
 - Values represent actual photon counts in each pixel based on emitter's photon value
 
@@ -402,7 +402,7 @@ Automatically handles z-coordinate if both PSF and emitter support it.
 - `threaded::Bool=true`: Whether to use multi-threading for integration
 
 # Returns
-- `Matrix{Complex{T}}`: Integrated complex amplitudes where T matches emitter.photons type
+- `Matrix{Complex{T}}`: Integrated complex amplitudes; T is the type of `emitter.photons`, or floating point for an integer count
 - Array is indexed as [y,x] with [1,1] at top-left pixel
 - Values are not normalized to preserve complex amplitude relationships
 

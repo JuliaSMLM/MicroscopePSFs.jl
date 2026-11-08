@@ -309,7 +309,8 @@ Evaluate the 3D spline PSF at position (x, y, z).
 # Notes
 - Returns NaN for nonfinite coordinates and 0 outside the finite PSF boundary
 - Never negative: where cubic interpolation between samples dips below zero, the result is 0
-- Preserves the normalization of the original PSF data
+- Interpolates the PSF data without rescaling it; its integral matches the original PSF as
+  closely as the samples resolve it, and cutting dips off at zero adds their area
 
 # Example
 ```julia
@@ -357,7 +358,8 @@ Evaluate the spline PSF at position (x, y).
 - For 3D PSFs, evaluates at z = 0 if in range, otherwise returns 0
 - Returns NaN for nonfinite coordinates and 0 outside the finite PSF boundary
 - Never negative: where cubic interpolation between samples dips below zero, the result is 0
-- Preserves the normalization of the original PSF data
+- Interpolates the PSF data without rescaling it; its integral matches the original PSF as
+  closely as the samples resolve it, and cutting dips off at zero adds their area
 
 # Example
 ```julia

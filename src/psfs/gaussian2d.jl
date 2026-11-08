@@ -46,6 +46,7 @@ function integrate_pixels!(
     # Integer edges or positions become floating point, so an offset cannot wrap.
     edges_x, edges_y = _float_coordinates(pixel_edges_x), _float_coordinates(pixel_edges_y)
     x₀, y₀ = _float_coordinate(emitter.x), _float_coordinate(emitter.y)
+    photons = _float_coordinate(emitter.photons)
     x_integrals = [
         erf((edges_x[i] - x₀) / scale, (edges_x[i + 1] - x₀) / scale) / 2 for i in 1:nx
     ]
@@ -54,7 +55,7 @@ function integrate_pixels!(
     ]
     function integrate_column(i)
         for j in 1:ny
-            result[j, i] = emitter.photons * x_integrals[i] * y_integrals[j]
+            result[j, i] = photons * x_integrals[i] * y_integrals[j]
         end
         return
     end

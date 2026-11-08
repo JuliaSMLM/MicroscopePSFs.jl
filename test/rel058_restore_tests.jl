@@ -1248,4 +1248,22 @@ end
         @test all(>=(0), spline3(x, y, z) for x in -1.0:0.01:1.0, y in (0.0, 0.3), z in (-0.4, 0.1))
         @test isnan(spline3(0.0, 0.0, NaN))
     end
+
+    @testset "Integer photons with single-precision positions" begin
+        # Before: the Gaussian route multiplied an integer photon count by Float32 pixel
+        # fractions, so the image held Float32 products, unlike photons given as Float64.
+        @eval Main mutable struct MixedPhotonEmitter{P} <: MicroscopePSFs.AbstractEmitter
+            x::Float32
+            y::Float32
+            photons::P
+        end
+        ex, ey = Float32[-0.1, 0.05, 0.25], Float32[-0.15, 0.0, 0.2]
+        for psf in (GaussianPSF(0.13f0), AiryPSF(1.4f0, 0.6f0)), I in (Int, Int8, UInt16)
+            whole = Main.MixedPhotonEmitter(0.01f0, -0.02f0, I(100))
+            floating = Main.MixedPhotonEmitter(0.01f0, -0.02f0, 100.0)
+            image = integrate_pixels(psf, ex, ey, whole; threaded = false)
+            @test image == integrate_pixels(psf, ex, ey, floating; threaded = false)
+            @test eltype(image) == Float64
+        end
+    end
 end
