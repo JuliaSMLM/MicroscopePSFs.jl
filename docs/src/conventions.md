@@ -63,11 +63,17 @@ The PSFs are checked over this range:
 | Gaussian σ | 0.01 to 10 μm |
 | Positions and pixel edges | within 10⁴ μm (1 cm) of the origin |
 | Pixel size | at least 10⁻³ μm (1 nm) |
-| Axial position z | within 100 μm of focus |
+| Axial position z | within 100 μm of focus; see below for a `VectorPSF` |
 | Photons per emitter | up to 10¹² |
 
 Inside it, every PSF gives finite, non-negative intensities for `Float32`, `Float64` and
 integer inputs and any mix of them.
+
+For a `VectorPSF`, z is the emitter's depth above the coverslip, not a defocus. When the
+numerical aperture exceeds the sample's refractive index (`n_medium`), the pupil carries
+evanescent waves, which decay above the coverslip and grow without bound below it; such a
+PSF is in range only for depths from 0 to 100 μm, counting a `PlanePSF` offset in the depth.
+A `FourPiPSF` refuses such arms, since its mirrored arm sees the negative depth.
 
 Pixel integration converts integer pixel edges, emitter positions (x, y and z), support radii
 and photon counts to floating point before any arithmetic. There, fixed-width integers such as
