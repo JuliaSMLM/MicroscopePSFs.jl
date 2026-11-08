@@ -62,5 +62,12 @@ function _check_normalization(values; tol=1e-6)
     return s
 end
 
+# Widen a narrow number before it is squared, so the square cannot underflow, overflow or
+# wrap: Float16 and Float32 go to Float64, integers to floating point. Everything else,
+# Float64, BigFloat and ForwardDiff duals included, passes through unchanged.
+_widen_for_square(x::Union{Float16, Float32}) = Float64(x)
+_widen_for_square(x::Integer) = float(x)
+_widen_for_square(x::Real) = x
+
 # Export the public functions
 export get_pixel_size, get_pixel_centers, is_axis_aligned

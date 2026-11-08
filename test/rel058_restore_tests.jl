@@ -953,16 +953,19 @@ end
         end
     end
 
-    # These formulas preserve the ef969db arithmetic for inputs outside all-Float32.
+    # For inputs outside all-Float32, the ef969db formulas evaluated on Float64 copies of the
+    # stored parameter and the coordinates: narrow numbers are widened before squaring.
     function reference_airy(psf, x, y)
+        ν, x, y = Float64(psf.ν), Float64(x), Float64(y)
         r² = x^2 + y^2
-        w² = r² * psf.ν^2
-        w² < 1.0e-10 && return psf.ν / sqrt(4π) * (1 - w² / 8)
-        w = sqrt(r²) * psf.ν
-        return psf.ν / sqrt(4π) * (2 * besselj1(w) / w)
+        w² = r² * ν^2
+        w² < 1.0e-10 && return ν / sqrt(4π) * (1 - w² / 8)
+        w = sqrt(r²) * ν
+        return ν / sqrt(4π) * (2 * besselj1(w) / w)
     end
     function reference_gaussian(psf, x, y)
-        return 1 / (2π * psf.σ^2) * exp(-(x^2 + y^2) / (2psf.σ^2))
+        σ, x, y = Float64(psf.σ), Float64(x), Float64(y)
+        return 1 / (2π * σ^2) * exp(-(x^2 + y^2) / (2σ^2))
     end
 
     @testset "Review 10.3: Float32 scope and inferred mixed inputs" begin
@@ -1035,6 +1038,64 @@ end
             @test_throws ArgumentError ScalarPSF(
                 1.4f0, 0.6f0, 1.518f0, PupilFunction(1.4f0, 0.6f0, 1.518f0, field)
             )
+        end
+    end
+
+    @testset "Narrow inputs widened before squaring" begin
+        # Before: each square was taken in the narrow type, so these gave NaN, zero, the
+        # peak, or a wrapped integer square. References use the stored values exactly.
+        setprecision(BigFloat, 256) do
+            gaussian_big(σ, x, y) = (s = BigFloat(σ);
+                exp(-(BigFloat(x)^2 + BigFloat(y)^2) / (2s^2)) / (2big(π) * s^2))
+            function airy_big(ν, x, y)
+                v = BigFloat(ν)
+                w = sqrt(BigFloat(x)^2 + BigFloat(y)^2) * v
+                a = iszero(w) ? v / sqrt(4big(π)) : v / sqrt(4big(π)) * 2besselj1(w) / w
+                return abs2(a)
+            end
+            gaussian_cases = (
+                (1.0f-25, 1.0e-24, 0.0),          # Float32 width: square underflowed, NaN
+                (1.0f-25, 0.0, 0.0),
+                (Float16(1.0e-4), 1.0e-4, 0.0),   # Float16 width: NaN
+                (Float16(1.0e-4), 0.0, 0.0),
+                (1.0f25, 1.0e25, 0.0),            # Float32 width: square overflowed, zero
+                (1.0e-25, 1.0f-24, 0.0f0),        # Float32 position: square underflowed, peak
+                (5.0, Int8(12), Int8(0)),         # Int8 position: square wrapped
+                (Float16(0.13), 0.1, 0.0),        # Float16 width: square rounded, 2e-4 off
+            )
+            for (σ, x, y) in gaussian_cases
+                psf = GaussianPSF(σ)
+                reference = gaussian_big(σ, x, y)
+                value = psf(x, y)
+                @test value isa Float64
+                @test value ≈ reference rtol = 1.0e-13
+                @test amplitude(psf, x, y) ≈ sqrt(reference) rtol = 1.0e-13
+            end
+            airy_cases = (
+                (Float16(1.4), Float16(0.02), 0.0),   # Float16 ν² overflowed: NaN at center
+                (Float16(1.4), Float16(0.02), 0.01),
+                (1.4f0, 1.0f-19, 0.0),                # Float32 ν² overflowed: NaN at center
+                (1.4f0, 1.0f-19, 1.0e-20),
+                (1.4, 0.6, Int8(12)),                 # Int8 position: square wrapped
+            )
+            for (na, λ, x) in airy_cases
+                psf = AiryPSF(na, λ)
+                reference = airy_big(psf.ν, x, zero(x))
+                value = psf(x, zero(x))
+                @test value isa Float64
+                @test value ≈ reference rtol = 1.0e-13
+            end
+        end
+        # Float64 parameters with Float64 positions: the ef969db arithmetic, bit for bit.
+        for (x, y) in ((0.0, 0.0), (0.0731, -0.0412), (0.2, 0.35), (1.7, -2.3))
+            gaussian = GaussianPSF(0.13)
+            @test gaussian(x, y) === 1 / (2π * 0.13^2) * exp(-(x^2 + y^2) / (2 * 0.13^2))
+            airy = AiryPSF(1.4, 0.6)
+            r² = x^2 + y^2
+            w² = r² * airy.ν^2
+            expected = w² < 1.0e-10 ? airy.ν / sqrt(4π) * (1 - w² / 8) :
+                airy.ν / sqrt(4π) * (2 * besselj1(sqrt(r²) * airy.ν) / (sqrt(r²) * airy.ν))
+            @test amplitude(airy, x, y) === expected
         end
     end
 end

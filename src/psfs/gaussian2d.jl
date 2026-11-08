@@ -12,8 +12,9 @@ function (psf::GaussianPSF{T})(x::Real, y::Real) where {T}
     if C === Float32
         return Float32(_gaussian_intensity_float64(psf, x, y))
     end
-    r² = x^2 + y^2
-    return 1 / (2C(π) * psf.σ^2) * exp(-r² / (2psf.σ^2))
+    σ = _widen_for_square(psf.σ)
+    r² = _widen_for_square(x)^2 + _widen_for_square(y)^2
+    return 1 / (2C(π) * σ^2) * exp(-r² / (2σ^2))
 end
 
 function _gaussian_intensity_float64(psf::GaussianPSF{Float32}, x::Real, y::Real)
