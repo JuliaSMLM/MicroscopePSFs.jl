@@ -39,9 +39,12 @@ struct PlanePSF{T, P <: AbstractPSF} <: Abstract3DPSF{T}
         return new{T,P}(psf, T(dz))
     end
 end
-(p::PlanePSF)(x::Real, y::Real, z::Real) = p.psf(x, y, z + p.dz)
-amplitude(p::PlanePSF, x::Real, y::Real, z::Real) = amplitude(p.psf, x, y, z + p.dz)
-dipole_fields(p::PlanePSF, x::Real, y::Real, z::Real) = dipole_fields(p.psf, x, y, z + p.dz)
+# An integer z becomes floating point before the offset, so it cannot narrow or wrap.
+(p::PlanePSF)(x::Real, y::Real, z::Real) = p.psf(x, y, _float_coordinate(z) + p.dz)
+amplitude(p::PlanePSF, x::Real, y::Real, z::Real) =
+    amplitude(p.psf, x, y, _float_coordinate(z) + p.dz)
+dipole_fields(p::PlanePSF, x::Real, y::Real, z::Real) =
+    dipole_fields(p.psf, x, y, _float_coordinate(z) + p.dz)
 
 _n_components(::AbstractPSF) = 0
 _n_components(::ScalarPSF) = 1
@@ -209,6 +212,8 @@ struct FourPiPSF{T, A <: AbstractPSF, B <: AbstractPSF} <: Abstract3DPSF{T}
 end
 _n_components(p::FourPiPSF) = _n_components(p.top)
 function dipole_fields(p::FourPiPSF, x::Real, y::Real, z::Real)
+    # An integer z becomes floating point first: negating an unsigned z would wrap.
+    z = _float_coordinate(z)
     Et = dipole_fields(p.top, x, y, z)
     Eb = dipole_fields(p.bottom, x, y, -z)
     s = _mirror_signs(p.bottom)
@@ -456,6 +461,7 @@ function channel_position(mc::MultiChannelPSF, i::Integer, x::Real, y::Real, z::
     1 <= i <= length(mc.channels) || throw(ArgumentError(
         "Channel index must be in 1:$(length(mc.channels)); select an existing channel"))
     r = mc.registration[i]
+    x, y, z = _float_coordinate(x), _float_coordinate(y), _float_coordinate(z)
     return (r[1,1] * x + r[1,2] * y + r[1,3],
             r[2,1] * x + r[2,2] * y + r[2,3], z + mc.z_offset[i])
 end

@@ -3,7 +3,8 @@
 """
     ZernikeCoefficients{T<:Real}
 
-Mutable structure to hold Zernike coefficients for both magnitude and phase of a pupil function.
+Mutable structure to hold Zernike coefficients for both magnitude and phase of a pupil
+function.
 Uses Noll indexing convention starting at index 1.
 
 # Fields
@@ -11,10 +12,13 @@ Uses Noll indexing convention starting at index 1.
 - `phase::Vector{T}`: Coefficients for phase (1-indexed per Noll convention)
 
 # Notes
-- First coefficient (index 1) typically represents piston
-- Magnitude coefficients are typically normalized with mag[1] = 1
+- Index 1 is piston
+- Magnitude coefficients are absolute: `PupilFunction` uses `Σⱼ mag[j] Zⱼ` as the amplitude
+  with no offset added. Keep `mag[1] = 1` for unit amplitude, as `ZernikeCoefficients(n)`
+  does, and add 1 to `mag[1]` when converting offsets from unit amplitude
 - Phase coefficients represent phase in radians
-- RMS normalization (Noll convention) is used so coefficients directly represent RMS wavefront error
+- RMS normalization (Noll convention) is used so coefficients directly represent RMS
+  wavefront error
 """
 mutable struct ZernikeCoefficients{T<:Real}
     mag::Vector{T}

@@ -7,7 +7,7 @@ function review_vector_energy(p)
         dk = 2 * p.nₐ / p.λ / (N - 1)
         for i in 1:N, j in 1:N
             kx, ky = (i - (N+1)/2) * dk, (j - (N+1)/2) * dk
-            if kx^2 + ky^2 <= (p.nₐ / p.λ)^2
+            if (2i - N - 1)^2 + (2j - N - 1)^2 <= (N - 1)^2    # exact aperture geometry
                 total += (abs2(pupil.Ex.field[j,i]) + abs2(pupil.Ey.field[j,i])) * dk^2
             end
         end
@@ -127,7 +127,7 @@ end
                 for i in 1:N, j in 1:N
                     kx, ky = (i-(N+1)/2)*dk, (j-(N+1)/2)*dk
                     kr2 = kx^2 + ky^2
-                    inside = kr2 <= (p.nₐ/p.λ)^2
+                    inside = (2i - N - 1)^2 + (2j - N - 1)^2 <= (N - 1)^2    # exact aperture
                     if inside
                         kz = sqrt(complex((p.n_medium/p.λ)^2-kr2))
                         phase = cis(2π*(0.1*kx - 0.2*ky + 0.3*real(kz)))

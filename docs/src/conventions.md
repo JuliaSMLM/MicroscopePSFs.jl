@@ -35,8 +35,8 @@ PSF models use the following normalization conventions:
 Aberrations are represented using Zernike polynomials:
 
 - Zernike polynomials are normalized to give an RMS of 1.0
-- Coefficients can be set directly via indexing: `zc[5] = 0.5`
-- The OSA indexing scheme is used by default
+- Phase coefficients can be set with `zc[5, :phase] = 0.5` or `zc.phase[5] = 0.5`
+- The Noll indexing scheme is used by default
 - Positive z (defocus) corresponds to the emitter moving away from the objective
 
 ## Units
@@ -50,6 +50,53 @@ Aberrations are represented using Zernike polynomials:
 | NA          | Dimensionless       |
 | Refractive index | Dimensionless  |
 | Zernike coefficients | Normalized (RMS=1) |
+
+## Numerical Range
+
+The PSFs are checked over this range:
+
+| Quantity | Range |
+|:---------|:------|
+| Wavelength | 0.1 to 10 μm |
+| Numerical aperture | 0.01 to 1.7, and not above the refractive index |
+| Refractive index | 1 to 4 |
+| Gaussian σ | 0.01 to 10 μm |
+| Positions and pixel edges | within 10⁴ μm (1 cm) of the origin |
+| Pixel size | at least 10⁻³ μm (1 nm) |
+| Axial position z | within 100 μm of focus; see below for a `VectorPSF` |
+| Photons per emitter | up to 10¹² |
+
+Inside it, every PSF gives finite, non-negative intensities for `Float32`, `Float64` and
+integer inputs and any mix of them.
+
+For a `VectorPSF`, z is the emitter's depth above the coverslip, not a defocus. When the
+numerical aperture exceeds the sample's refractive index (`n_medium`), the pupil carries
+evanescent waves, which decay above the coverslip and grow without bound below it; such a
+PSF is in range only for depths from 0 to 100 μm, counting a `PlanePSF` offset in the depth.
+A `FourPiPSF` refuses such arms, since its mirrored arm sees the negative depth.
+
+Pixel integration converts integer pixel edges, emitter positions (x, y and z), support radii
+and photon counts to floating point before any arithmetic. There, fixed-width integers such as
+`Int`, `Int8` and `UInt8` give exactly the image of the same numbers given as `Float64`; a
+`BigInt` gives `BigFloat`. A PSF evaluated directly at integer coordinates gives finite,
+non-negative values; their number type is not promised.
+Integer optical parameters, Zernike coefficients included, are accepted; with fixed-width
+integers alone or with `Float64` the PSF is `Float64`. For a `Float32` PSF, give every
+optical parameter as `Float32`.
+
+A `SplinePSF` reproduces the samples it was built from. Between samples, cubic
+interpolation can dip below zero, most where the samples are coarse compared with the width
+of the PSF; the interpolated intensity is cut off at zero there.
+
+`Float32` results carry `Float32` rounding, which grows with the size of the intermediate
+values: the defocus phase, about 2π z n / λ, and positions far from the origin. For
+example, an all-`Float32` scalar PSF at 100 μm of defocus differed from `Float64` by 0.24
+percent of the image peak, and a `Float32` position 1 cm from the origin, which resolves
+only about 1 nm, moved the image of a PSF a few nanometers wide by up to 2 percent. Use
+`Float64` where that matters.
+
+Outside the range, intermediate values such as squared wave numbers or pixel areas can
+leave the range of the number type and give zero, infinity or `NaN`.
 
 ## Type Hierarchy
 

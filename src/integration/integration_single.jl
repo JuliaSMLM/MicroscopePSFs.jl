@@ -13,6 +13,7 @@
 
 Integrate PSF intensity over camera pixels, storing the result in a pre-allocated matrix.
 Automatically uses z-coordinate if both PSF and emitter support it.
+GaussianPSF uses the exact product of erf differences for any `sampling`.
 
 # Arguments
 - `result`: Pre-allocated array where results will be stored
@@ -60,8 +61,9 @@ function integrate_pixels!(
         threaded=threaded
     )
     
-    # Scale by photon count
-    result .*= emitter.photons
+    # Scale by photon count; an integer count becomes floating point first, so a narrow
+    # result array gets the same rounding as for the count given as Float64.
+    result .*= _float_coordinate(emitter.photons)
     
     return result
 end
@@ -235,7 +237,8 @@ end
 Integrate PSF intensity over camera pixels with optional support region optimization.
 
 For each pixel in the specified region, numerically integrates the PSF intensity using the specified 
-sampling density. Physical coordinates are relative to camera with (0,0) at top-left corner.
+sampling density. GaussianPSF uses the exact product of erf differences for any
+`sampling`. Physical coordinates are relative to camera with (0,0) at top-left corner.
 Automatically handles z-coordinate if both PSF and emitter support it.
 
 # Arguments
@@ -251,7 +254,7 @@ Automatically handles z-coordinate if both PSF and emitter support it.
   Set to false when using with automatic differentiation frameworks
 
 # Returns
-- `Matrix{T}`: Integrated intensities where T matches emitter.photons type
+- `Matrix{T}`: Integrated intensities; T is the type of `emitter.photons`, or floating point for an integer count
 - Array is indexed as [y,x] with [1,1] at top-left pixel
 - Values represent actual photon counts in each pixel based on emitter's photon value
 
@@ -280,7 +283,7 @@ function integrate_pixels(
     sampling::Integer=2,
     threaded::Bool=true
 )
-    T = typeof(emitter.photons)
+    T = _photon_result_type(typeof(emitter.photons))
     
     # Get pixel indices for the support region
     i_range, j_range = get_pixel_indices(pixel_edges_x, pixel_edges_y, emitter, support)
@@ -331,6 +334,7 @@ end
 Integrate PSF intensity over camera pixels with optional support region optimization.
 
 This version takes a camera object instead of explicit pixel edges.
+GaussianPSF uses the exact product of erf differences for any `sampling`.
 
 # Arguments
 - `psf::AbstractPSF`: Point spread function to integrate
@@ -344,7 +348,7 @@ This version takes a camera object instead of explicit pixel edges.
 
 # Returns
 - Array of pixel values with dimensions [y, x] (matrix indexed [row,col])
-- Values are normalized to sum to 1
+- Values are photon counts: the PSF integral times `emitter.photons`
 - Array indices start at [1,1] for top-left pixel
 
 See also: [`integrate_pixels_amplitude`](@ref), [`AbstractPSF`](@ref)
@@ -399,7 +403,7 @@ Automatically handles z-coordinate if both PSF and emitter support it.
 - `threaded::Bool=true`: Whether to use multi-threading for integration
 
 # Returns
-- `Matrix{Complex{T}}`: Integrated complex amplitudes where T matches emitter.photons type
+- `Array{Complex{T}}`: Integrated complex amplitudes, `[y, x]`, or `[y, x, 2]` for a vector PSF's two field components; T is the type of `emitter.photons`, or floating point for an integer count
 - Array is indexed as [y,x] with [1,1] at top-left pixel
 - Values are not normalized to preserve complex amplitude relationships
 
@@ -421,7 +425,7 @@ function integrate_pixels_amplitude(
 )
     _check_amplitude_integration(psf, support)
     output_dims = _amplitude_output_dims(psf)
-    T = Complex{typeof(emitter.photons)}
+    T = Complex{_photon_result_type(typeof(emitter.photons))}
     
     # Get pixel indices for the support region
     i_range, j_range = get_pixel_indices(pixel_edges_x, pixel_edges_y, emitter, support)

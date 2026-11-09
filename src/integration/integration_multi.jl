@@ -45,7 +45,7 @@ function integrate_pixels(
     isempty(emitters) && return zeros(Float64, length(pixel_edges_y)-1, length(pixel_edges_x)-1)
     
     # Determine result type from first emitter (promotion will happen automatically)
-    T = typeof(emitters[1].photons)
+    T = _photon_result_type(typeof(emitters[1].photons))
     
     # Allocate result array for the full domain
     nx = length(pixel_edges_x) - 1
@@ -143,7 +143,9 @@ Integrate PSF complex amplitude over camera pixels for multiple emitters with op
 - Values represent coherently summed field contributions
 
 # Notes
-- Results are the coherent sum of individual emitter field contributions
+- Results are the coherent sum of individual emitter field contributions.
+- `abs2` of this sum is not the image of mutually incoherent emitters;
+  use `integrate_pixels` for their image.
 - Returns a unit-photon field for each emitter; emitter photons are ignored.
 - Squaring a pixel-integrated field is not pixel-integrated intensity.
 - For incoherent photon counts, use `integrate_pixels`.
@@ -158,7 +160,8 @@ function integrate_pixels_amplitude(
     threaded::Bool=true
 )
     _check_amplitude_integration(psf, support)
-    T = isempty(emitters) ? Complex{Float64} : Complex{typeof(first(emitters).photons)}
+    T = isempty(emitters) ? Complex{Float64} :
+        Complex{_photon_result_type(typeof(first(emitters).photons))}
     result = zeros(T, length(pixel_edges_y) - 1, length(pixel_edges_x) - 1,
         _amplitude_output_dims(psf)...)
 
@@ -207,9 +210,10 @@ This version takes a camera object instead of explicit pixel edges.
 - Array of integrated complex amplitudes
 - Values represent coherently summed field contributions
 
-This returns a unit-photon field: emitter photons are ignored. Squaring a
-pixel-integrated field is not pixel-integrated intensity; use `integrate_pixels`
-for intensity images.
+The result is the coherent sum of the emitters' unit-photon fields; emitter
+photons are ignored. Its `abs2` is not the image of mutually incoherent emitters;
+use `integrate_pixels` for their image. Squaring a pixel-integrated field is not
+pixel-integrated intensity.
 """
 function integrate_pixels_amplitude(
     psf::AbstractPSF,

@@ -11,6 +11,7 @@
                 grid_size::Integer=128)
 
 Create a vector PSF using either a pupil-based or Zernike-based approach.
+The numerical aperture must satisfy `nₐ <= n_immersion`.
 When `n_medium == n_coverslip`, use `nₐ <= 0.995 * n_medium`. Apodization
 diverges at grazing angles, so grid sampling fails near 90 degrees; real objectives
 stay below this bound.
@@ -34,7 +35,11 @@ for the measurement points and fixed-dipole results.
 - `n_coverslip`: Cover slip refractive index (default: 1.52)
 - `n_immersion`: Immersion medium refractive index (default: 1.52)
 - `z_stage`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm) (default: 0.0)
-- `grid_size`: Size of pupil grid (default: 128)
+- `grid_size`: Generated pupil grid size (default: 128); a supplied `base_pupil`
+  retains its own grid. The field is zero at and beyond `L/2` in either lateral
+  coordinate relative to the emitter, where `L = (grid_size - 1) * λ / (2nₐ)`
+  in microns uses the actual pupil grid size. A larger `grid_size` widens the field.
+  For NA 1.4 and λ 0.6 microns, grid 128 gives `L/2 ≈ 13.61` microns.
 
 # Returns
 - VectorPSF instance
@@ -49,11 +54,11 @@ function VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     grid_size::Integer=128)
 
     _require_fixed_dipole(dipole)
-    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
+    T = float(promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
         typeof(n_coverslip), typeof(n_immersion), typeof(z_stage),
         typeof(dipole.px),
         isnothing(base_pupil) ? typeof(nₐ) : real(eltype(base_pupil.field)),
-        isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike))
+        isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike)))
     nₐ, λ, n_medium = T(nₐ), T(λ), T(n_medium)
     n_coverslip, n_immersion = T(n_coverslip), T(n_immersion)
     _check_vector_aperture(nₐ, n_medium, n_coverslip)
@@ -63,6 +68,10 @@ function VectorPSF(nₐ::Real, λ::Real, dipole::DipoleVector;
     end
     if !isnothing(base_zernike) && !(base_zernike isa ZernikeCoefficients{T})
         base_zernike = ZernikeCoefficients(T.(base_zernike.mag), T.(base_zernike.phase))
+    end
+
+    if !isnothing(base_pupil)
+        grid_size = size(base_pupil.field, 1)
     end
 
     # Store the base pupil and/or convert Zernike coeffs to pupil if provided
@@ -108,6 +117,7 @@ end
 
 Create a vector PSF with a rotating dipole, modeled as an incoherent sum of 
 x, y, and z dipole orientations.
+The numerical aperture must satisfy `nₐ <= n_immersion`.
 When `n_medium == n_coverslip`, use `nₐ <= 0.995 * n_medium` because
 apodization diverges at grazing angles and grid sampling fails near 90 degrees.
 Real objectives stay below this bound.
@@ -130,7 +140,11 @@ for the measurement points and fixed-dipole results.
 - `n_coverslip`: Cover slip refractive index (default: 1.52)
 - `n_immersion`: Immersion medium refractive index (default: 1.52)
 - `z_stage`: Distance the sample stage was moved away from the nominal focal plane at the coverslip (μm) (default: 0.0)
-- `grid_size`: Size of pupil grid (default: 128)
+- `grid_size`: Generated pupil grid size (default: 128); a supplied `base_pupil`
+  retains its own grid. The field is zero at and beyond `L/2` in either lateral
+  coordinate relative to the emitter, where `L = (grid_size - 1) * λ / (2nₐ)`
+  in microns uses the actual pupil grid size. A larger `grid_size` widens the field.
+  For NA 1.4 and λ 0.6 microns, grid 128 gives `L/2 ≈ 13.61` microns.
 
 # Returns
 - VectorPSF instance representing a rotating dipole
@@ -148,10 +162,10 @@ function VectorPSF(nₐ::Real, λ::Real;
     z_stage::Real=zero(float(nₐ)),
     grid_size::Integer=128)
 
-    T = promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
+    T = float(promote_type(typeof(nₐ), typeof(λ), typeof(n_medium),
         typeof(n_coverslip), typeof(n_immersion), typeof(z_stage),
         isnothing(base_pupil) ? typeof(nₐ) : real(eltype(base_pupil.field)),
-        isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike))
+        isnothing(base_zernike) ? typeof(nₐ) : eltype(base_zernike)))
     nₐ, λ, n_medium = T(nₐ), T(λ), T(n_medium)
     n_coverslip, n_immersion = T(n_coverslip), T(n_immersion)
     _check_vector_aperture(nₐ, n_medium, n_coverslip)
@@ -161,6 +175,10 @@ function VectorPSF(nₐ::Real, λ::Real;
     end
     if !isnothing(base_zernike) && !(base_zernike isa ZernikeCoefficients{T})
         base_zernike = ZernikeCoefficients(T.(base_zernike.mag), T.(base_zernike.phase))
+    end
+
+    if !isnothing(base_pupil)
+        grid_size = size(base_pupil.field, 1)
     end
 
     # Store the base pupil and/or convert Zernike coeffs to pupil if provided
@@ -234,6 +252,13 @@ function _calculate_field_amplitude(
     # Initialize result vector [Ex, Ey]
     T = promote_type(real(eltype(pupil.Ex.field)), typeof(x), typeof(y), typeof(z))
     result = zeros(Complex{T}, 2)
+    if isnan(x) || isnan(y) || isnan(z)
+        return fill!(result, Complex{T}(NaN, NaN))
+    end
+    halfwidth = _alias_free_halfwidth(pupil)
+    if _outside_field_window(x, halfwidth) || _outside_field_window(y, halfwidth)
+        return result
+    end
 
     # Pupil parameters
     grid_size = size(pupil.Ex.field, 1)

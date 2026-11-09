@@ -148,7 +148,7 @@
                 kx = (i - center) * kpixel
                 ky = (j - center) * kpixel
                 kr2 = kx^2 + ky^2
-                kr2 > kmax_val^2 && continue
+                (2i - gs - 1)^2 + (2j - gs - 1)^2 > (gs - 1)^2 && continue    # exact aperture
                 ph = exp(im * 2π * (kx * x + ky * y))
                 ex += vp.Ex.field[j, i] * ph * kpixel^2
                 ey += vp.Ey.field[j, i] * ph * kpixel^2

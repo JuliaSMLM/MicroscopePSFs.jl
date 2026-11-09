@@ -36,6 +36,7 @@ struct GaussianPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
 end
 
 GaussianPSF(σ::T) where {T<:AbstractFloat} = GaussianPSF{T}(σ)
+GaussianPSF(σ::Integer) = GaussianPSF(float(σ))
 
 """
     AiryPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
@@ -60,7 +61,7 @@ struct AiryPSF{T<:AbstractFloat} <: Abstract2DPSF{T}
     ν::T
 
     function AiryPSF(nₐ::Real, λ::Real)
-        T = promote_type(typeof(nₐ), typeof(λ))
+        T = float(promote_type(typeof(nₐ), typeof(λ)))
         nₐ > 0 || throw(ArgumentError("Numerical aperture must be positive"))
         λ > 0 || throw(ArgumentError("Wavelength must be positive"))
         ν = 2T(π) * nₐ / λ
@@ -104,7 +105,22 @@ struct ScalarPSF{T} <: Abstract3DPSF{T}
         nₐ > 0 || throw(ArgumentError("NA must be positive"))
         λ > 0 || throw(ArgumentError("wavelength must be positive"))
         n > 0 || throw(ArgumentError("refractive index must be positive"))
-        new{T}(T(nₐ), T(λ), T(n), pupil, zernike_coeffs)
+        n >= nₐ || throw(
+            ArgumentError(
+                "Numerical aperture nₐ=$nₐ must be <= refractive index n=$n"
+            )
+        )
+        scale = _pupil_field_scale(pupil)
+        isfinite(scale) && scale > 0 || throw(
+            ArgumentError(
+                "Pupil field scale=$scale must be finite and > 0 inside the aperture"
+            )
+        )
+        zc = zernike_coeffs
+        if !isnothing(zc) && !(zc isa ZernikeCoefficients{T})
+            zc = ZernikeCoefficients(T.(zc.mag), T.(zc.phase))
+        end
+        return new{T}(T(nₐ), T(λ), T(n), pupil, zc)
     end
 end
 

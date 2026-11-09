@@ -4,6 +4,7 @@
     VectorPupilFunction{T}
 
 Vector pupil function storing Ex,Ey field components as PupilFunctions.
+The numerical aperture must satisfy `nₐ <= n_immersion`.
 
 # Fields
 - `nₐ::T`: Numerical aperture
@@ -31,13 +32,18 @@ struct VectorPupilFunction{T<:AbstractFloat}
         n_medium > 0 || throw(ArgumentError("n_medium must be positive"))
         n_coverslip > 0 || throw(ArgumentError("n_coverslip must be positive"))
         n_immersion > 0 || throw(ArgumentError("n_immersion must be positive"))
+        nₐ <= n_immersion || throw(
+            ArgumentError(
+                "Numerical aperture nₐ=$nₐ must be <= n_immersion=$n_immersion"
+            )
+        )
         
         size(Ex.field) == size(Ey.field) || 
             throw(ArgumentError("Ex and Ey pupils must have same size"))
         
-        T = promote_type(typeof(nₐ), typeof(λ),
+        T = float(promote_type(typeof(nₐ), typeof(λ),
                         typeof(n_medium), typeof(n_coverslip), typeof(n_immersion),
-                        real(eltype(Ex.field)), real(eltype(Ey.field)))
+                        real(eltype(Ex.field)), real(eltype(Ey.field))))
         
         new{T}(T(nₐ), T(λ), T(n_medium), T(n_coverslip), T(n_immersion), Ex, Ey)
     end
@@ -54,7 +60,10 @@ Create a vector pupil function with empty field components.
 - `n_medium`: Sample medium refractive index
 - `n_coverslip`: Cover slip refractive index
 - `n_immersion`: Immersion medium refractive index
-- `grid_size`: Size of pupil grid (grid_size × grid_size)
+- `grid_size`: Size of pupil grid (grid_size × grid_size). The field is zero at
+  and beyond `L/2` in either lateral coordinate relative to the emitter, where
+  `L = (grid_size - 1) * λ / (2nₐ)` in microns. A larger `grid_size` widens the field.
+  For grid 128, NA 1.4 and λ 0.6 microns, `L/2 ≈ 13.61` microns.
 
 # Returns
 - `VectorPupilFunction` with zero-initialized field components
@@ -67,11 +76,14 @@ function VectorPupilFunction(nₐ::Real, λ::Real, n_medium::Real, n_coverslip::
     VectorPupilFunction(nₐ, λ, n_medium, n_coverslip, n_immersion, Ex, Ey)
 end
 
+# Membership is exact grid geometry, as for scalar pupils, so it does not depend on the
+# precision of the pupil; a vector pupil keeps a sample exactly on the rim. The kmax²
+# argument is no longer needed for it.
 @inline function _vector_pupil_sample(i, j, center, kpixel, kmax²)
     kx = (i - center) * kpixel
     ky = (j - center) * kpixel
     kr2 = kx^2 + ky^2
-    return kx, ky, kr2, kr2 <= kmax²
+    return kx, ky, kr2, _inside_aperture(i, j, center, <=)
 end
 
 function _vector_pupil_energy(p::VectorPupilFunction{T}) where {T}

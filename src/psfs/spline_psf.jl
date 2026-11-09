@@ -307,8 +307,10 @@ Evaluate the 3D spline PSF at position (x, y, z).
 - PSF intensity at the specified position
 
 # Notes
-- Returns 0 if the position is outside the PSF boundary
-- Preserves the normalization of the original PSF data
+- Returns NaN for nonfinite coordinates and 0 outside the finite PSF boundary
+- Never negative: where cubic interpolation between samples dips below zero, the result is 0
+- Interpolates the PSF data without rescaling it; its integral matches the original PSF as
+  closely as the samples resolve it, and cutting dips off at zero adds their area
 
 # Example
 ```julia
@@ -322,6 +324,8 @@ function (psf::SplinePSF)(x::Real, y::Real, z::Real)
         throw(ArgumentError("Cannot evaluate a 2D SplinePSF with 3D coordinates. Use psf(x, y) instead."))
     end
 
+    isfinite(x) && isfinite(y) && isfinite(z) || return NaN
+
     # Check bounds using cached Float64 values (avoids type-instability from first/last on ranges)
     if x < psf.x_min || x > psf.x_max ||
        y < psf.y_min || y > psf.y_max ||
@@ -331,8 +335,11 @@ function (psf::SplinePSF)(x::Real, y::Real, z::Real)
 
     # Evaluate using the scaled interpolant.
     # Note the order: since our data is (y, x, z), we call it as (y, x, z).
-    return psf.spline(y, x, z)
+    return _nonnegative(psf.spline(y, x, z))
 end
+
+# Cubic interpolation can dip below zero between samples; an intensity cannot. NaN stays NaN.
+_nonnegative(v::Real) = max(v, zero(v))
 
 # --- Define evaluation for 2D PSF ---
 
@@ -349,8 +356,10 @@ Evaluate the spline PSF at position (x, y).
 
 # Notes
 - For 3D PSFs, evaluates at z = 0 if in range, otherwise returns 0
-- Returns 0 if the position is outside the PSF boundary
-- Preserves the normalization of the original PSF data
+- Returns NaN for nonfinite coordinates and 0 outside the finite PSF boundary
+- Never negative: where cubic interpolation between samples dips below zero, the result is 0
+- Interpolates the PSF data without rescaling it; its integral matches the original PSF as
+  closely as the samples resolve it, and cutting dips off at zero adds their area
 
 # Example
 ```julia
@@ -359,6 +368,7 @@ intensity = spline_psf(0.1, 0.2)
 ```
 """
 function (psf::SplinePSF)(x::Real, y::Real)
+    isfinite(x) && isfinite(y) || return NaN
     # Check bounds using cached Float64 values
     if x < psf.x_min || x > psf.x_max ||
        y < psf.y_min || y > psf.y_max
@@ -367,11 +377,11 @@ function (psf::SplinePSF)(x::Real, y::Real)
 
     # For 2D PSFs
     if psf.z_range === nothing
-        return psf.spline(y, x)
+        return _nonnegative(psf.spline(y, x))
     else
         # For 3D PSFs, check if z=0 is in range
         if psf.z_min <= 0.0 && psf.z_max >= 0.0
-            return psf.spline(y, x, 0.0)
+            return _nonnegative(psf.spline(y, x, 0.0))
         else
             return zero(Float64)
         end
@@ -420,6 +430,31 @@ end
 
 # --- Integration methods for pixel calculation ---
 
+function integrate_pixels!(
+        result::AbstractMatrix{T},
+        psf::SplinePSF,
+        pixel_edges_x::AbstractVector,
+        pixel_edges_y::AbstractVector,
+        emitter::AbstractEmitter;
+        sampling::Integer = 2,
+        threaded::Bool = true
+    ) where {T <: Real}
+    if supports_3d(psf) && has_z_coordinate(emitter)
+        if isfinite(emitter.z) && (emitter.z < psf.z_min || emitter.z > psf.z_max)
+            message = "Emitter z=$(emitter.z) is outside SplinePSF z range " *
+                "[$(psf.z_min), $(psf.z_max)]; returning zero photon counts"
+            @warn message maxlog = 1
+        end
+    end
+    return invoke(
+        integrate_pixels!,
+        Tuple{
+            AbstractMatrix{T}, AbstractPSF, AbstractVector, AbstractVector, AbstractEmitter,
+        },
+        result, psf, pixel_edges_x, pixel_edges_y, emitter; sampling, threaded
+    )
+end
+
 """
     integrate_pixels(
         psf::SplinePSF,
@@ -448,6 +483,8 @@ Integrate PSF over camera pixels using interpolation.
 
 # Notes
 - For 3D SplinePSFs (when z_range is defined), requires an emitter with a z-coordinate
+- A finite emitter z outside the sampled range returns a zero image and warns once,
+  naming the range
 """
 function integrate_pixels(
     psf::SplinePSF,

@@ -115,7 +115,7 @@ end
 
 # # Returns
 # - Array of pixel values with dimensions [y,x] (matrix indexed [row,col])
-# - Values are normalized to sum to 1
+# - Values are photon counts: the PSF integral times emitter.photons
 # - Array indices start at [1,1] for top-left pixel
 
 # # Camera Coordinates
